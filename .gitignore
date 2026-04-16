@@ -1,0 +1,5 @@
+node_modules/
+furzi.db
+furzi.db-wal
+furzi.db-shm
+.env

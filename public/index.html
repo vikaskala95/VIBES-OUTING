@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Furzi Outing — Discover, Join & Explore Together</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<style>
+:root {
+  --primary: #6C3CE1;
+  --primary-light: #8B5CF6;
+  --primary-dark: #5521C5;
+  --secondary: #F97316;
+  --accent: #06D6A0;
+  --bg: #F8FAFC;
+  --card: #FFFFFF;
+  --text: #1E293B;
+  --text-light: #64748B;
+  --border: #E2E8F0;
+  --success: #10B981;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+  --radius: 16px;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 6px 16px rgba(0,0,0,.06);
+  --shadow-lg: 0 4px 24px rgba(108,60,225,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer;font-family:inherit}
+input,textarea,select{font-family:inherit}
+
+/* NAV */
+.nav{background:#fff;border-bottom:1px solid var(--border);padding:0 2rem;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.nav-logo{font-weight:800;font-size:1.4rem;color:var(--primary);display:flex;align-items:center;gap:.5rem}
+.nav-logo i{font-size:1.2rem;background:var(--primary);color:#fff;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.nav-links{display:flex;gap:.5rem;align-items:center}
+.nav-links a,.nav-links button{padding:.5rem 1rem;border-radius:10px;font-size:.875rem;font-weight:500;border:none;background:none;color:var(--text-light);transition:.2s}
+.nav-links a:hover,.nav-links button:hover{background:var(--primary);color:#fff}
+.nav-links .btn-primary{background:var(--primary);color:#fff}
+.nav-links .user-badge{background:var(--primary);color:#fff;padding:.4rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#6C3CE1 0%,#8B5CF6 50%,#A78BFA 100%);color:#fff;padding:6rem 2rem 4rem;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;right:-20%;width:600px;height:600px;background:rgba(255,255,255,.06);border-radius:50%}
+.hero::after{content:'';position:absolute;bottom:-30%;left:-10%;width:400px;height:400px;background:rgba(255,255,255,.04);border-radius:50%}
+.hero h1{font-size:3rem;font-weight:800;margin-bottom:1rem;position:relative;z-index:1}
+.hero p{font-size:1.2rem;opacity:.9;max-width:600px;margin:0 auto 2rem;position:relative;z-index:1}
+.hero-buttons{display:flex;gap:1rem;justify-content:center;position:relative;z-index:1;flex-wrap:wrap}
+.btn{padding:.75rem 1.5rem;border-radius:12px;font-weight:600;font-size:.95rem;border:none;transition:.2s;display:inline-flex;align-items:center;gap:.5rem}
+.btn-white{background:#fff;color:var(--primary)}
+.btn-white:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.btn-outline-white{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.4)}
+.btn-outline-white:hover{background:rgba(255,255,255,.15)}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark);transform:translateY(-1px)}
+.btn-secondary{background:var(--secondary);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-sm{padding:.4rem .8rem;font-size:.8rem;border-radius:8px}
+.btn-block{width:100%}
+
+/* STATS BAR */
+.stats-bar{display:flex;justify-content:center;gap:3rem;padding:2rem;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.stat-item{text-align:center}
+.stat-item .num{font-size:2rem;font-weight:800;color:var(--primary)}
+.stat-item .label{font-size:.85rem;color:var(--text-light)}
+
+/* SECTION */
+.section{padding:3rem 2rem;max-width:1200px;margin:0 auto}
+.section-title{font-size:1.8rem;font-weight:700;margin-bottom:.5rem}
+.section-subtitle{color:var(--text-light);margin-bottom:2rem}
+
+/* FILTERS */
+.filters{display:flex;gap:.75rem;margin-bottom:2rem;flex-wrap:wrap}
+.filters input,.filters select{padding:.6rem 1rem;border:1px solid var(--border);border-radius:10px;font-size:.9rem;background:#fff}
+.filters input:focus,.filters select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(108,60,225,.1)}
+
+/* CARDS GRID */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.5rem}
+.card{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:.3s}
+.card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.card-img{height:200px;background-size:cover;background-position:center;position:relative}
+.card-img .badge{position:absolute;top:12px;right:12px;background:var(--primary);color:#fff;padding:.3rem .7rem;border-radius:8px;font-size:.75rem;font-weight:600}
+.card-img .spots-left{position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,.6);color:#fff;padding:.25rem .6rem;border-radius:6px;font-size:.75rem}
+.card-body{padding:1.25rem}
+.card-body h3{font-size:1.1rem;font-weight:700;margin-bottom:.5rem}
+.card-meta{display:flex;flex-wrap:wrap;gap:.75rem;margin-bottom:.75rem;font-size:.85rem;color:var(--text-light)}
+.card-meta span{display:flex;align-items:center;gap:.3rem}
+.card-body p{font-size:.9rem;color:var(--text-light);margin-bottom:1rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-footer{display:flex;justify-content:space-between;align-items:center}
+.price{font-size:1.2rem;font-weight:800;color:var(--primary)}
+.price small{font-size:.75rem;font-weight:400;color:var(--text-light)}
+
+/* MODAL */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:.3s}
+.modal-overlay.active{opacity:1;pointer-events:all}
+.modal{background:#fff;border-radius:var(--radius);max-width:500px;width:100%;max-height:90vh;overflow-y:auto;padding:2rem;position:relative}
+.modal h2{font-size:1.4rem;font-weight:700;margin-bottom:1.5rem}
+.modal .close{position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.2rem;color:var(--text-light)}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;font-size:.85rem;font-weight:600;margin-bottom:.4rem;color:var(--text)}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:.65rem .9rem;border:1px solid var(--border);border-radius:10px;font-size:.9rem}
+.form-group textarea{min-height:80px;resize:vertical}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(108,60,225,.1)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+
+/* DASHBOARD */
+.dashboard{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 64px)}
+.sidebar{background:#fff;border-right:1px solid var(--border);padding:1.5rem 0}
+.sidebar a{display:flex;align-items:center;gap:.75rem;padding:.75rem 1.5rem;font-size:.9rem;color:var(--text-light);transition:.2s}
+.sidebar a:hover,.sidebar a.active{background:rgba(108,60,225,.06);color:var(--primary);border-right:3px solid var(--primary)}
+.sidebar a i{width:20px;text-align:center}
+.dash-content{padding:2rem}
+.dash-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:2rem}
+.dash-stat{background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow)}
+.dash-stat .icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:.75rem}
+.dash-stat h4{font-size:.85rem;color:var(--text-light);margin-bottom:.25rem}
+.dash-stat .value{font-size:1.8rem;font-weight:800}
+
+/* TABLE */
+.table-wrap{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:.75rem 1rem;text-align:left;border-bottom:1px solid var(--border);font-size:.875rem}
+th{font-weight:600;color:var(--text-light);background:#FAFBFC}
+.status{padding:.2rem .6rem;border-radius:6px;font-size:.75rem;font-weight:600}
+.status-paid,.status-approved,.status-active{background:#D1FAE5;color:#065F46}
+.status-pending{background:#FEF3C7;color:#92400E}
+.status-rejected,.status-cancelled{background:#FEE2E2;color:#991B1B}
+
+/* TOAST */
+.toast{position:fixed;bottom:2rem;right:2rem;background:var(--text);color:#fff;padding:1rem 1.5rem;border-radius:12px;font-size:.9rem;z-index:300;transform:translateY(100px);opacity:0;transition:.3s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{background:var(--success)}
+.toast.error{background:var(--danger)}
+
+/* REVIEWS */
+.review-card{background:#F8FAFC;padding:1rem;border-radius:10px;margin-bottom:.75rem}
+.review-card .stars{color:#F59E0B;margin-bottom:.25rem}
+.review-card .reviewer{font-weight:600;font-size:.85rem}
+.review-card .review-text{font-size:.85rem;color:var(--text-light);margin-top:.25rem}
+.star-input{display:flex;gap:.25rem;margin-bottom:.5rem}
+.star-input i{font-size:1.5rem;color:var(--border);cursor:pointer;transition:.2s}
+.star-input i.active,.star-input i:hover{color:#F59E0B}
+
+/* CHAT */
+.chat-box{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;max-width:700px;margin:0 auto}
+.chat-header{background:var(--primary);color:#fff;padding:1rem 1.5rem;font-weight:600;display:flex;align-items:center;gap:.5rem}
+.chat-messages{height:350px;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.5rem}
+.chat-msg{max-width:75%;padding:.6rem 1rem;border-radius:12px;font-size:.9rem}
+.chat-msg.mine{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:4px}
+.chat-msg.other{align-self:flex-start;background:#F1F5F9;color:var(--text);border-bottom-left-radius:4px}
+.chat-msg .msg-name{font-size:.7rem;font-weight:600;opacity:.7;margin-bottom:2px}
+.chat-msg .msg-time{font-size:.65rem;opacity:.5;margin-top:2px;text-align:right}
+.chat-input{display:flex;border-top:1px solid var(--border);padding:.75rem}
+.chat-input input{flex:1;border:1px solid var(--border);border-radius:10px;padding:.5rem .75rem;font-size:.9rem;margin-right:.5rem}
+.chat-input input:focus{outline:none;border-color:var(--primary)}
+
+/* VERIFICATION BADGE */
+.verified-badge{display:inline-flex;align-items:center;gap:.25rem;background:#D1FAE5;color:#065F46;padding:.15rem .5rem;border-radius:6px;font-size:.7rem;font-weight:600}
+.unverified-badge{display:inline-flex;align-items:center;gap:.25rem;background:#FEF3C7;color:#92400E;padding:.15rem .5rem;border-radius:6px;font-size:.7rem;font-weight:600}
+
+/* AI RECOMMENDATION */
+.rec-reasons{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.5rem}
+.rec-reason{background:rgba(108,60,225,.08);color:var(--primary);padding:.15rem .5rem;border-radius:6px;font-size:.7rem;font-weight:500}
+.ai-badge{background:linear-gradient(135deg,#6C3CE1,#F97316);color:#fff;padding:.2rem .6rem;border-radius:6px;font-size:.7rem;font-weight:700}
+
+/* FOOTER */
+.footer{background:var(--text);color:#fff;padding:3rem 2rem;text-align:center}
+.footer p{opacity:.6;font-size:.85rem}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .hero h1{font-size:2rem}
+  .cards-grid{grid-template-columns:1fr}
+  .dashboard{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .form-row{grid-template-columns:1fr}
+  .stats-bar{gap:1.5rem}
+  .nav-links .hide-mobile{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="navbar">
+  <a href="#" class="nav-logo" onclick="navigate('home')"><i class="fas fa-compass"></i> Furzi Outing</a>
+  <div class="nav-links" id="navLinks"></div>
+</nav>
+
+<!-- APP CONTAINER -->
+<main id="app"></main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ──────────────────────────────────────────────────────
+let currentUser = JSON.parse(localStorage.getItem('furzi_user') || 'null');
+let outings = [];
+let currentPage = 'home';
+
+// ─── API ────────────────────────────────────────────────────────
+const api = async (url, opts = {}) => {
+  const res = await fetch('/api' + url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  return res.json();
+};
+
+// ─── TOAST ──────────────────────────────────────────────────────
+function toast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ─── MODAL ──────────────────────────────────────────────────────
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+
+// ─── NAV RENDER ─────────────────────────────────────────────────
+function renderNav() {
+  const n = document.getElementById('navLinks');
+  if (currentUser) {
+    const isAdmin = currentUser.role === 'admin';
+    n.innerHTML = `
+      <a href="#" onclick="navigate('outings')">Outings</a>
+      <a href="#" onclick="navigate('suggest')" class="hide-mobile">Suggest</a>
+      ${isAdmin ? `<a href="#" onclick="navigate('admin')">Admin</a>` : `
+        <a href="#" onclick="navigate('recommendations')">🤖 For You</a>
+        <a href="#" onclick="navigate('dashboard')">My Dashboard</a>
+      `}
+      <span class="user-badge"><i class="fas fa-user"></i> ${currentUser.name}</span>
+      <button onclick="logout()" class="btn btn-sm btn-danger">Logout</button>
+    `;
+  } else {
+    n.innerHTML = `
+      <a href="#" onclick="navigate('outings')">Outings</a>
+      <button onclick="showLogin()" class="btn btn-sm btn-primary">Login</button>
+      <button onclick="showSignup()" class="btn btn-sm btn-outline-white" style="border-color:var(--primary);color:var(--primary)">Sign Up</button>
+    `;
+  }
+}
+
+// ─── AUTH ────────────────────────────────────────────────────────
+function showLogin() {
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-sign-in-alt" style="color:var(--primary)"></i> Welcome Back</h2>
+    <form onsubmit="handleLogin(event)">
+      <div class="form-group"><label>Email</label><input type="email" id="loginEmail" required placeholder="you@email.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="loginPass" required placeholder="••••••••"></div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-arrow-right"></i> Login</button>
+    </form>
+    <p style="text-align:center;margin-top:1rem;font-size:.85rem;color:var(--text-light)">No account? <a href="#" onclick="closeModal();showSignup()" style="color:var(--primary);font-weight:600">Sign up</a></p>
+  `);
+}
+
+function showSignup() {
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-user-plus" style="color:var(--primary)"></i> Create Account</h2>
+    <form onsubmit="handleSignup(event)">
+      <div class="form-group"><label>Full Name</label><input type="text" id="signName" required placeholder="John Doe"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Email</label><input type="email" id="signEmail" required placeholder="you@email.com"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" id="signPhone" placeholder="9876543210"></div>
+      </div>
+      <div class="form-group"><label>Password</label><input type="password" id="signPass" required minlength="6" placeholder="Min 6 characters"></div>
+      <div class="form-group"><label>Interests</label><input type="text" id="signInterests" placeholder="Trekking, Beaches, Food..."></div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-rocket"></i> Sign Up</button>
+    </form>
+  `);
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const data = await api('/auth/login', { method: 'POST', body: { email: document.getElementById('loginEmail').value, password: document.getElementById('loginPass').value } });
+  if (data.success) { currentUser = data.user; localStorage.setItem('furzi_user', JSON.stringify(data.user)); closeModal(); renderNav(); navigate(data.user.role === 'admin' ? 'admin' : 'home'); toast('Welcome back, ' + data.user.name + '!', 'success'); }
+  else toast(data.message, 'error');
+}
+
+async function handleSignup(e) {
+  e.preventDefault();
+  const data = await api('/auth/signup', { method: 'POST', body: { name: document.getElementById('signName').value, email: document.getElementById('signEmail').value, phone: document.getElementById('signPhone').value, password: document.getElementById('signPass').value, interests: document.getElementById('signInterests').value } });
+  if (data.success) { currentUser = data.user; localStorage.setItem('furzi_user', JSON.stringify(data.user)); closeModal(); renderNav(); navigate('home'); toast('Account created! Welcome!', 'success'); }
+  else toast(data.message, 'error');
+}
+
+function logout() { currentUser = null; localStorage.removeItem('furzi_user'); renderNav(); navigate('home'); toast('Logged out'); }
+
+// ─── PAGES ──────────────────────────────────────────────────────
+async function navigate(page) {
+  currentPage = page;
+  const app = document.getElementById('app');
+
+  if (page === 'home') await renderHome(app);
+  else if (page === 'outings') await renderOutings(app);
+  else if (page === 'suggest') renderSuggest(app);
+  else if (page === 'dashboard') await renderUserDashboard(app);
+  else if (page === 'admin') await renderAdmin(app);
+  else if (page === 'recommendations') await renderRecommendations(app);
+  else if (page.startsWith('outing-')) await renderOutingDetail(app, parseInt(page.split('-')[1]));
+  else if (page.startsWith('chat-')) await renderChat(app, parseInt(page.split('-')[1]));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── HOME PAGE ──────────────────────────────────────────────────
+async function renderHome(app) {
+  outings = await api('/outings');
+  const featured = outings.slice(0, 3);
+  app.innerHTML = `
+    <section class="hero">
+      <h1>Find Your Next Fun Outing 🎉</h1>
+      <p>Discover amazing group outings, meet new people, and create unforgettable memories. Join solo or bring your squad!</p>
+      <div class="hero-buttons">
+        <button class="btn btn-white" onclick="navigate('outings')"><i class="fas fa-compass"></i> Explore Outings</button>
+        <button class="btn btn-outline-white" onclick="${currentUser ? "navigate('suggest')" : 'showLogin()'}"><i class="fas fa-lightbulb"></i> Suggest an Outing</button>
+      </div>
+    </section>
+    <div class="stats-bar">
+      <div class="stat-item"><div class="num">${outings.length}+</div><div class="label">Active Outings</div></div>
+      <div class="stat-item"><div class="num">500+</div><div class="label">Happy Explorers</div></div>
+      <div class="stat-item"><div class="num">20+</div><div class="label">Cities</div></div>
+      <div class="stat-item"><div class="num">4.8★</div><div class="label">Avg Rating</div></div>
+    </div>
+    <section class="section">
+      <h2 class="section-title">🔥 Trending Outings</h2>
+      <p class="section-subtitle">Most popular experiences this month</p>
+      <div class="cards-grid">${featured.map(o => outingCard(o)).join('')}</div>
+      <div style="text-align:center;margin-top:2rem"><button class="btn btn-primary" onclick="navigate('outings')">View All Outings <i class="fas fa-arrow-right"></i></button></div>
+    </section>
+    <section class="section" style="background:#fff;max-width:100%;padding:3rem 2rem">
+      <div style="max-width:1200px;margin:0 auto">
+        <h2 class="section-title" style="text-align:center">How It Works</h2>
+        <p class="section-subtitle" style="text-align:center">Three simple steps to your next adventure</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:2rem;margin-top:2rem">
+          <div style="text-align:center;padding:2rem"><div style="width:64px;height:64px;background:rgba(108,60,225,.1);border-radius:16px;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--primary)"><i class="fas fa-search"></i></div><h3>1. Browse</h3><p style="color:var(--text-light);font-size:.9rem;margin-top:.5rem">Explore curated outings by location, budget, and date</p></div>
+          <div style="text-align:center;padding:2rem"><div style="width:64px;height:64px;background:rgba(249,115,22,.1);border-radius:16px;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--secondary)"><i class="fas fa-ticket-alt"></i></div><h3>2. Book</h3><p style="color:var(--text-light);font-size:.9rem;margin-top:.5rem">Pay a small token amount to reserve your spot</p></div>
+          <div style="text-align:center;padding:2rem"><div style="width:64px;height:64px;background:rgba(6,214,160,.1);border-radius:16px;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--accent)"><i class="fas fa-users"></i></div><h3>3. Go!</h3><p style="color:var(--text-light);font-size:.9rem;margin-top:.5rem">Meet your group, explore together, and have fun!</p></div>
+        </div>
+      </div>
+    </section>
+    <footer class="footer"><p>© 2026 Furzi Outing. Made with ❤️ for explorers everywhere.</p></footer>
+  `;
+}
+
+// ─── OUTING CARD ────────────────────────────────────────────────
+function outingCard(o) {
+  const spotsLeft = o.max_participants - o.current_participants;
+  const dateStr = new Date(o.date).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+  return `
+    <div class="card">
+      <div class="card-img" style="background-image:url('${o.image_url || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600'}');cursor:pointer" onclick="navigate('outing-${o.id}')">
+        <span class="badge">${o.location}</span>
+        <span class="spots-left"><i class="fas fa-users"></i> ${spotsLeft} spots left</span>
+      </div>
+      <div class="card-body">
+        <h3 style="cursor:pointer" onclick="navigate('outing-${o.id}')">${o.title}</h3>
+        <div class="card-meta">
+          <span><i class="far fa-calendar"></i> ${dateStr}</span>
+          <span><i class="far fa-clock"></i> ${o.time}</span>
+          <span><i class="fas fa-map-marker-alt"></i> ${o.location}</span>
+        </div>
+        <p>${o.description || ''}</p>
+        ${o.matchReasons ? `<div class="rec-reasons">${o.matchReasons.map(r => `<span class="rec-reason">${r}</span>`).join('')}</div>` : ''}
+        <div class="card-footer" style="margin-top:.75rem">
+          <div class="price">₹${o.cost} <small>/person</small></div>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn btn-sm" style="background:#F1F5F9;color:var(--text)" onclick="navigate('outing-${o.id}')"><i class="fas fa-info-circle"></i></button>
+            <button class="btn btn-primary btn-sm" onclick="bookOuting(${o.id})"><i class="fas fa-bolt"></i> Book</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── OUTINGS PAGE ───────────────────────────────────────────────
+async function renderOutings(app) {
+  outings = await api('/outings');
+  app.innerHTML = `
+    <section class="section">
+      <h2 class="section-title">🗺️ All Outings</h2>
+      <p class="section-subtitle">Find your perfect adventure</p>
+      <div class="filters">
+        <input type="text" id="searchFilter" placeholder="🔍 Search outings..." oninput="filterOutings()">
+        <select id="locationFilter" onchange="filterOutings()">
+          <option value="">All Locations</option>
+          ${[...new Set(outings.map(o => o.location))].map(l => `<option>${l}</option>`).join('')}
+        </select>
+        <select id="budgetFilter" onchange="filterOutings()">
+          <option value="">All Budgets</option>
+          <option value="0-300">Under ₹300</option>
+          <option value="300-1000">₹300 – ₹1000</option>
+          <option value="1000-99999">₹1000+</option>
+        </select>
+      </div>
+      <div class="cards-grid" id="outingsGrid">${outings.map(o => outingCard(o)).join('')}</div>
+    </section>
+  `;
+}
+
+function filterOutings() {
+  const search = document.getElementById('searchFilter').value.toLowerCase();
+  const loc = document.getElementById('locationFilter').value;
+  const budget = document.getElementById('budgetFilter').value;
+  let filtered = outings.filter(o => {
+    if (search && !o.title.toLowerCase().includes(search) && !o.location.toLowerCase().includes(search)) return false;
+    if (loc && o.location !== loc) return false;
+    if (budget) { const [min, max] = budget.split('-').map(Number); if (o.cost < min || o.cost > max) return false; }
+    return true;
+  });
+  document.getElementById('outingsGrid').innerHTML = filtered.length ? filtered.map(o => outingCard(o)).join('') : '<p style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:3rem">No outings found. Try different filters!</p>';
+}
+
+// ─── BOOKING ────────────────────────────────────────────────────
+async function bookOuting(id) {
+  if (!currentUser) return showLogin();
+  const o = await api('/outings/' + id);
+  const spotsLeft = o.max_participants - o.current_participants;
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-ticket-alt" style="color:var(--primary)"></i> Book: ${o.title}</h2>
+    <div style="background:#F8FAFC;padding:1rem;border-radius:10px;margin-bottom:1.5rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><span>📍 ${o.location}</span><span>📅 ${new Date(o.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span></div>
+      <div style="display:flex;justify-content:space-between"><span>💰 ₹${o.cost}/person</span><span>👥 ${spotsLeft} spots left</span></div>
+    </div>
+    <form onsubmit="confirmBooking(event, ${o.id}, ${o.cost})">
+      <div class="form-group"><label>Number of Participants</label><input type="number" id="bookParticipants" min="1" max="${spotsLeft}" value="1" required onchange="updateTotal(${o.cost})"></div>
+      <div class="form-group"><label>Participant Names (comma separated)</label><input type="text" id="bookNames" placeholder="${currentUser.name}" value="${currentUser.name}"></div>
+      <div style="background:rgba(108,60,225,.06);padding:1rem;border-radius:10px;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:600">Total Amount</span>
+        <span style="font-size:1.5rem;font-weight:800;color:var(--primary)" id="bookTotal">₹${o.cost}</span>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-lock"></i> Pay & Confirm</button>
+    </form>
+  `);
+}
+
+function updateTotal(cost) { document.getElementById('bookTotal').textContent = '₹' + (cost * (document.getElementById('bookParticipants').value || 1)); }
+
+async function confirmBooking(e, outingId, cost) {
+  e.preventDefault();
+  const participants = parseInt(document.getElementById('bookParticipants').value);
+  const participantNames = document.getElementById('bookNames').value;
+  const totalAmount = cost * participants;
+
+  // Step 1: Create Razorpay order on server
+  const orderRes = await api('/bookings/create-order', { method: 'POST', body: {
+    user_id: currentUser.id, outing_id: outingId, participants, participant_names: participantNames
+  }});
+
+  if (!orderRes.success) {
+    // Fallback to direct booking if Razorpay keys not configured
+    if (orderRes.message && orderRes.message.includes('API keys')) {
+      const fallback = await api('/bookings', { method: 'POST', body: { user_id: currentUser.id, outing_id: outingId, participants, participant_names: participantNames, total_amount: totalAmount } });
+      if (fallback.success) { closeModal(); toast('🎉 Booking confirmed (demo mode)! ID: ' + fallback.payment_id, 'success'); navigate(currentPage); }
+      else toast(fallback.message, 'error');
+      return;
+    }
+    toast(orderRes.message || 'Error creating order', 'error');
+    return;
+  }
+
+  closeModal();
+
+  // Step 2: Open Razorpay Checkout popup
+  const options = {
+    key: orderRes.key_id,
+    amount: totalAmount * 100,
+    currency: 'INR',
+    name: 'Furzi Outing',
+    description: 'Outing Booking — ' + participants + ' participant(s)',
+    image: 'https://img.icons8.com/3d-fluency/94/compass.png',
+    order_id: orderRes.order_id,
+    handler: async function (response) {
+      // Step 3: Verify payment on server
+      const verifyRes = await api('/bookings/verify-payment', { method: 'POST', body: {
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature,
+        booking_id: orderRes.booking_id
+      }});
+      if (verifyRes.success) {
+        toast('🎉 Payment successful! ID: ' + verifyRes.payment_id, 'success');
+        // Show WhatsApp share option
+        if (verifyRes.whatsapp_link) {
+          setTimeout(() => {
+            openModal(`
+              <button class="close" onclick="closeModal()">&times;</button>
+              <div style="text-align:center;padding:1rem">
+                <div style="font-size:3rem;margin-bottom:1rem">🎉</div>
+                <h2 style="color:var(--success)">Booking Confirmed!</h2>
+                <p style="color:var(--text-light);margin:1rem 0">Payment ID: <code>${verifyRes.payment_id}</code></p>
+                <p style="color:var(--text-light);margin-bottom:1.5rem">A confirmation email has been sent to your email.</p>
+                <a href="${verifyRes.whatsapp_link}" target="_blank" class="btn btn-success btn-block" style="background:#25D366;margin-bottom:.75rem"><i class="fab fa-whatsapp"></i> Share on WhatsApp</a>
+                <button class="btn btn-primary btn-block" onclick="closeModal();navigate('dashboard')"><i class="fas fa-ticket-alt"></i> View My Bookings</button>
+              </div>
+            `);
+          }, 500);
+        }
+        navigate(currentPage);
+      } else {
+        toast('Payment verification failed', 'error');
+      }
+    },
+    prefill: {
+      name: currentUser.name,
+      email: currentUser.email || '',
+    },
+    theme: { color: '#6C3CE1' },
+    modal: {
+      ondismiss: function () {
+        toast('Payment cancelled', 'error');
+        // Mark booking as cancelled
+        api('/bookings/verify-payment', { method: 'POST', body: { razorpay_order_id: orderRes.order_id, razorpay_payment_id: '', razorpay_signature: '', booking_id: orderRes.booking_id } });
+      }
+    }
+  };
+
+  const rzp = new Razorpay(options);
+  rzp.open();
+}
+
+// ─── SUGGEST PAGE ───────────────────────────────────────────────
+function renderSuggest(app) {
+  if (!currentUser) { showLogin(); return; }
+  app.innerHTML = `
+    <section class="section" style="max-width:700px">
+      <h2 class="section-title">💡 Suggest an Outing</h2>
+      <p class="section-subtitle">Have a cool outing idea? Share it and we'll make it happen!</p>
+      <div style="background:#fff;padding:2rem;border-radius:var(--radius);box-shadow:var(--shadow)">
+        <form onsubmit="submitSuggestion(event)">
+          <div class="form-group"><label>Outing Title</label><input type="text" id="sugTitle" required placeholder="e.g. Midnight Cycling in Mumbai"></div>
+          <div class="form-row">
+            <div class="form-group"><label>Location</label><input type="text" id="sugLocation" required placeholder="City or Place"></div>
+            <div class="form-group"><label>Estimated Budget</label><input type="text" id="sugBudget" placeholder="₹200-500 per person"></div>
+          </div>
+          <div class="form-group"><label>Description</label><textarea id="sugDesc" placeholder="Describe the outing, what's included, best time, etc."></textarea></div>
+          <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-paper-plane"></i> Submit Suggestion</button>
+        </form>
+      </div>
+    </section>
+  `;
+}
+
+async function submitSuggestion(e) {
+  e.preventDefault();
+  await api('/suggestions', { method: 'POST', body: { user_id: currentUser.id, title: document.getElementById('sugTitle').value, location: document.getElementById('sugLocation').value, description: document.getElementById('sugDesc').value, budget: document.getElementById('sugBudget').value } });
+  toast('✅ Suggestion submitted! Admin will review it.', 'success');
+  navigate('home');
+}
+
+// ─── USER DASHBOARD ─────────────────────────────────────────────
+async function renderUserDashboard(app) {
+  if (!currentUser) { showLogin(); return; }
+  const bookings = await api('/bookings/' + currentUser.id);
+  const verification = await api('/verify-id/' + currentUser.id);
+  const verStatus = verification.status || 'none';
+
+  app.innerHTML = `
+    <section class="section">
+      <h2 class="section-title">👋 Hi, ${currentUser.name}!</h2>
+      <p class="section-subtitle">Your bookings and upcoming adventures</p>
+      <div class="dash-stats">
+        <div class="dash-stat"><div class="icon" style="background:rgba(108,60,225,.1);color:var(--primary)"><i class="fas fa-ticket-alt"></i></div><h4>Total Bookings</h4><div class="value">${bookings.length}</div></div>
+        <div class="dash-stat"><div class="icon" style="background:rgba(16,185,129,.1);color:var(--success)"><i class="fas fa-rupee-sign"></i></div><h4>Total Spent</h4><div class="value">₹${bookings.reduce((s,b) => s + b.total_amount, 0)}</div></div>
+        <div class="dash-stat">
+          <div class="icon" style="background:${verStatus==='verified'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)'};color:${verStatus==='verified'?'var(--success)':'var(--warning)'}">
+            <i class="fas fa-${verStatus==='verified'?'check-shield':'id-card'}"></i>
+          </div>
+          <h4>ID Verification</h4>
+          <div class="value" style="font-size:1rem">
+            ${verStatus === 'verified' ? '<span class="verified-badge"><i class="fas fa-check-circle"></i> Verified</span>' :
+              verStatus === 'pending' ? '<span class="unverified-badge"><i class="fas fa-clock"></i> Under Review</span>' :
+              `<button class="btn btn-primary btn-sm" onclick="showVerifyId()"><i class="fas fa-id-card"></i> Verify Now</button>`}
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom:1rem">My Bookings</h3>
+      ${bookings.length ? `<div class="table-wrap"><table>
+        <thead><tr><th>Outing</th><th>Date</th><th>Participants</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${bookings.map(b => `<tr>
+          <td><strong>${b.title}</strong><br><small style="color:var(--text-light)">${b.location}</small></td>
+          <td>${new Date(b.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
+          <td>${b.participants}</td>
+          <td><strong>₹${b.total_amount}</strong></td>
+          <td><span class="status status-${b.payment_status}">${b.payment_status}</span></td>
+          <td>
+            ${b.payment_status === 'paid' ? `
+              <button class="btn btn-sm" style="background:#F1F5F9" onclick="navigate('outing-${b.outing_id}')"><i class="fas fa-eye"></i></button>
+              <button class="btn btn-sm" style="background:#F1F5F9" onclick="navigate('chat-${b.outing_id}')"><i class="fas fa-comments"></i></button>
+            ` : '-'}
+          </td>
+        </tr>`).join('')}</tbody>
+      </table></div>` : '<p style="color:var(--text-light)">No bookings yet. <a href="#" onclick="navigate(\'outings\')" style="color:var(--primary)">Explore outings!</a></p>'}
+    </section>
+  `;
+}
+
+function showVerifyId() {
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-shield-alt" style="color:var(--primary)"></i> ID Verification</h2>
+    <p style="color:var(--text-light);margin-bottom:1.5rem;font-size:.9rem">Verify your identity for a safer outing experience. Your data is kept secure.</p>
+    <form onsubmit="submitVerification(event)">
+      <div class="form-group"><label>Full Name (as on ID)</label><input type="text" id="vFullName" required placeholder="As per government ID"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>ID Type</label>
+          <select id="vIdType" required>
+            <option value="">Select...</option>
+            <option value="aadhaar">Aadhaar Card</option>
+            <option value="pan">PAN Card</option>
+            <option value="driving_license">Driving License</option>
+            <option value="passport">Passport</option>
+          </select>
+        </div>
+        <div class="form-group"><label>ID Number</label><input type="text" id="vIdNumber" required placeholder="Enter ID number"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Emergency Contact Name</label><input type="text" id="vEmergName" placeholder="Name"></div>
+        <div class="form-group"><label>Emergency Contact Phone</label><input type="tel" id="vEmergPhone" placeholder="Phone number"></div>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-check-circle"></i> Submit for Verification</button>
+    </form>
+  `);
+}
+
+async function submitVerification(e) {
+  e.preventDefault();
+  const data = await api('/verify-id', { method: 'POST', body: {
+    user_id: currentUser.id,
+    full_name: document.getElementById('vFullName').value,
+    id_type: document.getElementById('vIdType').value,
+    id_number: document.getElementById('vIdNumber').value,
+    emergency_name: document.getElementById('vEmergName').value,
+    emergency_contact: document.getElementById('vEmergPhone').value
+  }});
+  if (data.success) { closeModal(); toast('✅ ID submitted for verification!', 'success'); navigate('dashboard'); }
+  else toast(data.message, 'error');
+}
+
+// ─── OUTING DETAIL PAGE (Reviews + Chat access) ────────────────
+async function renderOutingDetail(app, outingId) {
+  const o = await api('/outings/' + outingId);
+  const reviewData = await api('/reviews/' + outingId);
+  const spotsLeft = o.max_participants - o.current_participants;
+  const dateStr = new Date(o.date).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
+  const hasBooked = currentUser ? (await api('/bookings/' + currentUser.id)).some(b => b.outing_id === outingId && b.payment_status === 'paid') : false;
+
+  app.innerHTML = `
+    <section class="section" style="max-width:800px">
+      <div style="margin-bottom:1rem"><a href="#" onclick="navigate('outings')" style="color:var(--primary);font-size:.9rem"><i class="fas fa-arrow-left"></i> Back to Outings</a></div>
+      <div style="border-radius:var(--radius);overflow:hidden;height:300px;background:url('${o.image_url || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800'}') center/cover;margin-bottom:1.5rem"></div>
+      <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:1rem">
+        <div>
+          <h1 style="font-size:1.8rem;margin-bottom:.5rem">${o.title}</h1>
+          <div class="card-meta" style="margin-bottom:1rem">
+            <span><i class="fas fa-map-marker-alt"></i> ${o.location}</span>
+            <span><i class="far fa-calendar"></i> ${dateStr}</span>
+            <span><i class="far fa-clock"></i> ${o.time}</span>
+            <span><i class="fas fa-users"></i> ${spotsLeft} spots left</span>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="price" style="font-size:1.5rem">₹${o.cost} <small>/person</small></div>
+          <button class="btn btn-primary" onclick="bookOuting(${o.id})" style="margin-top:.5rem"><i class="fas fa-bolt"></i> Book Now</button>
+        </div>
+      </div>
+      <div style="background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:2rem">
+        <h3 style="margin-bottom:.75rem">About this Outing</h3>
+        <p style="color:var(--text-light);line-height:1.8">${o.description || 'No description available.'}</p>
+      </div>
+      ${hasBooked ? `<div style="margin-bottom:2rem"><button class="btn btn-primary" onclick="navigate('chat-${outingId}')" style="margin-right:.5rem"><i class="fas fa-comments"></i> Group Chat</button></div>` : ''}
+      
+      <!-- REVIEWS SECTION -->
+      <div style="background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:2rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <h3>⭐ Reviews ${reviewData.count ? `(${reviewData.average}/5 — ${reviewData.count} reviews)` : ''}</h3>
+          ${hasBooked ? `<button class="btn btn-primary btn-sm" onclick="showReviewForm(${outingId})"><i class="fas fa-pen"></i> Write Review</button>` : ''}
+        </div>
+        ${reviewData.reviews.length ? reviewData.reviews.map(r => `
+          <div class="review-card">
+            <div class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+            <div class="reviewer">${r.user_name} <span style="color:var(--text-light);font-weight:400">• ${new Date(r.created_at).toLocaleDateString('en-IN')}</span></div>
+            ${r.comment ? `<div class="review-text">${r.comment}</div>` : ''}
+          </div>
+        `).join('') : `<p style="color:var(--text-light);font-size:.9rem">No reviews yet.${hasBooked ? ' Be the first to review!' : ' Book this outing to leave a review.'}</p>`}
+      </div>
+    </section>
+  `;
+}
+
+function showReviewForm(outingId) {
+  let selectedRating = 0;
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-star" style="color:#F59E0B"></i> Write a Review</h2>
+    <div class="form-group">
+      <label>Rating</label>
+      <div class="star-input" id="starInput">
+        ${[1,2,3,4,5].map(i => `<i class="fas fa-star" data-rating="${i}" onclick="selectStar(${i})" onmouseover="hoverStar(${i})" onmouseout="resetStars()"></i>`).join('')}
+      </div>
+    </div>
+    <div class="form-group"><label>Comment (optional)</label><textarea id="reviewComment" placeholder="Share your experience..."></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="submitReview(${outingId})"><i class="fas fa-paper-plane"></i> Submit Review</button>
+  `);
+  window._selectedRating = 0;
+}
+
+function selectStar(n) {
+  window._selectedRating = n;
+  document.querySelectorAll('#starInput i').forEach((s,i) => s.classList.toggle('active', i < n));
+}
+function hoverStar(n) { document.querySelectorAll('#starInput i').forEach((s,i) => s.classList.toggle('active', i < n)); }
+function resetStars() { const n = window._selectedRating; document.querySelectorAll('#starInput i').forEach((s,i) => s.classList.toggle('active', i < n)); }
+
+async function submitReview(outingId) {
+  if (!window._selectedRating) return toast('Please select a rating', 'error');
+  const data = await api('/reviews', { method: 'POST', body: { user_id: currentUser.id, outing_id: outingId, rating: window._selectedRating, comment: document.getElementById('reviewComment').value } });
+  if (data.success) { closeModal(); toast('⭐ Review submitted!', 'success'); navigate('outing-' + outingId); }
+  else toast(data.message, 'error');
+}
+
+// ─── GROUP CHAT PAGE ────────────────────────────────────────────
+let chatInterval = null;
+
+async function renderChat(app, outingId) {
+  if (!currentUser) return showLogin();
+  const o = await api('/outings/' + outingId);
+  const messages = await api('/chat/' + outingId);
+
+  app.innerHTML = `
+    <section class="section" style="max-width:700px">
+      <div style="margin-bottom:1rem"><a href="#" onclick="navigate('outing-${outingId}')" style="color:var(--primary);font-size:.9rem"><i class="fas fa-arrow-left"></i> Back to ${o.title}</a></div>
+      <div class="chat-box">
+        <div class="chat-header"><i class="fas fa-comments"></i> ${o.title} — Group Chat</div>
+        <div class="chat-messages" id="chatMessages">
+          ${messages.length ? messages.map(m => chatBubble(m)).join('') : '<p style="text-align:center;color:var(--text-light);padding:2rem">No messages yet. Say hi! 👋</p>'}
+        </div>
+        <div class="chat-input">
+          <input type="text" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat(${outingId})">
+          <button class="btn btn-primary btn-sm" onclick="sendChat(${outingId})"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+    </section>
+  `;
+
+  const chatDiv = document.getElementById('chatMessages');
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+
+  // Auto-refresh chat every 3 seconds
+  if (chatInterval) clearInterval(chatInterval);
+  chatInterval = setInterval(async () => {
+    if (!currentPage.startsWith('chat-')) { clearInterval(chatInterval); return; }
+    const newMsgs = await api('/chat/' + outingId);
+    const chatEl = document.getElementById('chatMessages');
+    if (chatEl && newMsgs.length) {
+      chatEl.innerHTML = newMsgs.map(m => chatBubble(m)).join('');
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+  }, 3000);
+}
+
+function chatBubble(m) {
+  const isMine = currentUser && m.user_id === currentUser.id;
+  const time = new Date(m.created_at).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+  return `<div class="chat-msg ${isMine ? 'mine' : 'other'}">
+    ${!isMine ? `<div class="msg-name">${m.user_name}</div>` : ''}
+    ${m.message}
+    <div class="msg-time">${time}</div>
+  </div>`;
+}
+
+async function sendChat(outingId) {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const data = await api('/chat', { method: 'POST', body: { outing_id: outingId, user_id: currentUser.id, message: msg } });
+  if (data.success) {
+    const msgs = await api('/chat/' + outingId);
+    const chatEl = document.getElementById('chatMessages');
+    chatEl.innerHTML = msgs.map(m => chatBubble(m)).join('');
+    chatEl.scrollTop = chatEl.scrollHeight;
+  } else toast(data.message, 'error');
+}
+
+// ─── AI RECOMMENDATIONS PAGE ────────────────────────────────────
+async function renderRecommendations(app) {
+  if (!currentUser) return showLogin();
+  const recs = await api('/recommendations/' + currentUser.id);
+  app.innerHTML = `
+    <section class="section">
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
+        <h2 class="section-title" style="margin-bottom:0">🤖 Recommended For You</h2>
+        <span class="ai-badge"><i class="fas fa-magic"></i> AI Powered</span>
+      </div>
+      <p class="section-subtitle">Smart picks based on your interests, past bookings, and what's trending</p>
+      ${recs.length ? `<div class="cards-grid">${recs.map(o => outingCard(o)).join('')}</div>` : `
+        <div style="text-align:center;padding:3rem;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow)">
+          <div style="font-size:3rem;margin-bottom:1rem">🎯</div>
+          <h3>We need more data!</h3>
+          <p style="color:var(--text-light);margin:1rem 0">Book a few outings and add your interests to get personalized recommendations.</p>
+          <button class="btn btn-primary" onclick="navigate('outings')">Explore Outings</button>
+        </div>
+      `}
+    </section>
+  `;
+}
+
+// ─── ID VERIFICATION (User Dashboard) ──────────────────────────
+let adminTab = 'overview';
+
+async function renderAdmin(app) {
+  if (!currentUser || currentUser.role !== 'admin') { navigate('home'); return; }
+  const stats = await api('/admin/stats');
+  app.innerHTML = `
+    <div class="dashboard">
+      <div class="sidebar">
+        <a href="#" class="${adminTab==='overview'?'active':''}" onclick="adminTab='overview';renderAdmin(document.getElementById('app'))"><i class="fas fa-chart-pie"></i> Overview</a>
+        <a href="#" class="${adminTab==='outings'?'active':''}" onclick="adminTab='outings';renderAdmin(document.getElementById('app'))"><i class="fas fa-calendar-alt"></i> Outings</a>
+        <a href="#" class="${adminTab==='bookings'?'active':''}" onclick="adminTab='bookings';renderAdmin(document.getElementById('app'))"><i class="fas fa-receipt"></i> Bookings</a>
+        <a href="#" class="${adminTab==='users'?'active':''}" onclick="adminTab='users';renderAdmin(document.getElementById('app'))"><i class="fas fa-users"></i> Users</a>
+        <a href="#" class="${adminTab==='suggestions'?'active':''}" onclick="adminTab='suggestions';renderAdmin(document.getElementById('app'))"><i class="fas fa-lightbulb"></i> Suggestions <span style="background:var(--warning);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.pendingSuggestions}</span></a>
+        <a href="#" class="${adminTab==='verifications'?'active':''}" onclick="adminTab='verifications';renderAdmin(document.getElementById('app'))"><i class="fas fa-id-card"></i> ID Verify <span style="background:var(--warning);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.pendingVerifications || 0}</span></a>
+      </div>
+      <div class="dash-content" id="adminContent"></div>
+    </div>
+  `;
+  if (adminTab === 'overview') renderAdminOverview(stats);
+  else if (adminTab === 'outings') renderAdminOutings();
+  else if (adminTab === 'bookings') renderAdminBookings();
+  else if (adminTab === 'users') renderAdminUsers();
+  else if (adminTab === 'suggestions') renderAdminSuggestions();
+  else if (adminTab === 'verifications') renderAdminVerifications();
+}
+
+function renderAdminOverview(stats) {
+  document.getElementById('adminContent').innerHTML = `
+    <h2 style="margin-bottom:1.5rem">📊 Dashboard Overview</h2>
+    <div class="dash-stats">
+      <div class="dash-stat"><div class="icon" style="background:rgba(108,60,225,.1);color:var(--primary)"><i class="fas fa-users"></i></div><h4>Total Users</h4><div class="value">${stats.users}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(249,115,22,.1);color:var(--secondary)"><i class="fas fa-calendar-alt"></i></div><h4>Active Outings</h4><div class="value">${stats.outings}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(16,185,129,.1);color:var(--success)"><i class="fas fa-receipt"></i></div><h4>Total Bookings</h4><div class="value">${stats.bookings}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(6,214,160,.1);color:var(--accent)"><i class="fas fa-rupee-sign"></i></div><h4>Revenue</h4><div class="value">₹${stats.revenue.toLocaleString()}</div></div>
+    </div>
+    <div class="dash-stats">
+      <div class="dash-stat"><div class="icon" style="background:rgba(245,158,11,.1);color:var(--warning)"><i class="fas fa-id-card"></i></div><h4>Pending Verifications</h4><div class="value">${stats.pendingVerifications || 0}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(249,115,22,.1);color:var(--secondary)"><i class="fas fa-star"></i></div><h4>Total Reviews</h4><div class="value">${stats.totalReviews || 0}</div></div>
+    </div>
+  `;
+}
+
+async function renderAdminOutings() {
+  outings = await api('/outings');
+  document.getElementById('adminContent').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+      <h2>📅 Manage Outings</h2>
+      <button class="btn btn-primary btn-sm" onclick="showCreateOuting()"><i class="fas fa-plus"></i> Create Outing</button>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Title</th><th>Location</th><th>Date</th><th>Cost</th><th>Spots</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${outings.map(o => `<tr>
+        <td><strong>${o.title}</strong></td>
+        <td>${o.location}</td>
+        <td>${new Date(o.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</td>
+        <td>₹${o.cost}</td>
+        <td>${o.current_participants}/${o.max_participants}</td>
+        <td><span class="status status-${o.status}">${o.status}</span></td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteOuting(${o.id})"><i class="fas fa-trash"></i></button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  `;
+}
+
+function showCreateOuting() {
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-plus-circle" style="color:var(--primary)"></i> Create Outing</h2>
+    <form onsubmit="createOuting(event)">
+      <div class="form-group"><label>Title</label><input type="text" id="newTitle" required></div>
+      <div class="form-row">
+        <div class="form-group"><label>Location</label><input type="text" id="newLocation" required></div>
+        <div class="form-group"><label>Date</label><input type="date" id="newDate" required></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Cost (₹/person)</label><input type="number" id="newCost" required min="0"></div>
+        <div class="form-group"><label>Max Participants</label><input type="number" id="newMax" value="20" min="1"></div>
+      </div>
+      <div class="form-group"><label>Time</label><input type="text" id="newTime" value="10:00 AM"></div>
+      <div class="form-group"><label>Image URL</label><input type="url" id="newImage" placeholder="https://..."></div>
+      <div class="form-group"><label>Description</label><textarea id="newDesc"></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-check"></i> Create</button>
+    </form>
+  `);
+}
+
+async function createOuting(e) {
+  e.preventDefault();
+  await api('/outings', { method: 'POST', body: { title: document.getElementById('newTitle').value, location: document.getElementById('newLocation').value, date: document.getElementById('newDate').value, time: document.getElementById('newTime').value, cost: parseInt(document.getElementById('newCost').value), max_participants: parseInt(document.getElementById('newMax').value), image_url: document.getElementById('newImage').value, description: document.getElementById('newDesc').value } });
+  closeModal(); toast('Outing created!', 'success'); renderAdmin(document.getElementById('app'));
+}
+
+async function deleteOuting(id) {
+  if (!confirm('Delete this outing?')) return;
+  await api('/outings/' + id, { method: 'DELETE' });
+  toast('Outing deleted', 'success'); renderAdmin(document.getElementById('app'));
+}
+
+async function renderAdminBookings() {
+  const bookings = await api('/admin/bookings');
+  document.getElementById('adminContent').innerHTML = `
+    <h2 style="margin-bottom:1.5rem">🧾 All Bookings</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>User</th><th>Outing</th><th>Participants</th><th>Amount</th><th>Payment ID</th><th>Status</th></tr></thead>
+      <tbody>${bookings.map(b => `<tr>
+        <td><strong>${b.user_name}</strong><br><small>${b.user_email}</small></td>
+        <td>${b.outing_title}</td>
+        <td>${b.participants}</td>
+        <td>₹${b.total_amount}</td>
+        <td><code style="font-size:.75rem">${b.payment_id || '-'}</code></td>
+        <td><span class="status status-${b.payment_status}">${b.payment_status}</span></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  `;
+}
+
+async function renderAdminUsers() {
+  const users = await api('/admin/users');
+  document.getElementById('adminContent').innerHTML = `
+    <h2 style="margin-bottom:1.5rem">👥 Users</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Joined</th></tr></thead>
+      <tbody>${users.map(u => `<tr>
+        <td><strong>${u.name}</strong></td>
+        <td>${u.email}</td>
+        <td>${u.phone || '-'}</td>
+        <td><span class="status status-${u.role==='admin'?'active':'pending'}">${u.role}</span></td>
+        <td>${new Date(u.created_at).toLocaleDateString('en-IN')}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  `;
+}
+
+async function renderAdminSuggestions() {
+  const suggestions = await api('/suggestions');
+  document.getElementById('adminContent').innerHTML = `
+    <h2 style="margin-bottom:1.5rem">💡 Suggestions</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Title</th><th>Location</th><th>Budget</th><th>By</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${suggestions.length ? suggestions.map(s => `<tr>
+        <td><strong>${s.title}</strong><br><small style="color:var(--text-light)">${s.description || ''}</small></td>
+        <td>${s.location}</td>
+        <td>${s.budget || '-'}</td>
+        <td>${s.user_name}</td>
+        <td><span class="status status-${s.status}">${s.status}</span></td>
+        <td>${s.status === 'pending' ? `<button class="btn btn-success btn-sm" onclick="updateSuggestion(${s.id},'approved')">✓</button> <button class="btn btn-danger btn-sm" onclick="updateSuggestion(${s.id},'rejected')">✗</button>` : '-'}</td>
+      </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-light)">No suggestions yet</td></tr>'}</tbody>
+    </table></div>
+  `;
+}
+
+async function updateSuggestion(id, status) {
+  await api('/suggestions/' + id, { method: 'PUT', body: { status } });
+  toast('Suggestion ' + status, 'success');
+  renderAdmin(document.getElementById('app'));
+}
+
+async function renderAdminVerifications() {
+  const verifications = await api('/admin/verifications');
+  document.getElementById('adminContent').innerHTML = `
+    <h2 style="margin-bottom:1.5rem">🛡️ ID Verifications</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>User</th><th>Name on ID</th><th>ID Type</th><th>ID Number</th><th>Emergency Contact</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${verifications.length ? verifications.map(v => `<tr>
+        <td><strong>${v.user_name}</strong><br><small>${v.email}</small></td>
+        <td>${v.full_name}</td>
+        <td>${v.id_type.toUpperCase()}</td>
+        <td><code>${v.id_number}</code></td>
+        <td>${v.emergency_name ? `${v.emergency_name}<br><small>${v.emergency_contact}</small>` : '-'}</td>
+        <td><span class="status status-${v.status === 'verified' ? 'approved' : v.status}">${v.status}</span></td>
+        <td>${v.status === 'pending' ? `<button class="btn btn-success btn-sm" onclick="verifyUser(${v.id},'verified')">✓ Verify</button> <button class="btn btn-danger btn-sm" onclick="verifyUser(${v.id},'rejected')">✗</button>` : '-'}</td>
+      </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--text-light)">No verification requests</td></tr>'}</tbody>
+    </table></div>
+  `;
+}
+
+async function verifyUser(id, status) {
+  await api('/admin/verifications/' + id, { method: 'PUT', body: { status } });
+  toast('User ' + status, 'success');
+  renderAdmin(document.getElementById('app'));
+}
+
+// ─── INIT ───────────────────────────────────────────────────────
+renderNav();
+navigate('home');
+</script>
+</body>
+</html>

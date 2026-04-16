@@ -1,0 +1,19 @@
+{
+  "name": "furzi-outing",
+  "version": "1.0.0",
+  "description": "Furzi Outing Platform - Discover, Join & Suggest Group Outings",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "nodemailer": "^6.9.7",
+    "razorpay": "^2.9.2"
+  }
+}
