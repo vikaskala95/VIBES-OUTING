@@ -270,7 +270,28 @@ function showLogin() {
       <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-arrow-right"></i> Login</button>
     </form>
     <p style="text-align:center;margin-top:1rem;font-size:.85rem;color:var(--text-light)">No account? <a href="#" onclick="closeModal();showSignup()" style="color:var(--primary);font-weight:600">Sign up</a></p>
+    <p style="text-align:center;margin-top:.5rem;font-size:.85rem"><a href="#" onclick="closeModal();showForgotPassword()" style="color:var(--primary);font-weight:600">Forgot password?</a></p>
   `);
+}
+
+function showForgotPassword() {
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-unlock-alt" style="color:var(--primary)"></i> Forgot Password?</h2>
+    <form onsubmit="handleForgotPassword(event)">
+      <div class="form-group"><label>Email</label><input type="email" id="forgotEmail" required placeholder="you@email.com"></div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-paper-plane"></i> Send Reset Link</button>
+    </form>
+    <p style="text-align:center;margin-top:1rem;font-size:.85rem;color:var(--text-light)"><a href="#" onclick="closeModal();showLogin()" style="color:var(--primary);font-weight:600">Back to Login</a></p>
+  `);
+}
+
+async function handleForgotPassword(e) {
+  e.preventDefault();
+  const email = document.getElementById('forgotEmail').value;
+  await api('/auth/forgot-password', { method: 'POST', body: { email } });
+  toast('If your email exists, a reset link was sent.', 'success');
+  closeModal();
 }
 
 function showSignup() {
@@ -305,6 +326,37 @@ async function handleSignup(e) {
 }
 
 function logout() { currentUser = null; localStorage.removeItem('furzi_user'); renderNav(); navigate('home'); toast('Logged out'); }
+
+function showResetPassword(token) {
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-key" style="color:var(--primary)"></i> Set New Password</h2>
+    <form onsubmit="handleResetPassword(event, '${token}')">
+      <div class="form-group"><label>New Password</label><input type="password" id="resetPass" required minlength="6" placeholder="Min 6 characters"></div>
+      <div class="form-group"><label>Confirm Password</label><input type="password" id="resetPassConfirm" required minlength="6" placeholder="Repeat password"></div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-save"></i> Reset Password</button>
+    </form>
+  `);
+}
+
+async function handleResetPassword(e, token) {
+  e.preventDefault();
+  const password = document.getElementById('resetPass').value;
+  const confirm = document.getElementById('resetPassConfirm').value;
+  if (password !== confirm) return toast('Passwords do not match', 'error');
+  const res = await fetch('/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password }) });
+  const data = await res.json();
+  if (data.success) { toast('Password updated! Please login.', 'success'); closeModal(); showLogin(); }
+  else toast(data.message || 'Reset failed', 'error');
+}
+
+// Check for reset-password token in URL on page load
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  if (window.location.pathname === '/reset-password' && params.get('token')) {
+    setTimeout(() => showResetPassword(params.get('token')), 500);
+  }
+})();
 
 // ─── PAGES ──────────────────────────────────────────────────────
 async function navigate(page) {

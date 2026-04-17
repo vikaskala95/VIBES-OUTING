@@ -161,6 +161,16 @@ db.exec(`
     verified_at DATETIME,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS password_resets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
 `);
 
 // Seed admin + sample data
@@ -476,7 +486,52 @@ app.post('/api/whatsapp-link', (req, res) => {
   res.json({ link });
 });
 
-// ─── ADMIN STATS UPDATE (add verification count) ────────────────
+// ─── FORGOT PASSWORD ─────────────────────────────────────────────────
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  const user = db.prepare('SELECT id, name FROM users WHERE email = ?').get(email);
+  if (!user) return res.json({ success: true }); // Don't reveal if email exists
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 30).toISOString(); // 30 min
+  db.prepare('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?,?,?)').run(user.id, token, expiresAt);
+  if (emailEnabled) {
+    const resetUrl = `${process.env.PASSWORD_RESET_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+    try {
+      await emailTransporter.sendMail({
+        from: `"VIBES@Outing" <${process.env.SMTP_USER}>`,
+        to: email,
+        subject: 'Reset your VIBES@Outing password',
+        html: `<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+          <div style="background:linear-gradient(135deg,#6C3CE1,#8B5CF6);color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+            <h1 style="margin:0;font-size:24px">🔑 Password Reset</h1>
+          </div>
+          <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
+            <p>Hi <strong>${user.name}</strong>,</p>
+            <p>We received a request to reset your password for VIBES@Outing.</p>
+            <p><a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#6C3CE1;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Reset Password</a></p>
+            <p style="color:#64748B;font-size:14px">This link is valid for 30 minutes. If you didn't request this, just ignore this email.</p>
+          </div>
+        </div>`
+      });
+      console.log('📧 Password reset email sent to:', email);
+    } catch (err) { console.error('Email error:', err.message); }
+  } else {
+    console.log('📧 Password reset email skipped (not configured). Token:', token);
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/auth/reset-password', (req, res) => {
+  const { token, password } = req.body;
+  const reset = db.prepare('SELECT * FROM password_resets WHERE token = ? AND used = 0').get(token);
+  if (!reset) return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+  if (new Date(reset.expires_at) < new Date()) return res.status(400).json({ success: false, message: 'Token expired' });
+  db.prepare('UPDATE users SET password = ? WHERE id = ?').run(password, reset.user_id);
+  db.prepare('UPDATE password_resets SET used = 1 WHERE id = ?').run(reset.id);
+  res.json({ success: true });
+});
+
+// ─── SPA FALLBACK & START ───────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
