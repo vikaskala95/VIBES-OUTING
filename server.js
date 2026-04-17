@@ -36,7 +36,7 @@ async function sendBookingEmail(userEmail, userName, outingTitle, outingDate, ou
   if (!emailEnabled) return console.log('📧 Email skipped (not configured). Would send to:', userEmail);
   try {
     await emailTransporter.sendMail({
-      from: `"Furzi Outing" <${process.env.SMTP_USER}>`,
+      from: `"VIBES@Outing" <${process.env.SMTP_USER}>`,
       to: userEmail,
       subject: `✅ Booking Confirmed — ${outingTitle}`,
       html: `
@@ -46,7 +46,7 @@ async function sendBookingEmail(userEmail, userName, outingTitle, outingDate, ou
           </div>
           <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
             <p>Hi <strong>${userName}</strong>,</p>
-            <p>Your outing booking is confirmed!</p>
+            <p>Your VIBES@Outing is locked in! 🔥</p>
             <div style="background:#F8FAFC;padding:16px;border-radius:8px;margin:16px 0">
               <p style="margin:4px 0"><strong>🗓 Outing:</strong> ${outingTitle}</p>
               <p style="margin:4px 0"><strong>📍 Location:</strong> ${outingLocation}</p>
@@ -54,7 +54,7 @@ async function sendBookingEmail(userEmail, userName, outingTitle, outingDate, ou
               <p style="margin:4px 0"><strong>💰 Amount:</strong> ₹${amount}</p>
               <p style="margin:4px 0"><strong>🔑 Payment ID:</strong> ${paymentId}</p>
             </div>
-            <p style="color:#64748B;font-size:14px">See you there! 🚀<br>— Team Furzi Outing</p>
+            <p style="color:#64748B;font-size:14px">See you there! 🚀<br>— Team VIBES@Outing</p>
           </div>
         </div>
       `
@@ -65,7 +65,7 @@ async function sendBookingEmail(userEmail, userName, outingTitle, outingDate, ou
 
 function getWhatsAppLink(phone, outingTitle, outingDate, outingLocation, amount) {
   const cleanPhone = (phone || '').replace(/\D/g, '');
-  const msg = encodeURIComponent(`🎉 *Furzi Outing — Booking Confirmed!*\n\n🗓 *${outingTitle}*\n📍 ${outingLocation}\n📅 ${outingDate}\n💰 ₹${amount}\n\nSee you there! 🚀`);
+  const msg = encodeURIComponent(`🎉 *VIBES@Outing — Booking Confirmed!*\n\n🗓 *${outingTitle}*\n📍 ${outingLocation}\n📅 ${outingDate}\n💰 ₹${amount}\n\nSee you there! 🚀`);
   return cleanPhone ? `https://wa.me/91${cleanPhone}?text=${msg}` : `https://wa.me/?text=${msg}`;
 }
 
@@ -171,12 +171,17 @@ if (!adminExists) {
   );
 
   const sampleOutings = [
-    { title: 'Sunrise Trek to Skandagiri', location: 'Bangalore', description: 'A beautiful sunrise trek near Bangalore. Perfect for beginners and nature lovers. Includes breakfast and transport.', date: '2026-05-10', time: '4:00 AM', cost: 299, max: 25, img: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600' },
-    { title: 'Goa Beach Weekend', location: 'Goa', description: 'Fun-filled weekend at Goa beaches. Water sports, bonfire, and great company. Accommodation included.', date: '2026-05-17', time: '8:00 AM', cost: 1499, max: 30, img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600' },
-    { title: 'Pondicherry Road Trip', location: 'Pondicherry', description: 'Explore the French Quarter, cafes, and pristine beaches. Self-drive carpool available.', date: '2026-05-24', time: '6:00 AM', cost: 799, max: 15, img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600' },
-    { title: 'Coorg Coffee Trail', location: 'Coorg', description: 'Walk through coffee plantations, visit Abbey Falls, and enjoy local cuisine.', date: '2026-06-07', time: '7:00 AM', cost: 599, max: 20, img: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600' },
-    { title: 'Mumbai Street Food Crawl', location: 'Mumbai', description: 'Explore the best street food spots across Mumbai with fellow foodies.', date: '2026-06-14', time: '5:00 PM', cost: 199, max: 40, img: 'https://images.unsplash.com/photo-1567337710282-00832b415979?w=600' },
-    { title: 'Manali Snow Adventure', location: 'Manali', description: 'Snow trekking, paragliding, and campfire nights in the mountains.', date: '2026-06-21', time: '9:00 AM', cost: 2499, max: 20, img: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600' },
+    { title: '🌄 Nandi Hills Sunrise Vibes', location: 'Nandi Hills', description: 'Pickup from Bangalore at 4 AM → chase the sunrise, aesthetic pics, and chill breakfast at a hilltop cafe. High-end Resort + Private Cab from Bangalore included. Perfect GenZ weekend escape!', date: '2026-05-10', time: '4:00 AM', cost: 2999, max: 25, img: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600' },
+    { title: '🏞️ Bheemeshwari Adventure Day', location: 'Bheemeshwari', description: 'Starts from Bangalore → Kayaking, coracle ride, zipline & bonfire by the river. One epic day trip with High-end Resort + Private Cab from Bangalore. No boring stuff, only vibes!', date: '2026-05-17', time: '6:00 AM', cost: 4999, max: 20, img: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600' },
+    { title: '⛰️ Chikmagalur Coffee & Chill (2D/1N)', location: 'Chikmagalur', description: 'Pickup from Bangalore → 2-day getaway — Mullayanagiri trek, coffee plantation tour, campfire & stargazing. High-end Resort + Private Cab from Bangalore. Peak aesthetic energy.', date: '2026-05-24', time: '6:00 AM', cost: 12999, max: 20, img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600' },
+    { title: '🏰 Mysore Royal Day Out', location: 'Mysore', description: 'Starts from Bangalore → Palace visit, Chamundi Hills, street food crawl & Brindavan Gardens light show. One iconic day with High-end Resort + Private Cab from Bangalore.', date: '2026-06-07', time: '7:00 AM', cost: 1999, max: 30, img: 'https://images.unsplash.com/photo-1567337710282-00832b415979?w=600' },
+    { title: '🌿 Ooty Mountain Escape (2D/1N)', location: 'Ooty', description: 'Pickup from Bangalore → Toy train, botanical gardens, lake boating & cozy resort stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Main character energy guaranteed.', date: '2026-06-14', time: '5:00 AM', cost: 9999, max: 20, img: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600' },
+    { title: '☕ Coorg Rainforest Retreat (2D/1N)', location: 'Coorg', description: 'Starts from Bangalore → Abbey Falls, Raja Seat sunset, coffee trail & private villa stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Touch grass, literally.', date: '2026-06-21', time: '6:00 AM', cost: 10999, max: 20, img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600' },
+    { title: '🌊 Wayanad Wild Weekend (2D/1N)', location: 'Wayanad', description: 'Pickup from Bangalore → Edakkal Caves, bamboo rafting, Banasura dam & treehouse stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Nature but make it aesthetic.', date: '2026-06-28', time: '5:00 AM', cost: 10999, max: 20, img: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600' },
+    { title: '🏜️ Gandikota Grand Canyon (2D/1N)', location: 'Gandikota', description: 'Starts from Bangalore → India\'s Grand Canyon — cliff camping, Pennar river, fort ruins & astrophotography. 2-day trip with High-end Resort + Private Cab from Bangalore. Underrated gem!', date: '2026-07-05', time: '5:00 AM', cost: 10999, max: 20, img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600' },
+    { title: '🛕 Lepakshi Heritage & Vibes', location: 'Lepakshi', description: 'Pickup from Bangalore → Hanging Pillar temple, Nandi bull statue, mural art & local food. One day cultural trip with High-end Resort + Private Cab from Bangalore. History but cool.', date: '2026-07-12', time: '7:00 AM', cost: 5999, max: 25, img: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600' },
+    { title: '🌲 Sakleshpur Green Route Trek', location: 'Sakleshpur', description: 'Starts from Bangalore → Railway track trek, waterfall dip, homestay & campfire. High-end Resort + Private Cab from Bangalore. The most Insta-worthy trek near Bangalore!', date: '2026-07-19', time: '5:00 AM', cost: 9999, max: 20, img: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600' },
+    { title: '🏖️ Goa Beach Blowout (2D/1N)', location: 'Goa', description: 'Fly from Bangalore → Beach hopping, water sports, sunset parties, night market crawl & seafood feast. 2-day trip with High-end Resort + Private Cab in Goa. The ultimate GenZ getaway. No FOMO!', date: '2026-07-26', time: '6:00 AM', cost: 11999, max: 25, img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600' },
   ];
 
   const ins = db.prepare('INSERT INTO outings (title, location, description, date, time, cost, max_participants, image_url, created_by) VALUES (?,?,?,?,?,?,?,?,1)');
@@ -478,6 +483,6 @@ app.get('*', (req, res) => {
 
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`\n🚀 Furzi Outing Platform running at http://localhost:${PORT}\n`);
+  console.log(`\n🚀 VIBES@Outing Platform running at http://localhost:${PORT}\n`);
   console.log(`   Admin Login: admin@furzi.com / admin123\n`);
 });

@@ -1,6 +1,6 @@
-# Furzi Outing Platform
+# VIBES@Outing Platform 🔥
 
-Discover, Join & Suggest Group Outings 🎉
+**GenZ-Only Group Outings — Premium Resorts + Private Cab, Zero Planning**
 
 ## Quick Start
 ```bash
@@ -26,6 +26,7 @@ SMTP_PASS=your-app-password
 ```
 
 ## Features
+- 10 curated premium outings (₹1,999 – ₹12,999) with High-end Resort + Private Cab
 - Browse & book group outings with Razorpay payments
 - AI-powered recommendations
 - Group chat for booked participants
@@ -33,3 +34,4 @@ SMTP_PASS=your-app-password
 - ID verification system
 - WhatsApp & Email notifications
 - Admin dashboard with full management
+- Built for GenZ — aesthetic UI, zero friction
