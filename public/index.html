@@ -205,16 +205,20 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC}
 <script>
 // ─── STATE ──────────────────────────────────────────────────────
 let currentUser = JSON.parse(localStorage.getItem('furzi_user') || 'null');
+let authToken = localStorage.getItem('furzi_token') || null;
 let outings = [];
 let currentPage = 'home';
 
 // ─── API ────────────────────────────────────────────────────────
 const api = async (url, opts = {}) => {
+  const headers = { 'Content-Type': 'application/json' };
+  if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
   const res = await fetch('/api' + url, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...opts,
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
+  if (res.status === 401) { logout(); toast('Session expired. Please login again.', 'error'); return { success: false }; }
   return res.json();
 };
 
@@ -289,9 +293,23 @@ function showForgotPassword() {
 async function handleForgotPassword(e) {
   e.preventDefault();
   const email = document.getElementById('forgotEmail').value;
-  await api('/auth/forgot-password', { method: 'POST', body: { email } });
-  toast('If your email exists, a reset link was sent.', 'success');
-  closeModal();
+  const data = await api('/auth/forgot-password', { method: 'POST', body: { email } });
+  if (data.dev_reset_link) {
+    // Dev mode — email not configured, show reset link directly
+    openModal(`
+      <button class="close" onclick="closeModal()">&times;</button>
+      <h2><i class="fas fa-tools" style="color:var(--warning)"></i> Dev Mode</h2>
+      <p style="color:var(--text-light);margin-bottom:1rem">Email is not configured. Use this link to reset your password:</p>
+      <div style="background:#F8FAFC;padding:1rem;border-radius:10px;word-break:break-all;margin-bottom:1rem">
+        <a href="${data.dev_reset_link}" style="color:var(--primary);font-weight:600;font-size:.85rem">${data.dev_reset_link}</a>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="window.location.href='${data.dev_reset_link}'"><i class="fas fa-key"></i> Reset Password Now</button>
+      <p style="text-align:center;margin-top:1rem;font-size:.75rem;color:var(--danger)">⚠ This link is only shown because email is not configured. Configure SMTP in .env for production.</p>
+    `);
+  } else {
+    toast('If your email exists, a reset link was sent. Check your inbox!', 'success');
+    closeModal();
+  }
 }
 
 function showSignup() {
@@ -314,18 +332,18 @@ function showSignup() {
 async function handleLogin(e) {
   e.preventDefault();
   const data = await api('/auth/login', { method: 'POST', body: { email: document.getElementById('loginEmail').value, password: document.getElementById('loginPass').value } });
-  if (data.success) { currentUser = data.user; localStorage.setItem('furzi_user', JSON.stringify(data.user)); closeModal(); renderNav(); navigate(data.user.role === 'admin' ? 'admin' : 'home'); toast('Welcome back, ' + data.user.name + '!', 'success'); }
+  if (data.success) { currentUser = data.user; authToken = data.token; localStorage.setItem('furzi_user', JSON.stringify(data.user)); localStorage.setItem('furzi_token', data.token); closeModal(); renderNav(); navigate(data.user.role === 'admin' ? 'admin' : 'home'); toast('Welcome back, ' + data.user.name + '!', 'success'); }
   else toast(data.message, 'error');
 }
 
 async function handleSignup(e) {
   e.preventDefault();
   const data = await api('/auth/signup', { method: 'POST', body: { name: document.getElementById('signName').value, email: document.getElementById('signEmail').value, phone: document.getElementById('signPhone').value, password: document.getElementById('signPass').value, interests: document.getElementById('signInterests').value } });
-  if (data.success) { currentUser = data.user; localStorage.setItem('furzi_user', JSON.stringify(data.user)); closeModal(); renderNav(); navigate('home'); toast('Account created! Welcome!', 'success'); }
+  if (data.success) { currentUser = data.user; authToken = data.token; localStorage.setItem('furzi_user', JSON.stringify(data.user)); localStorage.setItem('furzi_token', data.token); closeModal(); renderNav(); navigate('home'); toast('Account created! Welcome!', 'success'); }
   else toast(data.message, 'error');
 }
 
-function logout() { currentUser = null; localStorage.removeItem('furzi_user'); renderNav(); navigate('home'); toast('Logged out'); }
+function logout() { currentUser = null; authToken = null; localStorage.removeItem('furzi_user'); localStorage.removeItem('furzi_token'); renderNav(); navigate('home'); toast('Logged out'); }
 
 function showResetPassword(token) {
   openModal(`
@@ -434,7 +452,10 @@ function outingCard(o) {
         <p>${o.description || ''}</p>
         ${o.matchReasons ? `<div class="rec-reasons">${o.matchReasons.map(r => `<span class="rec-reason">${r}</span>`).join('')}</div>` : ''}
         <div class="card-footer" style="margin-top:.75rem">
-          <div class="price">₹${o.cost} <small>/person</small></div>
+          <div class="price">
+            <span style="text-decoration:line-through;color:var(--text-light);font-size:.85rem;font-weight:400">₹${o.cost}</span>
+            <br>₹${Math.ceil(o.cost * 0.20)} <small>/person token</small>
+          </div>
           <div style="display:flex;gap:.5rem">
             <button class="btn btn-sm" style="background:#F1F5F9;color:var(--text)" onclick="navigate('outing-${o.id}')"><i class="fas fa-info-circle"></i></button>
             <button class="btn btn-primary btn-sm" onclick="bookOuting(${o.id})"><i class="fas fa-bolt"></i> Book</button>
@@ -499,33 +520,52 @@ async function bookOuting(id) {
     <form onsubmit="confirmBooking(event, ${o.id}, ${o.cost})">
       <div class="form-group"><label>Number of Participants</label><input type="number" id="bookParticipants" min="1" max="${spotsLeft}" value="1" required onchange="updateTotal(${o.cost})"></div>
       <div class="form-group"><label>Participant Names (comma separated)</label><input type="text" id="bookNames" placeholder="${currentUser.name}" value="${currentUser.name}"></div>
-      <div style="background:rgba(108,60,225,.06);padding:1rem;border-radius:10px;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-weight:600">Total Amount</span>
-        <span style="font-size:1.5rem;font-weight:800;color:var(--primary)" id="bookTotal">₹${o.cost}</span>
+      <div style="background:rgba(108,60,225,.06);padding:1rem;border-radius:10px;margin-bottom:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+          <span style="font-weight:600">Total Trip Cost</span>
+          <span style="font-size:1.2rem;font-weight:700;color:var(--text-light);text-decoration:line-through" id="bookTotal">₹${o.cost}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+          <span style="font-weight:700;color:var(--primary)">🔒 Pay Now (20% Token)</span>
+          <span style="font-size:1.5rem;font-weight:800;color:var(--primary)" id="bookToken">₹${Math.ceil(o.cost * 0.20)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:.85rem;color:var(--text-light)">⏰ Remaining (80%) due 24hrs before trip</span>
+          <span style="font-size:1rem;font-weight:600;color:var(--secondary)" id="bookRemaining">₹${o.cost - Math.ceil(o.cost * 0.20)}</span>
+        </div>
       </div>
-      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-lock"></i> Pay & Confirm</button>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-lock"></i> Pay ₹<span id="bookTokenBtn">${Math.ceil(o.cost * 0.20)}</span> Token & Confirm</button>
     </form>
   `);
 }
 
-function updateTotal(cost) { document.getElementById('bookTotal').textContent = '₹' + (cost * (document.getElementById('bookParticipants').value || 1)); }
+function updateTotal(cost) {
+  const p = parseInt(document.getElementById('bookParticipants').value) || 1;
+  const total = cost * p;
+  const token = Math.ceil(total * 0.20);
+  const remaining = total - token;
+  document.getElementById('bookTotal').textContent = '₹' + total;
+  document.getElementById('bookToken').textContent = '₹' + token;
+  document.getElementById('bookRemaining').textContent = '₹' + remaining;
+  document.getElementById('bookTokenBtn').textContent = token;
+}
 
 async function confirmBooking(e, outingId, cost) {
   e.preventDefault();
   const participants = parseInt(document.getElementById('bookParticipants').value);
   const participantNames = document.getElementById('bookNames').value;
   const totalAmount = cost * participants;
+  const tokenAmount = Math.ceil(totalAmount * 0.20);
 
-  // Step 1: Create Razorpay order on server
+  // Step 1: Create Razorpay order on server (20% token)
   const orderRes = await api('/bookings/create-order', { method: 'POST', body: {
     user_id: currentUser.id, outing_id: outingId, participants, participant_names: participantNames
   }});
 
   if (!orderRes.success) {
-    // Fallback to direct booking if Razorpay keys not configured
     if (orderRes.message && orderRes.message.includes('API keys')) {
       const fallback = await api('/bookings', { method: 'POST', body: { user_id: currentUser.id, outing_id: outingId, participants, participant_names: participantNames, total_amount: totalAmount } });
-      if (fallback.success) { closeModal(); toast('🎉 Booking confirmed (demo mode)! ID: ' + fallback.payment_id, 'success'); navigate(currentPage); }
+      if (fallback.success) { closeModal(); toast('🎉 Token booking confirmed (demo)! Paid ₹' + fallback.token_amount + ' | Remaining ₹' + fallback.remaining_amount, 'success'); navigate(currentPage); }
       else toast(fallback.message, 'error');
       return;
     }
@@ -535,17 +575,16 @@ async function confirmBooking(e, outingId, cost) {
 
   closeModal();
 
-  // Step 2: Open Razorpay Checkout popup
+  // Step 2: Open Razorpay Checkout popup (20% token only)
   const options = {
     key: orderRes.key_id,
-    amount: totalAmount * 100,
+    amount: tokenAmount * 100,
     currency: 'INR',
     name: 'VIBES@Outing',
-    description: 'GenZ Outing Booking — ' + participants + ' participant(s)',
+    description: '20% Token — ' + participants + ' participant(s) | Remaining due 24hrs before trip',
     image: 'https://img.icons8.com/3d-fluency/94/compass.png',
     order_id: orderRes.order_id,
     handler: async function (response) {
-      // Step 3: Verify payment on server
       const verifyRes = await api('/bookings/verify-payment', { method: 'POST', body: {
         razorpay_order_id: response.razorpay_order_id,
         razorpay_payment_id: response.razorpay_payment_id,
@@ -553,23 +592,24 @@ async function confirmBooking(e, outingId, cost) {
         booking_id: orderRes.booking_id
       }});
       if (verifyRes.success) {
-        toast('🎉 Payment successful! ID: ' + verifyRes.payment_id, 'success');
-        // Show WhatsApp share option
-        if (verifyRes.whatsapp_link) {
-          setTimeout(() => {
-            openModal(`
-              <button class="close" onclick="closeModal()">&times;</button>
-              <div style="text-align:center;padding:1rem">
-                <div style="font-size:3rem;margin-bottom:1rem">🎉</div>
-                <h2 style="color:var(--success)">Booking Confirmed!</h2>
-                <p style="color:var(--text-light);margin:1rem 0">Payment ID: <code>${verifyRes.payment_id}</code></p>
-                <p style="color:var(--text-light);margin-bottom:1.5rem">A confirmation email has been sent to your email.</p>
-                <a href="${verifyRes.whatsapp_link}" target="_blank" class="btn btn-success btn-block" style="background:#25D366;margin-bottom:.75rem"><i class="fab fa-whatsapp"></i> Share on WhatsApp</a>
-                <button class="btn btn-primary btn-block" onclick="closeModal();navigate('dashboard')"><i class="fas fa-ticket-alt"></i> View My Bookings</button>
+        toast('🎉 Token payment of ₹' + orderRes.amount + ' successful!', 'success');
+        setTimeout(() => {
+          openModal(`
+            <button class="close" onclick="closeModal()">&times;</button>
+            <div style="text-align:center;padding:1rem">
+              <div style="font-size:3rem;margin-bottom:1rem">🎉</div>
+              <h2 style="color:var(--success)">Token Booking Confirmed!</h2>
+              <p style="color:var(--text-light);margin:1rem 0">Payment ID: <code>${verifyRes.payment_id}</code></p>
+              <div style="background:#F8FAFC;padding:1rem;border-radius:10px;margin:1rem 0;text-align:left">
+                <p style="margin:.25rem 0"><strong>🔒 Token Paid:</strong> <span style="color:var(--success);font-weight:700">₹${orderRes.amount}</span></p>
+                <p style="margin:.25rem 0"><strong>⏰ Remaining:</strong> <span style="color:var(--secondary);font-weight:700">₹${orderRes.remaining_amount}</span></p>
+                <p style="margin:.25rem 0;font-size:.85rem;color:var(--text-light)">💡 Complete remaining payment 24 hours before the trip date</p>
               </div>
-            `);
-          }, 500);
-        }
+              ${verifyRes.whatsapp_link ? `<a href="${verifyRes.whatsapp_link}" target="_blank" class="btn btn-success btn-block" style="background:#25D366;margin-bottom:.75rem"><i class="fab fa-whatsapp"></i> Share on WhatsApp</a>` : ''}
+              <button class="btn btn-primary btn-block" onclick="closeModal();navigate('dashboard')"><i class="fas fa-ticket-alt"></i> View My Bookings</button>
+            </div>
+          `);
+        }, 500);
         navigate(currentPage);
       } else {
         toast('Payment verification failed', 'error');
@@ -651,23 +691,70 @@ async function renderUserDashboard(app) {
 
       <h3 style="margin-bottom:1rem">My Bookings</h3>
       ${bookings.length ? `<div class="table-wrap"><table>
-        <thead><tr><th>Outing</th><th>Date</th><th>Participants</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>${bookings.map(b => `<tr>
+        <thead><tr><th>Outing</th><th>Date</th><th>Participants</th><th>Token Paid</th><th>Remaining</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${bookings.map(b => {
+          const remainingStatus = (b.remaining_payment_status === 'paid') ? '<span class="status status-paid">Paid ✅</span>' :
+            b.deadline_passed ? '<span class="status status-rejected">Deadline passed</span>' :
+            `<span class="status status-pending">₹${b.remaining_amount || 0} due</span><br><small style="color:var(--secondary)">${b.hours_until_deadline}hrs left</small>`;
+          const payBtn = (b.payment_status === 'paid' && (b.remaining_payment_status || 'pending') !== 'paid' && !b.deadline_passed) ?
+            `<button class="btn btn-sm btn-secondary" onclick="payRemaining(${b.id})"><i class="fas fa-rupee-sign"></i> Pay ₹${b.remaining_amount || 0}</button>` : '';
+          return `<tr>
           <td><strong>${b.title}</strong><br><small style="color:var(--text-light)">${b.location}</small></td>
           <td>${new Date(b.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
           <td>${b.participants}</td>
-          <td><strong>₹${b.total_amount}</strong></td>
+          <td><strong style="color:var(--success)">₹${b.token_amount || b.total_amount}</strong></td>
+          <td>${remainingStatus}</td>
           <td><span class="status status-${b.payment_status}">${b.payment_status}</span></td>
           <td>
             ${b.payment_status === 'paid' ? `
               <button class="btn btn-sm" style="background:#F1F5F9" onclick="navigate('outing-${b.outing_id}')"><i class="fas fa-eye"></i></button>
               <button class="btn btn-sm" style="background:#F1F5F9" onclick="navigate('chat-${b.outing_id}')"><i class="fas fa-comments"></i></button>
+              ${payBtn}
             ` : '-'}
           </td>
-        </tr>`).join('')}</tbody>
+        </tr>`}).join('')}</tbody>
       </table></div>` : '<p style="color:var(--text-light)">No bookings yet. <a href="#" onclick="navigate(\'outings\')" style="color:var(--primary)">Explore outings!</a></p>'}
     </section>
   `;
+}
+
+// ─── PAY REMAINING (80%) ────────────────────────────────────────
+async function payRemaining(bookingId) {
+  const orderRes = await api('/bookings/pay-remaining', { method: 'POST', body: { booking_id: bookingId } });
+  if (!orderRes.success) {
+    // Fallback demo mode
+    if (orderRes.message && orderRes.message.includes('Payment gateway')) {
+      toast('Demo mode: Remaining payment marked as paid!', 'success');
+      navigate('dashboard');
+      return;
+    }
+    toast(orderRes.message || 'Error', 'error');
+    return;
+  }
+  const options = {
+    key: orderRes.key_id,
+    amount: orderRes.amount * 100,
+    currency: 'INR',
+    name: 'VIBES@Outing',
+    description: 'Remaining 80% Payment',
+    image: 'https://img.icons8.com/3d-fluency/94/compass.png',
+    order_id: orderRes.order_id,
+    handler: async function (response) {
+      const verifyRes = await api('/bookings/verify-remaining', { method: 'POST', body: {
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature,
+        booking_id: bookingId
+      }});
+      if (verifyRes.success) { toast('🎉 Full payment complete! You\'re all set!', 'success'); navigate('dashboard'); }
+      else toast('Payment verification failed', 'error');
+    },
+    prefill: { name: currentUser.name, email: currentUser.email || '' },
+    theme: { color: '#F97316' },
+    modal: { ondismiss: function() { toast('Payment cancelled', 'error'); } }
+  };
+  const rzp = new Razorpay(options);
+  rzp.open();
 }
 
 function showVerifyId() {
@@ -736,7 +823,9 @@ async function renderOutingDetail(app, outingId) {
           </div>
         </div>
         <div style="text-align:right">
-          <div class="price" style="font-size:1.5rem">₹${o.cost} <small>/person</small></div>
+          <div style="color:var(--text-light);text-decoration:line-through;font-size:.95rem">₹${o.cost}/person</div>
+          <div class="price" style="font-size:1.5rem">₹${Math.ceil(o.cost * 0.20)} <small>token (20%)</small></div>
+          <div style="font-size:.8rem;color:var(--secondary);margin-top:.25rem">Remaining ₹${o.cost - Math.ceil(o.cost * 0.20)} due 24hrs before trip</div>
           <button class="btn btn-primary" onclick="bookOuting(${o.id})" style="margin-top:.5rem"><i class="fas fa-bolt"></i> Book Now</button>
         </div>
       </div>
@@ -1004,16 +1093,37 @@ async function renderAdminUsers() {
   document.getElementById('adminContent').innerHTML = `
     <h2 style="margin-bottom:1.5rem">👥 Users</h2>
     <div class="table-wrap"><table>
-      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Joined</th></tr></thead>
+      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Joined</th><th>Actions</th></tr></thead>
       <tbody>${users.map(u => `<tr>
         <td><strong>${u.name}</strong></td>
         <td>${u.email}</td>
         <td>${u.phone || '-'}</td>
         <td><span class="status status-${u.role==='admin'?'active':'pending'}">${u.role}</span></td>
         <td>${new Date(u.created_at).toLocaleDateString('en-IN')}</td>
+        <td><button class="btn btn-sm btn-secondary" onclick="adminResetPassword(${u.id}, '${u.name}', '${u.email}')"><i class="fas fa-key"></i> Reset</button></td>
       </tr>`).join('')}</tbody>
     </table></div>
   `;
+}
+
+function adminResetPassword(userId, name, email) {
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-key" style="color:var(--warning)"></i> Reset Password</h2>
+    <p style="color:var(--text-light);margin-bottom:1rem">Reset password for <strong>${name}</strong> (${email})</p>
+    <form onsubmit="submitAdminReset(event, ${userId})">
+      <div class="form-group"><label>New Password</label><input type="password" id="adminNewPass" required minlength="6" placeholder="Min 6 characters"></div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-save"></i> Reset Password</button>
+    </form>
+  `);
+}
+
+async function submitAdminReset(e, userId) {
+  e.preventDefault();
+  const newPassword = document.getElementById('adminNewPass').value;
+  const data = await api('/admin/reset-password', { method: 'POST', body: { user_id: userId, new_password: newPassword } });
+  if (data.success) { closeModal(); toast('✅ ' + data.message, 'success'); }
+  else toast(data.message || 'Failed', 'error');
 }
 
 async function renderAdminSuggestions() {

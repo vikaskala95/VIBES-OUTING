@@ -39,7 +39,8 @@ Founded: 2026 | India-first | GenZ-focused | Mobile-ready Platform
 
 **Core Value:**
 - **Premium trips** — High-end Resort + Private Cab included in every outing
-- **Token-based booking** (₹1,999-₹12,999) via Razorpay
+- **Token-based booking** — Pay just 20% upfront (₹400-₹2,600), complete remaining 80% within 24 hours of trip date
+- **Flexible payments** via Razorpay (UPI, Cards, NetBanking)
 - **Solo-friendly** — join as individual, get matched with a GenZ crew
 - **Group-friendly** — book for your squad in one click
 - **Safe** — ID verification, emergency contacts, organizer ratings
@@ -238,7 +239,7 @@ Founded: 2026 | India-first | GenZ-focused | Mobile-ready Platform
 
 ### 📞 Let's Build This Together
 
-- **Platform:** [vibesatouting.com](https://furzi-outing.onrender.com)
+- **Platform:** [vibesatouting.com](https://vibes-outing.onrender.com)
 - **GitHub:** [github.com/vikaskala95/furzi-outing](https://github.com/vikaskala95/furzi-outing)
 - **Email:** hello@vibesatouting.com
 
