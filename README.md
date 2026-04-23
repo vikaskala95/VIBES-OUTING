@@ -11,7 +11,7 @@ node server.js
 Open http://localhost:3000
 
 ## Admin Login
-- Email: `admin@furzi.com`
+- Email: `admin@vibes-outing.com`
 - Password: `admin123`
 
 ## Environment Variables

@@ -118,7 +118,7 @@ function getWhatsAppLink(phone, outingTitle, outingDate, outingLocation, amount)
 }
 
 // ─── DATABASE SETUP ─────────────────────────────────────────────
-const db = new Database('furzi.db');
+const db = new Database('vibes.db');
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
@@ -275,11 +275,11 @@ try { db.exec(`ALTER TABLE bookings ADD COLUMN remaining_amount INTEGER DEFAULT 
 try { db.exec(`ALTER TABLE bookings ADD COLUMN remaining_payment_status TEXT DEFAULT 'pending'`); } catch(e) {}
 try { db.exec(`ALTER TABLE bookings ADD COLUMN remaining_payment_id TEXT`); } catch(e) {}
 
-const adminExists = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@furzi.com');
+const adminExists = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@vibes-outing.com');
 if (!adminExists) {
   const hashedAdminPass = bcrypt.hashSync('admin123', BCRYPT_ROUNDS);
   db.prepare('INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)').run(
-    'Admin', 'admin@furzi.com', '9999999999', hashedAdminPass, 'admin'
+    'Admin', 'admin@vibes-outing.com', '9999999999', hashedAdminPass, 'admin'
   );
 
   const sampleOutings = [
@@ -755,8 +755,8 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n🚀 VIBES@Outing Platform running at http://localhost:${PORT}\n`);
-  console.log(`   Admin Login: admin@furzi.com / admin123\n`);
+  console.log(`   Admin Login: admin@vibes-outing.com / admin123\n`);
 });

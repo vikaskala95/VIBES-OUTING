@@ -1,7 +1,7 @@
 {
-  "name": "furzi-outing",
+  "name": "vibes-outing",
   "version": "1.0.0",
-  "description": "Furzi Outing Platform - Discover, Join & Suggest Group Outings",
+  "description": "Vibes Outing Platform - Discover, Join & Suggest Group Outings",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

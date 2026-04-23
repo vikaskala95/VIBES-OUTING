@@ -240,7 +240,7 @@ Founded: 2026 | India-first | GenZ-focused | Mobile-ready Platform
 ### 📞 Let's Build This Together
 
 - **Platform:** [vibesatouting.com](https://vibes-outing.onrender.com)
-- **GitHub:** [github.com/vikaskala95/furzi-outing](https://github.com/vikaskala95/furzi-outing)
+- **GitHub:** [github.com/vikaskala95/vibes-outing](https://github.com/vikaskala95/vibes-outing)
 - **Email:** hello@vibesatouting.com
 
 > *"Touch grass. Make memories. No cap."* ✨

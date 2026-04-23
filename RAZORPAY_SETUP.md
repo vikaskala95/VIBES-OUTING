@@ -1,4 +1,4 @@
-# Razorpay Integration Guide for Furzi Outing
+# Razorpay Integration Guide for Vibes Outing
 
 ## Step 1: Get Your API Keys
 1. Go to Razorpay Dashboard → **Account & Settings** → **API Keys**

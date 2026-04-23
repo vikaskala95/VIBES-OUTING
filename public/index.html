@@ -204,8 +204,8 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC}
 
 <script>
 // ─── STATE ──────────────────────────────────────────────────────
-let currentUser = JSON.parse(localStorage.getItem('furzi_user') || 'null');
-let authToken = localStorage.getItem('furzi_token') || null;
+let currentUser = JSON.parse(localStorage.getItem('vibes_user') || 'null');
+let authToken = localStorage.getItem('vibes_token') || null;
 let outings = [];
 let currentPage = 'home';
 
@@ -338,18 +338,18 @@ function showSignup() {
 async function handleLogin(e) {
   e.preventDefault();
   const data = await api('/auth/login', { method: 'POST', body: { email: document.getElementById('loginEmail').value, password: document.getElementById('loginPass').value } });
-  if (data.success) { currentUser = data.user; authToken = data.token; localStorage.setItem('furzi_user', JSON.stringify(data.user)); localStorage.setItem('furzi_token', data.token); closeModal(); renderNav(); navigate(data.user.role === 'admin' ? 'admin' : 'home'); toast('Welcome back, ' + data.user.name + '!', 'success'); }
+  if (data.success) { currentUser = data.user; authToken = data.token; localStorage.setItem('vibes_user', JSON.stringify(data.user)); localStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate(data.user.role === 'admin' ? 'admin' : 'home'); toast('Welcome back, ' + data.user.name + '!', 'success'); }
   else toast(data.message, 'error');
 }
 
 async function handleSignup(e) {
   e.preventDefault();
   const data = await api('/auth/signup', { method: 'POST', body: { name: document.getElementById('signName').value, email: document.getElementById('signEmail').value, phone: document.getElementById('signPhone').value, password: document.getElementById('signPass').value, interests: document.getElementById('signInterests').value } });
-  if (data.success) { currentUser = data.user; authToken = data.token; localStorage.setItem('furzi_user', JSON.stringify(data.user)); localStorage.setItem('furzi_token', data.token); closeModal(); renderNav(); navigate('home'); toast('Account created! Welcome!', 'success'); }
+  if (data.success) { currentUser = data.user; authToken = data.token; localStorage.setItem('vibes_user', JSON.stringify(data.user)); localStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate('home'); toast('Account created! Welcome!', 'success'); }
   else toast(data.message, 'error');
 }
 
-function logout() { currentUser = null; authToken = null; localStorage.removeItem('furzi_user'); localStorage.removeItem('furzi_token'); renderNav(); navigate('home'); toast('Logged out'); }
+function logout() { currentUser = null; authToken = null; localStorage.removeItem('vibes_user'); localStorage.removeItem('vibes_token'); renderNav(); navigate('home'); toast('Logged out'); }
 
 function showResetPassword(token) {
   openModal(`
