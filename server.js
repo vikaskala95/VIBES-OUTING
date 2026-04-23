@@ -14,6 +14,9 @@ const { body, param, validationResult } = require('express-validator');
 
 const app = express();
 
+// Trust proxy (needed for rate limiting behind reverse proxies like Render, Railway, etc.)
+app.set('trust proxy', 1);
+
 // ─── SECURITY: JWT Secret ────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
 const JWT_EXPIRES = '7d';
@@ -38,7 +41,7 @@ app.use(cors({
 // ─── SECURITY: Rate Limiting ────────────────────────────────────
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // Max 20 login/signup/forgot-password attempts per 15 min
+  max: 100, // Max 100 login/signup/forgot-password attempts per 15 min per IP
   message: { success: false, message: 'Too many attempts. Please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -553,8 +556,6 @@ app.get('/api/admin/bookings', authMiddleware, adminMiddleware, (req, res) => {
   `).all();
   res.json(bookings);
 });
-
-// ─── SPA FALLBACK ───────────────────────────────────────────────
 
 // ─── REVIEW ROUTES ──────────────────────────────────────────────
 app.post('/api/reviews', authMiddleware, [
