@@ -211,15 +211,21 @@ let currentPage = 'home';
 
 // ─── API ────────────────────────────────────────────────────────
 const api = async (url, opts = {}) => {
-  const headers = { 'Content-Type': 'application/json' };
-  if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
-  const res = await fetch('/api' + url, {
-    headers,
-    ...opts,
-    body: opts.body ? JSON.stringify(opts.body) : undefined
-  });
-  if (res.status === 401) { logout(); toast('Session expired. Please login again.', 'error'); return { success: false }; }
-  return res.json();
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+    const res = await fetch('/api' + url, {
+      method: opts.method || 'GET',
+      headers,
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    });
+    if (res.status === 401) { logout(); toast('Session expired. Please login again.', 'error'); return { success: false }; }
+    return await res.json();
+  } catch (err) {
+    console.error('API Error:', err);
+    toast('Network error. Please check your connection and try again.', 'error');
+    return { success: false, message: 'Network error' };
+  }
 };
 
 // ─── TOAST ──────────────────────────────────────────────────────
