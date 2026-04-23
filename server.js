@@ -118,7 +118,8 @@ function getWhatsAppLink(phone, outingTitle, outingDate, outingLocation, amount)
 }
 
 // ─── DATABASE SETUP ─────────────────────────────────────────────
-const db = new Database('vibes.db');
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'vibes.db');
+const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
