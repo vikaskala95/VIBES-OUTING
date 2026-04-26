@@ -9,8 +9,23 @@
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
 @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeInDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes floatSlow{0%,100%{transform:translateY(0) translateX(0)}25%{transform:translateY(-8px) translateX(4px)}50%{transform:translateY(-14px) translateX(0)}75%{transform:translateY(-6px) translateX(-4px)}}
 @keyframes pulse{0%,100%{opacity:.4}50%{opacity:.8}}
+@keyframes driftClouds{0%{transform:translateX(-100%)}100%{transform:translateX(100vw)}}
+@keyframes driftMist{0%{opacity:.3;transform:translateX(-50%) scaleX(1)}50%{opacity:.6;transform:translateX(0%) scaleX(1.2)}100%{opacity:.3;transform:translateX(50%) scaleX(1)}}
+@keyframes sparkle{0%,100%{opacity:0;transform:scale(0)}50%{opacity:1;transform:scale(1)}}
+@keyframes rippleEffect{0%{transform:scale(0);opacity:.6}100%{transform:scale(4);opacity:0}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 20px rgba(139,92,246,.3)}50%{box-shadow:0 0 40px rgba(139,92,246,.6),0 0 80px rgba(139,92,246,.2)}}
+@keyframes kenBurns1{0%{transform:scale(1) translate(0,0)}100%{transform:scale(1.15) translate(-2%,-1%)}}
+@keyframes kenBurns2{0%{transform:scale(1.05) translate(1%,0)}100%{transform:scale(1.18) translate(-1%,-2%)}}
+@keyframes kenBurns3{0%{transform:scale(1) translate(-1%,1%)}100%{transform:scale(1.14) translate(2%,-1%)}}
+@keyframes kenBurns4{0%{transform:scale(1.02) translate(0,1%)}100%{transform:scale(1.16) translate(-2%,0)}}
+@keyframes kenBurns5{0%{transform:scale(1) translate(1%,-1%)}100%{transform:scale(1.13) translate(0,2%)}}
+@keyframes slideBlurIn{0%{filter:blur(12px);opacity:0}100%{filter:blur(0);opacity:1}}
+@keyframes dotPulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,.5)}70%{box-shadow:0 0 0 8px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+@keyframes tagFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 :root {
   --primary: #6C3CE1;
   --primary-light: #8B5CF6;
@@ -48,13 +63,86 @@ input,textarea,select{font-family:inherit}
 .nav-links .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 4px 12px rgba(108,60,225,.2)}
 .nav-links .user-badge{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:.45rem 1rem;border-radius:999px;font-size:.8rem;font-weight:600;box-shadow:0 2px 8px rgba(108,60,225,.2)}
 
-/* HERO — Premium Gradient + Animations */
-.hero{background:linear-gradient(135deg,#4C1D95 0%,#6C3CE1 30%,#8B5CF6 60%,#A78BFA 100%);color:#fff;padding:7rem 2rem 5rem;text-align:center;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;top:-40%;right:-15%;width:700px;height:700px;background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);border-radius:50%;animation:float 6s ease-in-out infinite}
-.hero::after{content:'';position:absolute;bottom:-25%;left:-8%;width:500px;height:500px;background:radial-gradient(circle,rgba(255,255,255,.06) 0%,transparent 70%);border-radius:50%;animation:float 8s ease-in-out infinite reverse}
-.hero h1{font-size:3.2rem;font-weight:800;margin-bottom:1rem;position:relative;z-index:1;animation:fadeInUp .8s ease;letter-spacing:-.5px;line-height:1.2}
-.hero p{font-size:1.15rem;opacity:.9;max-width:640px;margin:0 auto 2.5rem;position:relative;z-index:1;animation:fadeInUp .8s ease .15s both;line-height:1.8}
-.hero-buttons{display:flex;gap:1rem;justify-content:center;position:relative;z-index:1;flex-wrap:wrap;animation:fadeInUp .8s ease .3s both}
+/* HERO — Premium Airbnb/Expedia Style Slider */
+.hero{position:relative;color:#fff;padding:0;text-align:center;overflow:hidden;height:92vh;min-height:600px;max-height:1000px;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:0 auto;border-radius:0 0 28px 28px}
+
+/* Slider container */
+.hero-slider{position:absolute;inset:0;z-index:0}
+.hero-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.8s cubic-bezier(.4,0,.2,1);will-change:opacity,transform,filter;background-size:cover;background-position:center;filter:blur(0);transform-origin:center center}
+.hero-slide.active{opacity:1;z-index:1}
+.hero-slide.prev{opacity:0;filter:blur(8px);z-index:0}
+.hero-slide.kb-1{animation:kenBurns1 12s ease-in-out forwards}
+.hero-slide.kb-2{animation:kenBurns2 12s ease-in-out forwards}
+.hero-slide.kb-3{animation:kenBurns3 12s ease-in-out forwards}
+.hero-slide.kb-4{animation:kenBurns4 12s ease-in-out forwards}
+.hero-slide.kb-5{animation:kenBurns5 12s ease-in-out forwards}
+
+/* Overlays on top of slider */
+.hero-overlay{position:absolute;inset:0;z-index:2;pointer-events:none}
+.hero-overlay-gradient{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,23,42,.25) 0%,rgba(76,29,149,.35) 40%,rgba(108,60,225,.45) 70%,rgba(15,23,42,.7) 100%)}
+.hero-overlay-brand{position:absolute;inset:0;background:linear-gradient(135deg,rgba(76,29,149,.2) 0%,transparent 50%,rgba(139,92,246,.15) 100%)}
+.hero-overlay-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,.35) 100%)}
+
+/* Ambient motion layers */
+.hero-ambient{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+.hero-clouds{position:absolute;top:0;width:200%;height:140px;opacity:.2}
+.cloud{position:absolute;background:radial-gradient(ellipse,rgba(255,255,255,.6) 0%,transparent 70%);border-radius:50%;filter:blur(25px)}
+.cloud-1{width:500px;height:90px;top:20px;left:5%;animation:driftClouds 50s linear infinite}
+.cloud-2{width:350px;height:70px;top:60px;left:35%;animation:driftClouds 65s linear infinite;animation-delay:-25s}
+.cloud-3{width:420px;height:80px;top:5px;left:65%;animation:driftClouds 55s linear infinite;animation-delay:-15s}
+.hero-mist{position:absolute;bottom:0;left:0;width:100%;height:25%;overflow:hidden}
+.mist-layer{position:absolute;bottom:0;width:200%;height:100%;background:linear-gradient(to top,rgba(255,255,255,.1),transparent);filter:blur(35px);animation:driftMist 18s ease-in-out infinite}
+.mist-layer:nth-child(2){animation-delay:-7s;opacity:.4;height:50%}
+
+/* Particles */
+.hero-particles{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+.particle{position:absolute;width:4px;height:4px;background:rgba(255,255,255,.7);border-radius:50%;animation:sparkle 3s ease-in-out infinite;filter:blur(0.5px)}
+.particle.gold{background:rgba(255,200,100,.8)}
+
+/* Hero content — centered */
+.hero-content{position:relative;z-index:10;padding:2rem;max-width:860px;will-change:transform;transition:transform .15s ease-out}
+.hero h1{font-size:3.8rem;font-weight:800;margin-bottom:.75rem;animation:fadeInUp .9s cubic-bezier(.16,1,.3,1);letter-spacing:-1px;line-height:1.1;text-shadow:0 4px 30px rgba(0,0,0,.4),0 1px 3px rgba(0,0,0,.3)}
+.hero .hero-tagline{font-size:1.2rem;opacity:.88;max-width:580px;margin:0 auto 2.5rem;animation:fadeInUp .9s cubic-bezier(.16,1,.3,1) .15s both;line-height:1.7;text-shadow:0 2px 12px rgba(0,0,0,.3);font-weight:400}
+
+/* Glassmorphism search bar */
+.hero-search{display:flex;align-items:center;max-width:560px;margin:0 auto 1.5rem;background:rgba(255,255,255,.12);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1.5px solid rgba(255,255,255,.2);border-radius:999px;padding:.35rem .4rem .35rem 1.5rem;animation:fadeInUp .9s cubic-bezier(.16,1,.3,1) .3s both;box-shadow:0 8px 32px rgba(0,0,0,.2),inset 0 1px 1px rgba(255,255,255,.1);transition:all .3s ease}
+.hero-search:hover,.hero-search:focus-within{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.18);box-shadow:0 12px 40px rgba(0,0,0,.25),0 0 40px rgba(139,92,246,.15),inset 0 1px 1px rgba(255,255,255,.15)}
+.hero-search input{flex:1;background:none;border:none;color:#fff;font-size:1rem;font-weight:500;outline:none;padding:.6rem 0;letter-spacing:.2px}
+.hero-search input::placeholder{color:rgba(255,255,255,.55);font-weight:400}
+.hero-search-btn{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;border:none;border-radius:999px;padding:.7rem 1.5rem;font-weight:700;font-size:.9rem;cursor:pointer;display:flex;align-items:center;gap:.4rem;transition:all .3s ease;box-shadow:0 4px 16px rgba(108,60,225,.35)}
+.hero-search-btn:hover{transform:scale(1.05);box-shadow:0 6px 24px rgba(108,60,225,.5)}
+
+/* Popular destination tags */
+.hero-tags{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;animation:fadeInUp .9s cubic-bezier(.16,1,.3,1) .45s both;margin-bottom:1rem}
+.hero-tag{background:rgba(255,255,255,.1);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.18);color:#fff;padding:.4rem 1rem;border-radius:999px;font-size:.82rem;font-weight:500;cursor:pointer;transition:all .3s ease;display:flex;align-items:center;gap:.35rem;text-shadow:0 1px 4px rgba(0,0,0,.2)}
+.hero-tag:hover{background:rgba(255,255,255,.22);transform:translateY(-2px) scale(1.04);border-color:rgba(255,255,255,.35);box-shadow:0 4px 16px rgba(139,92,246,.25)}
+.hero-tag i{font-size:.7rem;opacity:.7}
+
+/* Glass CTA Buttons */
+.hero-buttons{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;animation:fadeInUp .9s cubic-bezier(.16,1,.3,1) .55s both;margin-top:.5rem}
+.btn-glass{padding:.8rem 1.8rem;border-radius:999px;font-weight:700;font-size:.95rem;border:1.5px solid rgba(255,255,255,.22);background:rgba(255,255,255,.1);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#fff;cursor:pointer;transition:all .3s ease-in-out;display:inline-flex;align-items:center;gap:.55rem;position:relative;overflow:hidden;box-shadow:inset 0 1px 1px rgba(255,255,255,.12),0 4px 20px rgba(0,0,0,.12);text-shadow:0 1px 4px rgba(0,0,0,.15)}
+.btn-glass:hover{background:rgba(255,255,255,.2);transform:translateY(-3px) scale(1.04);box-shadow:inset 0 1px 1px rgba(255,255,255,.18),0 8px 32px rgba(139,92,246,.35),0 0 40px rgba(139,92,246,.15);border-color:rgba(255,255,255,.35)}
+.btn-glass:active .ripple-circle{animation:rippleEffect .6s ease-out}
+.btn-glass-primary{background:rgba(255,255,255,.92);color:var(--primary);border:none;box-shadow:0 4px 20px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.5);text-shadow:none;font-weight:800}
+.btn-glass-primary:hover{background:#fff;transform:translateY(-3px) scale(1.04);box-shadow:0 8px 32px rgba(108,60,225,.3),0 0 60px rgba(139,92,246,.12)}
+.ripple-circle{position:absolute;width:20px;height:20px;background:rgba(255,255,255,.4);border-radius:50%;pointer-events:none;transform:scale(0);opacity:0}
+
+/* Slider navigation dots */
+.hero-dots{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);z-index:12;display:flex;gap:.6rem;align-items:center}
+.hero-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.35);border:none;cursor:pointer;transition:all .4s ease;padding:0}
+.hero-dot.active{background:#fff;width:28px;border-radius:999px;box-shadow:0 0 12px rgba(255,255,255,.5)}
+.hero-dot:hover{background:rgba(255,255,255,.65);transform:scale(1.2)}
+
+/* Pause / play toggle */
+.hero-playpause{position:absolute;bottom:2rem;right:2rem;z-index:12;background:rgba(255,255,255,.12);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2);color:#fff;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;transition:all .3s ease}
+.hero-playpause:hover{background:rgba(255,255,255,.25);transform:scale(1.1)}
+
+/* Slide caption */
+.hero-caption{position:absolute;bottom:5rem;left:2.5rem;z-index:11;text-align:left;animation:fadeInUp .6s ease;pointer-events:none}
+.hero-caption span{background:rgba(0,0,0,.35);backdrop-filter:blur(8px);padding:.3rem .85rem;border-radius:999px;font-size:.78rem;font-weight:500;letter-spacing:.3px;display:inline-flex;align-items:center;gap:.4rem}
+
+/* Parallax mouse tracking */
+.hero[data-parallax]{perspective:1000px}
 .btn{padding:.75rem 1.75rem;border-radius:999px;font-weight:600;font-size:.95rem;border:none;transition:all .3s ease;display:inline-flex;align-items:center;gap:.5rem}
 .btn-white{background:#fff;color:var(--primary);box-shadow:0 4px 16px rgba(0,0,0,.1)}
 .btn-white:hover{transform:translateY(-3px) scale(1.03);box-shadow:var(--shadow-xl)}
@@ -178,19 +266,58 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 .rec-reason{background:rgba(108,60,225,.08);color:var(--primary);padding:.15rem .5rem;border-radius:6px;font-size:.7rem;font-weight:500}
 .ai-badge{background:linear-gradient(135deg,#6C3CE1,#F97316);color:#fff;padding:.25rem .7rem;border-radius:999px;font-size:.7rem;font-weight:700;box-shadow:0 2px 8px rgba(108,60,225,.2)}
 
+/* CATEGORY CARDS — Horizontal Scroll Section */
+.categories-section{padding:3.5rem 2rem;max-width:1280px;margin:0 auto}
+.categories-section .section-title{font-size:1.6rem}
+.categories-row{display:flex;gap:1.25rem;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.5rem 0 1rem}
+.categories-row::-webkit-scrollbar{display:none}
+.cat-card{flex:0 0 calc((100% - 5 * 1.25rem) / 6);min-width:180px;height:240px;border-radius:20px;position:relative;overflow:hidden;cursor:pointer;scroll-snap-align:start;box-shadow:0 4px 20px rgba(0,0,0,.1);border:1.5px solid rgba(255,255,255,.08);transition:all .35s cubic-bezier(.25,.46,.45,.94)}
+.cat-card:hover{transform:translateY(-6px) scale(1.03);box-shadow:0 12px 40px rgba(108,60,225,.2),0 0 0 2px rgba(139,92,246,.25)}
+.cat-card-bg{position:absolute;inset:0;background-size:cover;background-position:center;transition:transform .6s cubic-bezier(.25,.46,.45,.94),filter .4s ease;will-change:transform}
+.cat-card:hover .cat-card-bg{transform:scale(1.1);filter:brightness(1.1) contrast(1.05)}
+.cat-card-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05) 0%,rgba(0,0,0,.15) 40%,rgba(0,0,0,.6) 100%);transition:all .35s ease;z-index:1}
+.cat-card:hover .cat-card-overlay{background:linear-gradient(180deg,rgba(108,60,225,.05) 0%,rgba(108,60,225,.1) 40%,rgba(15,23,42,.7) 100%)}
+.cat-card-glass{position:absolute;inset:0;border:1px solid rgba(255,255,255,.1);border-radius:20px;z-index:2;pointer-events:none;transition:border-color .3s ease}
+.cat-card:hover .cat-card-glass{border-color:rgba(139,92,246,.35)}
+.cat-card-content{position:absolute;bottom:0;left:0;right:0;padding:1.25rem;z-index:3;display:flex;flex-direction:column;gap:.25rem}
+.cat-card-name{font-size:.85rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.4)}
+.cat-card-count{font-size:.72rem;font-weight:500;color:rgba(255,255,255,.7);letter-spacing:.3px}
+.cat-card-icon{position:absolute;top:1rem;right:1rem;width:36px;height:36px;background:rgba(255,255,255,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#fff;z-index:3;border:1px solid rgba(255,255,255,.15);transition:all .3s ease;opacity:.7}
+.cat-card:hover .cat-card-icon{opacity:1;background:rgba(139,92,246,.3);transform:scale(1.1);border-color:rgba(139,92,246,.4)}
+
 /* FOOTER */
 .footer{background:linear-gradient(135deg,#1E293B,#0F172A);color:#fff;padding:3.5rem 2rem;text-align:center}
 .footer p{opacity:.6;font-size:.85rem;line-height:1.8}
 
 /* RESPONSIVE */
 @media(max-width:768px){
-  .hero h1{font-size:2rem}
+  .hero{height:85vh;min-height:550px;border-radius:0 0 20px 20px}
+  .hero h1{font-size:2rem;letter-spacing:-.5px}
+  .hero .hero-tagline{font-size:1rem;margin-bottom:1.5rem}
+  .hero-search{max-width:90%;padding:.3rem .3rem .3rem 1rem}
+  .hero-search input{font-size:.9rem}
+  .hero-search-btn{padding:.6rem 1rem;font-size:.8rem}
+  .hero-tags{gap:.4rem}
+  .hero-tag{font-size:.75rem;padding:.3rem .75rem}
+  .hero-content{padding:1.5rem}
+  .btn-glass{padding:.65rem 1.3rem;font-size:.85rem}
+  .hero-caption{display:none}
+  .hero-playpause{bottom:1.5rem;right:1.5rem;width:32px;height:32px;font-size:.7rem}
+  .hero-dots{bottom:1.5rem}
   .cards-grid{grid-template-columns:1fr}
   .dashboard{grid-template-columns:1fr}
   .sidebar{display:none}
   .form-row{grid-template-columns:1fr}
   .stats-bar{gap:1.5rem}
   .nav-links .hide-mobile{display:none}
+  .cat-card{flex:0 0 160px;min-width:160px;height:210px}
+  .categories-row{gap:1rem;padding-left:.5rem;padding-right:.5rem}
+}
+@media(max-width:480px){
+  .hero h1{font-size:1.65rem}
+  .hero-buttons{flex-direction:column;align-items:center}
+  .hero-search{flex-direction:column;border-radius:20px;padding:.8rem}
+  .hero-search-btn{width:100%;justify-content:center;margin-top:.3rem}
 }
 </style>
 </head>
@@ -398,6 +525,7 @@ async function handleResetPassword(e, token) {
 async function navigate(page) {
   currentPage = page;
   const app = document.getElementById('app');
+  cleanupHeroSlider();
 
   if (page === 'home') await renderHome(app);
   else if (page === 'outings') await renderOutings(app);
@@ -415,13 +543,68 @@ async function renderHome(app) {
   outings = await api('/outings');
   const featured = outings.slice(0, 3);
   app.innerHTML = `
-    <section class="hero">
-      <h1>Your Squad's Next Adventure Starts Here 🔥</h1>
-      <p>GenZ-only group outings — premium resorts, private cabs, zero planning stress. Go solo or bring your crew. No cap, just vibes! ✨</p>
-      <div class="hero-buttons">
-        <button class="btn btn-white" onclick="navigate('outings')"><i class="fas fa-compass"></i> Explore Outings</button>
-        <button class="btn btn-outline-white" onclick="${currentUser ? "navigate('suggest')" : 'showLogin()'}"><i class="fas fa-lightbulb"></i> Suggest an Outing</button>
+    <section class="hero" id="heroSection" data-parallax>
+      <!-- Background slider -->
+      <div class="hero-slider" id="heroSlider">
+        <div class="hero-slide active kb-1" data-caption="🏄 Ocean vibes — friends diving into the blue" style="background-image:url('https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1920&q=80')" loading="lazy"></div>
+        <div class="hero-slide kb-2" data-caption="🏔️ Misty mountains — peace above the clouds" style="background-image:url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80')" loading="lazy"></div>
+        <div class="hero-slide kb-3" data-caption="🌅 Golden hour beach — Goa sunsets hit different" style="background-image:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80')" loading="lazy"></div>
+        <div class="hero-slide kb-4" data-caption="🥾 Trek squad — conquering trails together" style="background-image:url('https://images.unsplash.com/photo-1551632811-561732d1e306?w=1920&q=80')" loading="lazy"></div>
+        <div class="hero-slide kb-5" data-caption="🔥 Night vibes — bonfires & unforgettable moments" style="background-image:url('https://images.unsplash.com/photo-1475483768296-6163e08872a1?w=1920&q=80')" loading="lazy"></div>
       </div>
+
+      <!-- Overlays -->
+      <div class="hero-overlay">
+        <div class="hero-overlay-gradient"></div>
+        <div class="hero-overlay-brand"></div>
+        <div class="hero-overlay-vignette"></div>
+      </div>
+
+      <!-- Ambient motion layers -->
+      <div class="hero-ambient">
+        <div class="hero-clouds"><div class="cloud cloud-1"></div><div class="cloud cloud-2"></div><div class="cloud cloud-3"></div></div>
+        <div class="hero-mist"><div class="mist-layer"></div><div class="mist-layer"></div></div>
+      </div>
+
+      <!-- Sparkle particles -->
+      <div class="hero-particles" id="heroParticles"></div>
+
+      <!-- Content -->
+      <div class="hero-content" id="heroContent">
+        <h1>Book traveller-backed<br>things to do</h1>
+        <p class="hero-tagline">Premium group outings for your squad — resorts, cabs, experiences. Zero planning, all vibes ✨</p>
+        <div class="hero-search" id="heroSearch">
+          <i class="fas fa-search" style="color:rgba(255,255,255,.5);font-size:.9rem"></i>
+          <input type="text" placeholder="Search by destination, experience..." id="heroSearchInput" onkeydown="if(event.key==='Enter'){searchFromHero()}">
+          <button class="hero-search-btn" onclick="searchFromHero()"><i class="fas fa-search"></i> Explore</button>
+        </div>
+        <div class="hero-tags">
+          <span class="hero-tag" onclick="searchDestination('Goa')"><i class="fas fa-umbrella-beach"></i> Goa</span>
+          <span class="hero-tag" onclick="searchDestination('Bali')"><i class="fas fa-water"></i> Bali</span>
+          <span class="hero-tag" onclick="searchDestination('Manali')"><i class="fas fa-mountain"></i> Manali</span>
+          <span class="hero-tag" onclick="searchDestination('Dubai')"><i class="fas fa-city"></i> Dubai</span>
+          <span class="hero-tag" onclick="searchDestination('Ooty')"><i class="fas fa-leaf"></i> Ooty</span>
+        </div>
+        <div class="hero-buttons">
+          <button class="btn-glass btn-glass-primary" onclick="navigate('outings')"><i class="fas fa-compass"></i> Explore Outings</button>
+          <button class="btn-glass" onclick="${currentUser ? "navigate('suggest')" : 'showLogin()'}"><i class="fas fa-lightbulb"></i> Suggest an Outing</button>
+        </div>
+      </div>
+
+      <!-- Slide caption -->
+      <div class="hero-caption" id="heroCaption"><span>🏄 Ocean vibes — friends diving into the blue</span></div>
+
+      <!-- Slider dots -->
+      <div class="hero-dots" id="heroDots">
+        <button class="hero-dot active" onclick="goToSlide(0)"></button>
+        <button class="hero-dot" onclick="goToSlide(1)"></button>
+        <button class="hero-dot" onclick="goToSlide(2)"></button>
+        <button class="hero-dot" onclick="goToSlide(3)"></button>
+        <button class="hero-dot" onclick="goToSlide(4)"></button>
+      </div>
+
+      <!-- Pause/play -->
+      <button class="hero-playpause" id="heroPlayPause" onclick="toggleSlider()" title="Pause slideshow"><i class="fas fa-pause"></i></button>
     </section>
     <div class="stats-bar">
       <div class="stat-item"><div class="num">${outings.length}+</div><div class="label">Epic Outings</div></div>
@@ -429,6 +612,57 @@ async function renderHome(app) {
       <div class="stat-item"><div class="num">10+</div><div class="label">Destinations</div></div>
       <div class="stat-item"><div class="num">4.8★</div><div class="label">Avg Vibe Check</div></div>
     </div>
+
+    <!-- CATEGORY SECTION -->
+    <section class="categories-section">
+      <h2 class="section-title">✨ Explore by Vibe</h2>
+      <p class="section-subtitle">Pick a mood, find your escape</p>
+      <div class="categories-row">
+        <div class="cat-card" onclick="searchDestination('Beach')">
+          <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80')"></div>
+          <div class="cat-card-overlay"></div>
+          <div class="cat-card-glass"></div>
+          <div class="cat-card-icon"><i class="fas fa-umbrella-beach"></i></div>
+          <div class="cat-card-content"><span class="cat-card-name">Beaches</span><span class="cat-card-count">12 experiences</span></div>
+        </div>
+        <div class="cat-card" onclick="searchDestination('Mountain')">
+          <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80')"></div>
+          <div class="cat-card-overlay"></div>
+          <div class="cat-card-glass"></div>
+          <div class="cat-card-icon"><i class="fas fa-mountain"></i></div>
+          <div class="cat-card-content"><span class="cat-card-name">Mountains</span><span class="cat-card-count">9 experiences</span></div>
+        </div>
+        <div class="cat-card" onclick="searchDestination('Festival')">
+          <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600&q=80')"></div>
+          <div class="cat-card-overlay"></div>
+          <div class="cat-card-glass"></div>
+          <div class="cat-card-icon"><i class="fas fa-music"></i></div>
+          <div class="cat-card-content"><span class="cat-card-name">Festivals</span><span class="cat-card-count">7 experiences</span></div>
+        </div>
+        <div class="cat-card" onclick="searchDestination('Road Trip')">
+          <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=80')"></div>
+          <div class="cat-card-overlay"></div>
+          <div class="cat-card-glass"></div>
+          <div class="cat-card-icon"><i class="fas fa-car"></i></div>
+          <div class="cat-card-content"><span class="cat-card-name">Road Trips</span><span class="cat-card-count">8 experiences</span></div>
+        </div>
+        <div class="cat-card" onclick="searchDestination('Trek')">
+          <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&q=80')"></div>
+          <div class="cat-card-overlay"></div>
+          <div class="cat-card-glass"></div>
+          <div class="cat-card-icon"><i class="fas fa-hiking"></i></div>
+          <div class="cat-card-content"><span class="cat-card-name">Adventure</span><span class="cat-card-count">11 experiences</span></div>
+        </div>
+        <div class="cat-card" onclick="searchDestination('Night')">
+          <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1475483768296-6163e08872a1?w=600&q=80')"></div>
+          <div class="cat-card-overlay"></div>
+          <div class="cat-card-glass"></div>
+          <div class="cat-card-icon"><i class="fas fa-moon"></i></div>
+          <div class="cat-card-content"><span class="cat-card-name">Nightlife</span><span class="cat-card-count">6 experiences</span></div>
+        </div>
+      </div>
+    </section>
+
     <section class="section">
       <h2 class="section-title">🔥 Trending Outings</h2>
       <p class="section-subtitle">Most hyped experiences this month — High-end Resort + Private Cab included</p>
@@ -448,6 +682,7 @@ async function renderHome(app) {
     </section>
     <footer class="footer"><p>© 2026 VIBES@Outing. Made with ❤️ by GenZ, for GenZ. No boring trips, only vibes. ✨</p><p style="margin-top:.5rem;opacity:.4;font-size:.75rem">Less planning, more feeling — enjoy the moment.</p></footer>
   `;
+  initHeroEffects();
 }
 
 // ─── OUTING CARD ────────────────────────────────────────────────
@@ -1191,6 +1426,174 @@ async function verifyUser(id, status) {
   await api('/admin/verifications/' + id, { method: 'PUT', body: { status } });
   toast('User ' + status, 'success');
   renderAdmin(document.getElementById('app'));
+}
+
+// ─── HERO SLIDER + IMMERSIVE EFFECTS ────────────────────────────
+
+let heroSliderInterval = null;
+let heroSliderPaused = false;
+let heroCurrentSlide = 0;
+const HERO_SLIDE_COUNT = 5;
+const HERO_SLIDE_DURATION = 5000; // 5 seconds
+
+function startHeroSlider() {
+  if (heroSliderInterval) clearInterval(heroSliderInterval);
+  heroSliderInterval = setInterval(() => {
+    if (!heroSliderPaused) nextSlide();
+  }, HERO_SLIDE_DURATION);
+}
+
+function nextSlide() {
+  goToSlide((heroCurrentSlide + 1) % HERO_SLIDE_COUNT);
+}
+
+function goToSlide(index) {
+  const slides = document.querySelectorAll('.hero-slide');
+  const dots = document.querySelectorAll('.hero-dot');
+  const caption = document.getElementById('heroCaption');
+  if (!slides.length) return;
+
+  // Remove active from current
+  slides[heroCurrentSlide]?.classList.remove('active');
+  slides[heroCurrentSlide]?.classList.add('prev');
+  dots[heroCurrentSlide]?.classList.remove('active');
+
+  // Clean prev class after transition
+  const prevIdx = heroCurrentSlide;
+  setTimeout(() => slides[prevIdx]?.classList.remove('prev'), 1800);
+
+  heroCurrentSlide = index;
+
+  // Reset Ken Burns by re-triggering animation
+  const slide = slides[heroCurrentSlide];
+  if (slide) {
+    // Remove all kb classes and re-add to restart animation
+    const kbClass = 'kb-' + (heroCurrentSlide + 1);
+    slide.classList.remove(kbClass);
+    void slide.offsetWidth; // force reflow
+    slide.classList.add(kbClass);
+    slide.classList.add('active');
+  }
+  dots[heroCurrentSlide]?.classList.add('active');
+
+  // Update caption
+  if (caption && slide) {
+    const text = slide.getAttribute('data-caption') || '';
+    caption.innerHTML = `<span>${text}</span>`;
+  }
+
+  // Reset timer
+  startHeroSlider();
+}
+
+function toggleSlider() {
+  heroSliderPaused = !heroSliderPaused;
+  const btn = document.getElementById('heroPlayPause');
+  if (btn) {
+    btn.innerHTML = heroSliderPaused ? '<i class="fas fa-play"></i>' : '<i class="fas fa-pause"></i>';
+    btn.title = heroSliderPaused ? 'Resume slideshow' : 'Pause slideshow';
+  }
+}
+
+// Search from hero
+function searchFromHero() {
+  const q = document.getElementById('heroSearchInput')?.value?.trim();
+  navigate('outings');
+  if (q) {
+    setTimeout(() => {
+      const sf = document.getElementById('searchFilter');
+      if (sf) { sf.value = q; filterOutings(); }
+    }, 300);
+  }
+}
+
+function searchDestination(dest) {
+  navigate('outings');
+  setTimeout(() => {
+    const sf = document.getElementById('searchFilter');
+    if (sf) { sf.value = dest; filterOutings(); }
+  }, 300);
+}
+
+// Generate sparkle particles
+function generateParticles() {
+  const container = document.getElementById('heroParticles');
+  if (!container) return;
+  container.innerHTML = '';
+  const count = window.innerWidth < 768 ? 18 : 40;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle' + (Math.random() > .7 ? ' gold' : '');
+    p.style.left = Math.random() * 100 + '%';
+    p.style.top = Math.random() * 100 + '%';
+    p.style.width = p.style.height = (Math.random() * 4 + 2) + 'px';
+    p.style.animationDelay = (Math.random() * 5) + 's';
+    p.style.animationDuration = (Math.random() * 3 + 2) + 's';
+    container.appendChild(p);
+  }
+}
+
+// Cursor-based parallax shift
+function initParallax() {
+  const hero = document.getElementById('heroSection');
+  if (!hero || window.innerWidth < 768) return;
+  hero.addEventListener('mousemove', (e) => {
+    const rect = hero.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    const content = document.getElementById('heroContent');
+    const ambient = hero.querySelector('.hero-ambient');
+    if (content) content.style.transform = `translate(${x * 12}px, ${y * 10}px)`;
+    if (ambient) ambient.style.transform = `translate(${x * -8}px, ${y * -6}px)`;
+  });
+  hero.addEventListener('mouseleave', () => {
+    const content = document.getElementById('heroContent');
+    const ambient = hero.querySelector('.hero-ambient');
+    [content, ambient].forEach(el => {
+      if (el) { el.style.transition = 'transform .6s ease-out'; el.style.transform = 'translate(0,0)'; setTimeout(() => { el.style.transition = 'transform .15s ease-out'; }, 600); }
+    });
+  });
+}
+
+// Ripple effect on glass buttons
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-glass, .hero-search-btn');
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple-circle';
+  ripple.style.left = (e.clientX - rect.left) + 'px';
+  ripple.style.top = (e.clientY - rect.top) + 'px';
+  ripple.style.animation = 'rippleEffect .6s ease-out forwards';
+  btn.style.position = btn.style.position || 'relative';
+  btn.style.overflow = 'hidden';
+  btn.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove());
+});
+
+// Preload slider images for smooth transitions
+function preloadSliderImages() {
+  const slides = document.querySelectorAll('.hero-slide');
+  slides.forEach(slide => {
+    const bg = slide.style.backgroundImage;
+    const url = bg.replace(/url\(['"]?/, '').replace(/['"]?\)/, '');
+    if (url) { const img = new Image(); img.src = url; }
+  });
+}
+
+// Init hero effects after page renders
+function initHeroEffects() {
+  setTimeout(() => {
+    generateParticles();
+    initParallax();
+    startHeroSlider();
+    preloadSliderImages();
+  }, 100);
+}
+
+// Cleanup slider on navigation away
+function cleanupHeroSlider() {
+  if (heroSliderInterval) { clearInterval(heroSliderInterval); heroSliderInterval = null; }
 }
 
 // ─── INIT ───────────────────────────────────────────────────────
