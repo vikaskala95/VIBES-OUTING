@@ -215,8 +215,9 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 
 <script>
 // ─── STATE ──────────────────────────────────────────────────────
-let currentUser = JSON.parse(localStorage.getItem('vibes_user') || 'null');
-let authToken = localStorage.getItem('vibes_token') || null;
+// SECURITY: Store user info in sessionStorage (not localStorage) — token is in httpOnly cookie
+let currentUser = JSON.parse(sessionStorage.getItem('vibes_user') || 'null');
+let authToken = sessionStorage.getItem('vibes_token') || null;
 let outings = [];
 let currentPage = 'home';
 
@@ -349,18 +350,18 @@ function showSignup() {
 async function handleLogin(e) {
   e.preventDefault();
   const data = await api('/auth/login', { method: 'POST', body: { email: document.getElementById('loginEmail').value, password: document.getElementById('loginPass').value } });
-  if (data.success) { currentUser = data.user; authToken = data.token; localStorage.setItem('vibes_user', JSON.stringify(data.user)); localStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate(data.user.role === 'admin' ? 'admin' : 'home'); toast('Welcome back, ' + data.user.name + '!', 'success'); }
+  if (data.success) { currentUser = data.user; authToken = data.token; sessionStorage.setItem('vibes_user', JSON.stringify(data.user)); sessionStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate(data.user.role === 'admin' ? 'admin' : 'home'); toast('Welcome back, ' + data.user.name + '!', 'success'); }
   else toast(data.message, 'error');
 }
 
 async function handleSignup(e) {
   e.preventDefault();
   const data = await api('/auth/signup', { method: 'POST', body: { name: document.getElementById('signName').value, email: document.getElementById('signEmail').value, phone: document.getElementById('signPhone').value, password: document.getElementById('signPass').value, interests: document.getElementById('signInterests').value } });
-  if (data.success) { currentUser = data.user; authToken = data.token; localStorage.setItem('vibes_user', JSON.stringify(data.user)); localStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate('home'); toast('Account created! Welcome!', 'success'); }
+  if (data.success) { currentUser = data.user; authToken = data.token; sessionStorage.setItem('vibes_user', JSON.stringify(data.user)); sessionStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate('home'); toast('Account created! Welcome!', 'success'); }
   else toast(data.message, 'error');
 }
 
-function logout() { currentUser = null; authToken = null; localStorage.removeItem('vibes_user'); localStorage.removeItem('vibes_token'); renderNav(); navigate('home'); toast('Logged out'); }
+function logout() { currentUser = null; authToken = null; sessionStorage.removeItem('vibes_user'); sessionStorage.removeItem('vibes_token'); fetch('/api/auth/logout', { method: 'POST' }); renderNav(); navigate('home'); toast('Logged out'); }
 
 function showResetPassword(token) {
   openModal(`

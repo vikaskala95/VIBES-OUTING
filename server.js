@@ -11,54 +11,133 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { body, param, validationResult } = require('express-validator');
+const hpp = require('hpp');
+const cookieParser = require('cookie-parser');
 
 const app = express();
+const IS_PROD = process.env.NODE_ENV === 'production';
 
-// Trust proxy (needed for rate limiting behind reverse proxies like Render, Railway, etc.)
+// ─── SECURITY: Trust proxy (for reverse proxies) ────────────────
 app.set('trust proxy', 1);
 
-// ─── SECURITY: JWT Secret ────────────────────────────────────────
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
+// ─── SECURITY: Disable x-powered-by ────────────────────────────
+app.disable('x-powered-by');
+
+// ─── SECURITY: JWT Secret — MUST be set in .env for production ──
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'CHANGE_ME_TO_A_RANDOM_64_CHAR_STRING') {
+  if (IS_PROD) {
+    console.error('❌ FATAL: JWT_SECRET must be set in .env for production!');
+    process.exit(1);
+  }
+  console.warn('⚠ WARNING: Using random JWT_SECRET. Set JWT_SECRET in .env for persistence.');
+}
+const JWT_SECRET_FINAL = JWT_SECRET || crypto.randomBytes(64).toString('hex');
 const JWT_EXPIRES = '7d';
 const BCRYPT_ROUNDS = 12;
 
-// ─── SECURITY: Helmet — HTTP security headers ───────────────────
+// ─── SECURITY: Helmet — Comprehensive HTTP security headers ────
 app.use(helmet({
-  contentSecurityPolicy: false, // Allow inline styles/scripts for SPA
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+      imgSrc: ["'self'", "data:", "https://images.unsplash.com", "https://img.icons8.com", "https://*.razorpay.com"],
+      connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com"],
+      frameSrc: ["'self'", "https://api.razorpay.com", "https://checkout.razorpay.com"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  },
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  xContentTypeOptions: true, // nosniff
+  xFrameOptions: { action: 'deny' },
 }));
 
-// ─── SECURITY: CORS — restrict origins ──────────────────────────
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',');
+// ─── SECURITY: Additional security headers ──────────────────────
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(self)');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  next();
+});
+
+// ─── SECURITY: CORS — strict origin rules ──────────────────────
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(o => o.trim());
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) callback(null, true);
     else callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400,
 }));
 
-// ─── SECURITY: Rate Limiting ────────────────────────────────────
+// ─── SECURITY: HPP — HTTP Parameter Pollution protection ────────
+app.use(hpp());
+
+// ─── SECURITY: Cookie Parser (secure cookies) ───────────────────
+app.use(cookieParser(process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex')));
+
+// ─── SECURITY: Rate Limiting — Brute-force & DDoS mitigation ───
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Max 100 login/signup/forgot-password attempts per 15 min per IP
+  windowMs: 15 * 60 * 1000,
+  max: 10, // Strict: only 10 login attempts per 15 min per IP
   message: { success: false, message: 'Too many attempts. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 signups per hour per IP
+  message: { success: false, message: 'Too many accounts created. Try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200, // General API rate limit
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { success: false, message: 'Too many password reset requests. Try later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 app.use('/api/', apiLimiter);
-app.use('/api/auth/', authLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/signup', signupLimiter);
+app.use('/api/auth/forgot-password', passwordResetLimiter);
 
-app.use(express.json({ limit: '2mb' })); // Reduced from 10mb
-app.use(express.static(path.join(__dirname, 'public')));
+// ─── SECURITY: Body size limit ──────────────────────────────────
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+
+// ─── SECURITY: Serve static files with security headers ─────────
+app.use(express.static(path.join(__dirname, 'public'), {
+  dotfiles: 'deny',
+  etag: true,
+  maxAge: IS_PROD ? '1d' : 0,
+}));
 
 // ─── RAZORPAY SETUP ─────────────────────────────────────────────
 const razorpay = new Razorpay({
@@ -93,14 +172,14 @@ async function sendBookingEmail(userEmail, userName, outingTitle, outingDate, ou
             <h1 style="margin:0;font-size:24px">🎉 Booking Confirmed!</h1>
           </div>
           <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
-            <p>Hi <strong>${userName}</strong>,</p>
+            <p>Hi <strong>${sanitize(userName)}</strong>,</p>
             <p>Your VIBES@Outing is locked in! 🔥</p>
             <div style="background:#F8FAFC;padding:16px;border-radius:8px;margin:16px 0">
-              <p style="margin:4px 0"><strong>🗓 Outing:</strong> ${outingTitle}</p>
-              <p style="margin:4px 0"><strong>📍 Location:</strong> ${outingLocation}</p>
-              <p style="margin:4px 0"><strong>📅 Date:</strong> ${outingDate}</p>
-              <p style="margin:4px 0"><strong>💰 Amount:</strong> ₹${amount}</p>
-              <p style="margin:4px 0"><strong>🔑 Payment ID:</strong> ${paymentId}</p>
+              <p style="margin:4px 0"><strong>🗓 Outing:</strong> ${sanitize(outingTitle)}</p>
+              <p style="margin:4px 0"><strong>📍 Location:</strong> ${sanitize(outingLocation)}</p>
+              <p style="margin:4px 0"><strong>📅 Date:</strong> ${sanitize(outingDate)}</p>
+              <p style="margin:4px 0"><strong>💰 Amount:</strong> ₹${parseInt(amount)}</p>
+              <p style="margin:4px 0"><strong>🔑 Payment ID:</strong> ${sanitize(paymentId)}</p>
             </div>
             <p style="color:#64748B;font-size:14px">See you there! 🚀<br>— Team VIBES@Outing</p>
           </div>
@@ -125,25 +204,43 @@ db.pragma('foreign_keys = ON');
 
 // ─── SECURITY: JWT Auth Middleware ──────────────────────────────
 function generateToken(user) {
-  return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+  return jwt.sign(
+    { id: user.id, email: user.email, role: user.role },
+    JWT_SECRET_FINAL,
+    { expiresIn: JWT_EXPIRES, issuer: 'vibes-outing', audience: 'vibes-outing-app' }
+  );
 }
 
 function authMiddleware(req, res, next) {
+  // Support both Bearer token and httpOnly cookie
+  let token = null;
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.cookies && req.cookies.vibes_token) {
+    token = req.cookies.vibes_token;
+  }
+
+  if (!token) {
     return res.status(401).json({ success: false, message: 'Authentication required' });
   }
   try {
-    const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET_FINAL, {
+      issuer: 'vibes-outing',
+      audience: 'vibes-outing-app',
+    });
     req.user = decoded;
     next();
   } catch (err) {
+    // Clear invalid cookie
+    res.clearCookie('vibes_token');
     return res.status(401).json({ success: false, message: 'Invalid or expired token' });
   }
 }
 
 function adminMiddleware(req, res, next) {
   if (!req.user || req.user.role !== 'admin') {
+    securityLog('UNAUTHORIZED_ADMIN_ACCESS', { userId: req.user?.id, ip: req.ip });
     return res.status(403).json({ success: false, message: 'Admin access required' });
   }
   next();
@@ -165,6 +262,46 @@ function sanitize(str) {
   return str.replace(/[<>"'&]/g, c => ({ '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;', '&':'&amp;' }[c]));
 }
 
+// ─── SECURITY: Logging — failed logins & suspicious activity ────
+function securityLog(event, details = {}) {
+  const timestamp = new Date().toISOString();
+  const logEntry = { timestamp, event, ...details };
+  console.log(`[SECURITY] ${JSON.stringify(logEntry)}`);
+
+  // Store in DB for monitoring
+  try {
+    db.prepare(`INSERT INTO security_logs (event, details, ip, created_at) VALUES (?,?,?,CURRENT_TIMESTAMP)`)
+      .run(event, JSON.stringify(details), details.ip || 'unknown');
+  } catch (e) { /* table may not exist yet */ }
+}
+
+// ─── SECURITY: Account lockout tracking ─────────────────────────
+const loginAttempts = new Map(); // ip -> { count, lastAttempt }
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+
+function checkAccountLockout(identifier) {
+  const attempt = loginAttempts.get(identifier);
+  if (!attempt) return false;
+  if (attempt.count >= LOCKOUT_THRESHOLD) {
+    if (Date.now() - attempt.lastAttempt < LOCKOUT_DURATION) return true;
+    loginAttempts.delete(identifier); // Reset after lockout period
+  }
+  return false;
+}
+
+function recordFailedLogin(identifier) {
+  const attempt = loginAttempts.get(identifier) || { count: 0, lastAttempt: 0 };
+  attempt.count++;
+  attempt.lastAttempt = Date.now();
+  loginAttempts.set(identifier, attempt);
+}
+
+function clearLoginAttempts(identifier) {
+  loginAttempts.delete(identifier);
+}
+
+// ─── DATABASE TABLES ────────────────────────────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -267,21 +404,30 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS security_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event TEXT NOT NULL,
+    details TEXT,
+    ip TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
-// Seed admin + sample data
 // Migrate: add new columns if missing
 try { db.exec(`ALTER TABLE bookings ADD COLUMN token_amount INTEGER DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE bookings ADD COLUMN remaining_amount INTEGER DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE bookings ADD COLUMN remaining_payment_status TEXT DEFAULT 'pending'`); } catch(e) {}
 try { db.exec(`ALTER TABLE bookings ADD COLUMN remaining_payment_id TEXT`); } catch(e) {}
 
+// Seed admin + sample data
 const adminExists = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@vibes-outing.com');
 if (!adminExists) {
   const hashedAdminPass = bcrypt.hashSync('admin123', BCRYPT_ROUNDS);
   db.prepare('INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)').run(
     'Admin', 'admin@vibes-outing.com', '9999999999', hashedAdminPass, 'admin'
   );
+  console.warn('⚠ Default admin created with password "admin123" — CHANGE THIS IMMEDIATELY in production!');
 
   const sampleOutings = [
     { title: '🌄 Nandi Hills Sunrise Vibes', location: 'Nandi Hills', description: 'Pickup from Bangalore at 4 AM → chase the sunrise, aesthetic pics, and chill breakfast at a hilltop cafe. High-end Resort + Private Cab from Bangalore included. Perfect GenZ weekend escape!', date: '2026-05-10', time: '4:00 AM', cost: 2999, max: 25, img: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600' },
@@ -301,12 +447,24 @@ if (!adminExists) {
   for (const o of sampleOutings) ins.run(o.title, o.location, o.description, o.date, o.time, o.cost, o.max, o.img);
 }
 
+// ─── SECURITY: Set secure cookie helper ─────────────────────────
+function setAuthCookie(res, token) {
+  res.cookie('vibes_token', token, {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: '/',
+  });
+}
+
 // ─── AUTH ROUTES (SECURED) ───────────────────────────────────────
 app.post('/api/auth/signup', [
   body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }).escape(),
   body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
-  body('password').isLength({ min: 6, max: 128 }).withMessage('Password must be 6-128 characters'),
-  body('phone').optional().trim().isLength({ max: 15 }),
+  body('password').isLength({ min: 8, max: 128 }).withMessage('Password must be 8-128 characters')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Password must contain uppercase, lowercase, and a number'),
+  body('phone').optional().trim().isLength({ max: 15 }).matches(/^[0-9+\-\s()]*$/).withMessage('Invalid phone number'),
   body('interests').optional().trim().isLength({ max: 500 }),
 ], async (req, res) => {
   if (!validate(req, res)) return;
@@ -318,6 +476,8 @@ app.post('/api/auth/signup', [
     );
     const user = db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(result.lastInsertRowid);
     const token = generateToken(user);
+    setAuthCookie(res, token);
+    securityLog('SIGNUP', { userId: user.id, email, ip: req.ip });
     res.json({ success: true, user, token });
   } catch (e) {
     res.status(400).json({ success: false, message: 'Email already exists' });
@@ -330,12 +490,42 @@ app.post('/api/auth/login', [
 ], async (req, res) => {
   if (!validate(req, res)) return;
   const { email, password } = req.body;
+  const lockoutKey = `${req.ip}_${email}`;
+
+  // Check account lockout
+  if (checkAccountLockout(lockoutKey)) {
+    securityLog('ACCOUNT_LOCKED', { email, ip: req.ip });
+    return res.status(429).json({ success: false, message: 'Account temporarily locked due to too many failed attempts. Try again in 15 minutes.' });
+  }
+
   const user = db.prepare('SELECT id, name, email, role, password as hashed FROM users WHERE email = ?').get(email);
-  if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+
+  // Constant-time response for non-existent users (prevent user enumeration)
+  if (!user) {
+    await bcrypt.hash(password, BCRYPT_ROUNDS); // Waste time to prevent timing attacks
+    recordFailedLogin(lockoutKey);
+    securityLog('FAILED_LOGIN', { email, reason: 'user_not_found', ip: req.ip });
+    return res.status(401).json({ success: false, message: 'Invalid credentials' });
+  }
+
   const match = await bcrypt.compare(password, user.hashed);
-  if (!match) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+  if (!match) {
+    recordFailedLogin(lockoutKey);
+    securityLog('FAILED_LOGIN', { email, reason: 'wrong_password', ip: req.ip, attempts: loginAttempts.get(lockoutKey)?.count });
+    return res.status(401).json({ success: false, message: 'Invalid credentials' });
+  }
+
+  clearLoginAttempts(lockoutKey);
   const token = generateToken({ id: user.id, email: user.email, role: user.role });
+  setAuthCookie(res, token);
+  securityLog('LOGIN_SUCCESS', { userId: user.id, email, ip: req.ip });
   res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
+});
+
+// ─── SECURITY: Logout — clear cookie ────────────────────────────
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('vibes_token');
+  res.json({ success: true });
 });
 
 // ─── OUTING ROUTES ──────────────────────────────────────────────
@@ -344,49 +534,87 @@ app.get('/api/outings', (req, res) => {
   res.json(outings);
 });
 
-app.get('/api/outings/:id', (req, res) => {
+app.get('/api/outings/:id', [
+  param('id').isInt({ min: 1 }).withMessage('Invalid outing ID'),
+], (req, res) => {
+  if (!validate(req, res)) return;
   const outing = db.prepare('SELECT * FROM outings WHERE id = ?').get(req.params.id);
   if (outing) res.json(outing);
   else res.status(404).json({ message: 'Not found' });
 });
 
-app.post('/api/outings', authMiddleware, adminMiddleware, (req, res) => {
+app.post('/api/outings', authMiddleware, adminMiddleware, [
+  body('title').trim().notEmpty().isLength({ max: 200 }).escape(),
+  body('location').trim().notEmpty().isLength({ max: 100 }).escape(),
+  body('description').optional().trim().isLength({ max: 2000 }).escape(),
+  body('date').isISO8601().withMessage('Valid date required'),
+  body('time').optional().trim().isLength({ max: 20 }),
+  body('cost').isInt({ min: 0, max: 1000000 }).withMessage('Valid cost required'),
+  body('max_participants').optional().isInt({ min: 1, max: 1000 }),
+  body('image_url').optional().trim().isURL().withMessage('Valid image URL required'),
+], (req, res) => {
+  if (!validate(req, res)) return;
   const { title, location, description, date, time, cost, max_participants, image_url } = req.body;
-  const result = db.prepare('INSERT INTO outings (title, location, description, date, time, cost, max_participants, image_url, created_by) VALUES (?,?,?,?,?,?,?,?,1)').run(title, location, description, date, time || '10:00 AM', cost, max_participants || 20, image_url || '');
+  const result = db.prepare('INSERT INTO outings (title, location, description, date, time, cost, max_participants, image_url, created_by) VALUES (?,?,?,?,?,?,?,?,?)').run(
+    sanitize(title), sanitize(location), sanitize(description || ''), date, sanitize(time || '10:00 AM'), cost, max_participants || 20, image_url || '', req.user.id
+  );
   res.json({ success: true, id: result.lastInsertRowid });
 });
 
-app.put('/api/outings/:id', authMiddleware, adminMiddleware, (req, res) => {
+app.put('/api/outings/:id', authMiddleware, adminMiddleware, [
+  param('id').isInt({ min: 1 }),
+  body('title').trim().notEmpty().isLength({ max: 200 }).escape(),
+  body('location').trim().notEmpty().isLength({ max: 100 }).escape(),
+  body('description').optional().trim().isLength({ max: 2000 }).escape(),
+  body('date').isISO8601(),
+  body('cost').isInt({ min: 0, max: 1000000 }),
+  body('status').isIn(['active', 'inactive', 'cancelled']),
+], (req, res) => {
+  if (!validate(req, res)) return;
   const { title, location, description, date, time, cost, max_participants, image_url, status } = req.body;
-  db.prepare('UPDATE outings SET title=?, location=?, description=?, date=?, time=?, cost=?, max_participants=?, image_url=?, status=? WHERE id=?').run(title, location, description, date, time, cost, max_participants, image_url, status, req.params.id);
+  db.prepare('UPDATE outings SET title=?, location=?, description=?, date=?, time=?, cost=?, max_participants=?, image_url=?, status=? WHERE id=?').run(
+    sanitize(title), sanitize(location), sanitize(description || ''), date, sanitize(time), cost, max_participants, image_url || '', status, req.params.id
+  );
   res.json({ success: true });
 });
 
-app.delete('/api/outings/:id', authMiddleware, adminMiddleware, (req, res) => {
+app.delete('/api/outings/:id', authMiddleware, adminMiddleware, [
+  param('id').isInt({ min: 1 }),
+], (req, res) => {
+  if (!validate(req, res)) return;
   db.prepare('DELETE FROM outings WHERE id = ?').run(req.params.id);
   res.json({ success: true });
 });
 
 // ─── BOOKING ROUTES (RAZORPAY — 20% TOKEN BOOKING) ─────────────
-// Step 1: Create Razorpay order (20% token amount)
-app.post('/api/bookings/create-order', authMiddleware, async (req, res) => {
-  const { user_id, outing_id, participants, participant_names } = req.body;
+app.post('/api/bookings/create-order', authMiddleware, [
+  body('outing_id').isInt({ min: 1 }),
+  body('participants').isInt({ min: 1, max: 50 }),
+  body('participant_names').optional().trim().isLength({ max: 1000 }).escape(),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { outing_id, participants, participant_names } = req.body;
+  const user_id = req.user.id; // IDOR prevention: use authenticated user
+
   const outing = db.prepare('SELECT * FROM outings WHERE id = ?').get(outing_id);
   if (!outing) return res.status(404).json({ message: 'Outing not found' });
+  if (outing.status !== 'active') return res.status(400).json({ message: 'Outing is not active' });
   if (outing.current_participants + participants > outing.max_participants) {
     return res.status(400).json({ message: 'Not enough spots available' });
   }
   const totalAmount = outing.cost * participants;
-  const tokenAmount = Math.ceil(totalAmount * 0.20); // 20% token
+  const tokenAmount = Math.ceil(totalAmount * 0.20);
   const remainingAmount = totalAmount - tokenAmount;
   try {
     const order = await razorpay.orders.create({
-      amount: tokenAmount * 100, // Razorpay uses paise — charge only 20%
+      amount: tokenAmount * 100,
       currency: 'INR',
       receipt: 'outing_' + outing_id + '_' + Date.now(),
       notes: { user_id: String(user_id), outing_id: String(outing_id), participants: String(participants), type: 'token' }
     });
-    const result = db.prepare('INSERT INTO bookings (user_id, outing_id, participants, participant_names, total_amount, token_amount, remaining_amount, payment_status, remaining_payment_status, payment_id) VALUES (?,?,?,?,?,?,?,?,?,?)').run(user_id, outing_id, participants, participant_names || '', totalAmount, tokenAmount, remainingAmount, 'pending', 'pending', order.id);
+    const result = db.prepare('INSERT INTO bookings (user_id, outing_id, participants, participant_names, total_amount, token_amount, remaining_amount, payment_status, remaining_payment_status, payment_id) VALUES (?,?,?,?,?,?,?,?,?,?)').run(
+      user_id, outing_id, participants, sanitize(participant_names || ''), totalAmount, tokenAmount, remainingAmount, 'pending', 'pending', order.id
+    );
     res.json({ success: true, order_id: order.id, booking_id: result.lastInsertRowid, amount: tokenAmount, total_amount: totalAmount, remaining_amount: remainingAmount, key_id: process.env.RAZORPAY_KEY_ID });
   } catch (err) {
     console.error('Razorpay order error:', err);
@@ -394,15 +622,25 @@ app.post('/api/bookings/create-order', authMiddleware, async (req, res) => {
   }
 });
 
-// Step 2: Verify token payment after Razorpay checkout
-app.post('/api/bookings/verify-payment', authMiddleware, (req, res) => {
+app.post('/api/bookings/verify-payment', authMiddleware, [
+  body('razorpay_order_id').trim().notEmpty(),
+  body('razorpay_payment_id').trim().notEmpty(),
+  body('razorpay_signature').trim().notEmpty(),
+  body('booking_id').isInt({ min: 1 }),
+], (req, res) => {
+  if (!validate(req, res)) return;
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature, booking_id } = req.body;
-  const body = razorpay_order_id + '|' + razorpay_payment_id;
-  const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'REPLACE')
-    .update(body).digest('hex');
 
-  if (expectedSignature === razorpay_signature) {
-    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(booking_id);
+  // IDOR prevention: verify booking belongs to authenticated user
+  const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND user_id = ?').get(booking_id, req.user.id);
+  if (!booking) return res.status(403).json({ success: false, message: 'Booking not found or access denied' });
+
+  const body_str = razorpay_order_id + '|' + razorpay_payment_id;
+  const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'REPLACE')
+    .update(body_str).digest('hex');
+
+  // Constant-time comparison to prevent timing attacks
+  if (crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature))) {
     db.prepare('UPDATE bookings SET payment_status = ?, payment_id = ? WHERE id = ?').run('paid', razorpay_payment_id, booking_id);
     db.prepare('UPDATE outings SET current_participants = current_participants + ? WHERE id = ?').run(booking.participants, booking.outing_id);
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(booking.user_id);
@@ -410,18 +648,23 @@ app.post('/api/bookings/verify-payment', authMiddleware, (req, res) => {
     if (user && outing) {
       sendBookingEmail(user.email, user.name, outing.title, outing.date, outing.location, booking.token_amount, razorpay_payment_id);
     }
+    securityLog('PAYMENT_SUCCESS', { userId: req.user.id, bookingId: booking_id, paymentId: razorpay_payment_id, ip: req.ip });
     const whatsappLink = (user && outing) ? getWhatsAppLink(user.phone, outing.title, outing.date, outing.location, booking.token_amount) : '';
     res.json({ success: true, payment_id: razorpay_payment_id, whatsapp_link: whatsappLink, token_amount: booking.token_amount, remaining_amount: booking.remaining_amount, outing_date: outing ? outing.date : '' });
   } else {
     db.prepare('UPDATE bookings SET payment_status = ? WHERE id = ?').run('failed', booking_id);
+    securityLog('PAYMENT_VERIFICATION_FAILED', { userId: req.user.id, bookingId: booking_id, ip: req.ip });
     res.status(400).json({ success: false, message: 'Payment verification failed' });
   }
 });
 
-// Step 3: Pay remaining amount (80%) — due 24hrs before trip
-app.post('/api/bookings/pay-remaining', authMiddleware, async (req, res) => {
+app.post('/api/bookings/pay-remaining', authMiddleware, [
+  body('booking_id').isInt({ min: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
   const { booking_id } = req.body;
-  const booking = db.prepare('SELECT b.*, o.date as outing_date FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.id = ?').get(booking_id);
+  // IDOR prevention
+  const booking = db.prepare('SELECT b.*, o.date as outing_date FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.id = ? AND b.user_id = ?').get(booking_id, req.user.id);
   if (!booking) return res.status(404).json({ message: 'Booking not found' });
   if (booking.payment_status !== 'paid') return res.status(400).json({ message: 'Token payment not completed yet' });
   if (booking.remaining_payment_status === 'paid') return res.status(400).json({ message: 'Already fully paid' });
@@ -444,13 +687,23 @@ app.post('/api/bookings/pay-remaining', authMiddleware, async (req, res) => {
   }
 });
 
-// Step 4: Verify remaining payment
-app.post('/api/bookings/verify-remaining', authMiddleware, (req, res) => {
+app.post('/api/bookings/verify-remaining', authMiddleware, [
+  body('razorpay_order_id').trim().notEmpty(),
+  body('razorpay_payment_id').trim().notEmpty(),
+  body('razorpay_signature').trim().notEmpty(),
+  body('booking_id').isInt({ min: 1 }),
+], (req, res) => {
+  if (!validate(req, res)) return;
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature, booking_id } = req.body;
-  const body = razorpay_order_id + '|' + razorpay_payment_id;
+
+  // IDOR prevention
+  const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND user_id = ?').get(booking_id, req.user.id);
+  if (!booking) return res.status(403).json({ success: false, message: 'Access denied' });
+
+  const body_str = razorpay_order_id + '|' + razorpay_payment_id;
   const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'REPLACE')
-    .update(body).digest('hex');
-  if (expectedSignature === razorpay_signature) {
+    .update(body_str).digest('hex');
+  if (crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature))) {
     db.prepare('UPDATE bookings SET remaining_payment_status = ?, remaining_payment_id = ? WHERE id = ?').run('paid', razorpay_payment_id, booking_id);
     res.json({ success: true, payment_id: razorpay_payment_id });
   } else {
@@ -458,9 +711,12 @@ app.post('/api/bookings/verify-remaining', authMiddleware, (req, res) => {
   }
 });
 
-// Fallback: direct booking without Razorpay (for testing if keys not set)
+// Fallback: direct booking without Razorpay (DISABLED in production)
 app.post('/api/bookings', authMiddleware, (req, res) => {
-  const { user_id, outing_id, participants, participant_names, total_amount } = req.body;
+  if (IS_PROD) return res.status(403).json({ message: 'Demo bookings disabled in production' });
+
+  const { outing_id, participants, participant_names, total_amount } = req.body;
+  const user_id = req.user.id; // IDOR prevention
   const outing = db.prepare('SELECT * FROM outings WHERE id = ?').get(outing_id);
   if (!outing) return res.status(404).json({ message: 'Outing not found' });
   if (outing.current_participants + participants > outing.max_participants) {
@@ -469,13 +725,18 @@ app.post('/api/bookings', authMiddleware, (req, res) => {
   const tokenAmount = Math.ceil(total_amount * 0.20);
   const remainingAmount = total_amount - tokenAmount;
   const paymentId = 'pay_demo_' + crypto.randomBytes(8).toString('hex');
-  const result = db.prepare('INSERT INTO bookings (user_id, outing_id, participants, participant_names, total_amount, token_amount, remaining_amount, payment_status, remaining_payment_status, payment_id) VALUES (?,?,?,?,?,?,?,?,?,?)').run(user_id, outing_id, participants, participant_names || '', total_amount, tokenAmount, remainingAmount, 'paid', 'pending', paymentId);
+  const result = db.prepare('INSERT INTO bookings (user_id, outing_id, participants, participant_names, total_amount, token_amount, remaining_amount, payment_status, remaining_payment_status, payment_id) VALUES (?,?,?,?,?,?,?,?,?,?)').run(
+    user_id, outing_id, participants, sanitize(participant_names || ''), total_amount, tokenAmount, remainingAmount, 'paid', 'pending', paymentId
+  );
   db.prepare('UPDATE outings SET current_participants = current_participants + ? WHERE id = ?').run(participants, outing_id);
   res.json({ success: true, booking_id: result.lastInsertRowid, payment_id: paymentId, token_amount: tokenAmount, remaining_amount: remainingAmount });
 });
 
-app.get('/api/bookings/:userId', authMiddleware, (req, res) => {
-  // Users can only see their own bookings
+app.get('/api/bookings/:userId', authMiddleware, [
+  param('userId').isInt({ min: 1 }),
+], (req, res) => {
+  if (!validate(req, res)) return;
+  // IDOR prevention: Users can only see their own bookings
   if (req.user.role !== 'admin' && req.user.id !== parseInt(req.params.userId)) {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
@@ -484,26 +745,32 @@ app.get('/api/bookings/:userId', authMiddleware, (req, res) => {
     FROM bookings b JOIN outings o ON b.outing_id = o.id
     WHERE b.user_id = ? ORDER BY b.created_at DESC
   `).all(req.params.userId);
-  // Add deadline info for each booking
   const enriched = bookings.map(b => {
     const tripDate = new Date(b.date);
     const deadline = new Date(tripDate.getTime() - 24 * 60 * 60 * 1000);
     const now = new Date();
-    const deadlinePassed = now > deadline;
-    const hoursLeft = Math.max(0, Math.round((deadline - now) / (1000 * 60 * 60)));
-    return { ...b, deadline: deadline.toISOString(), deadline_passed: deadlinePassed, hours_until_deadline: hoursLeft };
+    return { ...b, deadline: deadline.toISOString(), deadline_passed: now > deadline, hours_until_deadline: Math.max(0, Math.round((deadline - now) / (1000 * 60 * 60))) };
   });
   res.json(enriched);
 });
 
 // ─── SUGGESTION ROUTES ──────────────────────────────────────────
-// Get Razorpay key for frontend
 app.get('/api/razorpay-key', (req, res) => {
   res.json({ key_id: process.env.RAZORPAY_KEY_ID || '' });
 });
-app.post('/api/suggestions', authMiddleware, (req, res) => {
-  const { user_id, title, location, description, budget } = req.body;
-  db.prepare('INSERT INTO suggestions (user_id, title, location, description, budget) VALUES (?,?,?,?,?)').run(user_id, title, location, description, budget);
+
+app.post('/api/suggestions', authMiddleware, [
+  body('title').trim().notEmpty().isLength({ max: 200 }).escape(),
+  body('location').trim().notEmpty().isLength({ max: 100 }).escape(),
+  body('description').optional().trim().isLength({ max: 2000 }).escape(),
+  body('budget').optional().trim().isLength({ max: 100 }).escape(),
+], (req, res) => {
+  if (!validate(req, res)) return;
+  const { title, location, description, budget } = req.body;
+  const user_id = req.user.id; // IDOR prevention
+  db.prepare('INSERT INTO suggestions (user_id, title, location, description, budget) VALUES (?,?,?,?,?)').run(
+    user_id, sanitize(title), sanitize(location), sanitize(description || ''), sanitize(budget || '')
+  );
   res.json({ success: true });
 });
 
@@ -512,9 +779,12 @@ app.get('/api/suggestions', (req, res) => {
   res.json(suggestions);
 });
 
-app.put('/api/suggestions/:id', authMiddleware, adminMiddleware, (req, res) => {
-  const { status } = req.body;
-  db.prepare('UPDATE suggestions SET status = ? WHERE id = ?').run(status, req.params.id);
+app.put('/api/suggestions/:id', authMiddleware, adminMiddleware, [
+  param('id').isInt({ min: 1 }),
+  body('status').isIn(['approved', 'rejected']).withMessage('Invalid status'),
+], (req, res) => {
+  if (!validate(req, res)) return;
+  db.prepare('UPDATE suggestions SET status = ? WHERE id = ?').run(req.body.status, req.params.id);
   res.json({ success: true });
 });
 
@@ -527,18 +797,20 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, (req, res) => {
   const pendingSuggestions = db.prepare('SELECT COUNT(*) as count FROM suggestions WHERE status = ?').get('pending');
   const pendingVerifications = db.prepare('SELECT COUNT(*) as count FROM id_verifications WHERE status = ?').get('pending');
   const totalReviews = db.prepare('SELECT COUNT(*) as count FROM reviews').get();
-  res.json({ users: users.count, outings: outings.count, bookings: bookings.count, revenue: revenue.total, pendingSuggestions: pendingSuggestions.count, pendingVerifications: pendingVerifications.count, totalReviews: totalReviews.count });
+  const recentSecurityEvents = db.prepare('SELECT COUNT(*) as count FROM security_logs WHERE created_at > datetime("now", "-24 hours")').get();
+  res.json({ users: users.count, outings: outings.count, bookings: bookings.count, revenue: revenue.total, pendingSuggestions: pendingSuggestions.count, pendingVerifications: pendingVerifications.count, totalReviews: totalReviews.count, securityEvents24h: recentSecurityEvents.count });
 });
 
 app.get('/api/admin/users', authMiddleware, adminMiddleware, (req, res) => {
+  // Never expose password hashes
   const users = db.prepare('SELECT id, name, email, phone, interests, role, created_at FROM users ORDER BY created_at DESC').all();
   res.json(users);
 });
 
-// Admin: Reset any user's password
 app.post('/api/admin/reset-password', authMiddleware, adminMiddleware, [
   body('user_id').isInt().withMessage('Valid user ID required'),
-  body('new_password').isLength({ min: 6, max: 128 }).withMessage('Password must be 6-128 characters'),
+  body('new_password').isLength({ min: 8, max: 128 }).withMessage('Password must be 8-128 characters')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Password must contain uppercase, lowercase, and a number'),
 ], async (req, res) => {
   if (!validate(req, res)) return;
   const { user_id, new_password } = req.body;
@@ -546,6 +818,7 @@ app.post('/api/admin/reset-password', authMiddleware, adminMiddleware, [
   if (!user) return res.status(404).json({ success: false, message: 'User not found' });
   const hashed = await bcrypt.hash(new_password, BCRYPT_ROUNDS);
   db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashed, user_id);
+  securityLog('ADMIN_PASSWORD_RESET', { adminId: req.user.id, targetUserId: user_id, ip: req.ip });
   res.json({ success: true, message: `Password reset for ${user.name} (${user.email})` });
 });
 
@@ -558,15 +831,21 @@ app.get('/api/admin/bookings', authMiddleware, adminMiddleware, (req, res) => {
   res.json(bookings);
 });
 
+// ─── SECURITY: Admin — Security Logs ────────────────────────────
+app.get('/api/admin/security-logs', authMiddleware, adminMiddleware, (req, res) => {
+  const logs = db.prepare('SELECT * FROM security_logs ORDER BY created_at DESC LIMIT 100').all();
+  res.json(logs);
+});
+
 // ─── REVIEW ROUTES ──────────────────────────────────────────────
 app.post('/api/reviews', authMiddleware, [
-  body('outing_id').isInt().withMessage('Valid outing ID required'),
+  body('outing_id').isInt({ min: 1 }).withMessage('Valid outing ID required'),
   body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be 1-5'),
   body('comment').optional().trim().isLength({ max: 1000 }).escape(),
 ], (req, res) => {
   if (!validate(req, res)) return;
   const { outing_id, rating, comment } = req.body;
-  const user_id = req.user.id; // Use authenticated user, not body
+  const user_id = req.user.id;
   const existing = db.prepare('SELECT id FROM reviews WHERE user_id = ? AND outing_id = ?').get(user_id, outing_id);
   if (existing) return res.status(400).json({ message: 'You already reviewed this outing' });
   const hasBooked = db.prepare('SELECT id FROM bookings WHERE user_id = ? AND outing_id = ? AND payment_status = ?').get(user_id, outing_id, 'paid');
@@ -575,20 +854,26 @@ app.post('/api/reviews', authMiddleware, [
   res.json({ success: true });
 });
 
-app.get('/api/reviews/:outingId', (req, res) => {
+app.get('/api/reviews/:outingId', [
+  param('outingId').isInt({ min: 1 }),
+], (req, res) => {
+  if (!validate(req, res)) return;
   const reviews = db.prepare('SELECT r.*, u.name as user_name FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.outing_id = ? ORDER BY r.created_at DESC').all(req.params.outingId);
   const avg = db.prepare('SELECT AVG(rating) as avg, COUNT(*) as count FROM reviews WHERE outing_id = ?').get(req.params.outingId);
   res.json({ reviews, average: Math.round((avg.avg || 0) * 10) / 10, count: avg.count });
 });
 
 // ─── CHAT ROUTES ────────────────────────────────────────────────
-app.get('/api/chat/:outingId', authMiddleware, (req, res) => {
+app.get('/api/chat/:outingId', authMiddleware, [
+  param('outingId').isInt({ min: 1 }),
+], (req, res) => {
+  if (!validate(req, res)) return;
   const messages = db.prepare('SELECT c.*, u.name as user_name FROM chat_messages c JOIN users u ON c.user_id = u.id WHERE c.outing_id = ? ORDER BY c.created_at ASC').all(req.params.outingId);
   res.json(messages);
 });
 
 app.post('/api/chat', authMiddleware, [
-  body('outing_id').isInt().withMessage('Valid outing ID required'),
+  body('outing_id').isInt({ min: 1 }).withMessage('Valid outing ID required'),
   body('message').trim().notEmpty().withMessage('Message required').isLength({ max: 2000 }).escape(),
 ], (req, res) => {
   if (!validate(req, res)) return;
@@ -605,22 +890,27 @@ app.post('/api/verify-id', authMiddleware, [
   body('id_type').isIn(['aadhaar', 'pan', 'driving_license', 'passport']).withMessage('Invalid ID type'),
   body('id_number').trim().notEmpty().isLength({ min: 4, max: 30 }).withMessage('Valid ID number required'),
   body('full_name').trim().notEmpty().isLength({ max: 100 }).escape(),
-  body('emergency_contact').optional().trim().isLength({ max: 15 }),
+  body('emergency_contact').optional().trim().isLength({ max: 15 }).matches(/^[0-9+\-\s()]*$/),
   body('emergency_name').optional().trim().isLength({ max: 100 }).escape(),
 ], (req, res) => {
   if (!validate(req, res)) return;
   const { id_type, id_number, full_name, emergency_contact, emergency_name } = req.body;
   const user_id = req.user.id;
   try {
-    db.prepare('INSERT OR REPLACE INTO id_verifications (user_id, id_type, id_number, full_name, emergency_contact, emergency_name, status, submitted_at) VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)').run(user_id, sanitize(id_type), sanitize(id_number), sanitize(full_name), sanitize(emergency_contact || ''), sanitize(emergency_name || ''), 'pending');
+    db.prepare('INSERT OR REPLACE INTO id_verifications (user_id, id_type, id_number, full_name, emergency_contact, emergency_name, status, submitted_at) VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP)').run(
+      user_id, sanitize(id_type), sanitize(id_number), sanitize(full_name), sanitize(emergency_contact || ''), sanitize(emergency_name || ''), 'pending'
+    );
     res.json({ success: true });
   } catch (e) {
     res.status(400).json({ message: 'Verification submission failed' });
   }
 });
 
-app.get('/api/verify-id/:userId', authMiddleware, (req, res) => {
-  // Users can only see their own verification
+app.get('/api/verify-id/:userId', authMiddleware, [
+  param('userId').isInt({ min: 1 }),
+], (req, res) => {
+  if (!validate(req, res)) return;
+  // IDOR prevention
   if (req.user.role !== 'admin' && req.user.id !== parseInt(req.params.userId)) {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
@@ -633,15 +923,25 @@ app.get('/api/admin/verifications', authMiddleware, adminMiddleware, (req, res) 
   res.json(verifications);
 });
 
-app.put('/api/admin/verifications/:id', authMiddleware, adminMiddleware, (req, res) => {
-  const { status } = req.body;
-  if (!['verified', 'rejected'].includes(status)) return res.status(400).json({ message: 'Invalid status' });
-  db.prepare('UPDATE id_verifications SET status = ?, verified_at = CURRENT_TIMESTAMP WHERE id = ?').run(status, req.params.id);
+app.put('/api/admin/verifications/:id', authMiddleware, adminMiddleware, [
+  param('id').isInt({ min: 1 }),
+  body('status').isIn(['verified', 'rejected']).withMessage('Invalid status'),
+], (req, res) => {
+  if (!validate(req, res)) return;
+  db.prepare('UPDATE id_verifications SET status = ?, verified_at = CURRENT_TIMESTAMP WHERE id = ?').run(req.body.status, req.params.id);
   res.json({ success: true });
 });
 
 // ─── AI RECOMMENDATION ROUTE ────────────────────────────────────
-app.get('/api/recommendations/:userId', authMiddleware, (req, res) => {
+app.get('/api/recommendations/:userId', authMiddleware, [
+  param('userId').isInt({ min: 1 }),
+], (req, res) => {
+  if (!validate(req, res)) return;
+  // IDOR prevention
+  if (req.user.id !== parseInt(req.params.userId)) {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
+
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.userId);
   if (!user) return res.json([]);
   const userInterests = (user.interests || '').toLowerCase().split(',').map(i => i.trim()).filter(Boolean);
@@ -653,21 +953,15 @@ app.get('/api/recommendations/:userId', authMiddleware, (req, res) => {
     .map(o => {
       let score = 0;
       const desc = ((o.description || '') + ' ' + o.title + ' ' + o.location).toLowerCase();
-      // Interest matching
       userInterests.forEach(interest => { if (desc.includes(interest)) score += 30; });
-      // Location-based: boost outings in locations user has visited
       const bookedLocations = db.prepare('SELECT DISTINCT o.location FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.user_id = ? AND b.payment_status = ?').all(req.params.userId, 'paid').map(r => r.location.toLowerCase());
       if (bookedLocations.includes(o.location.toLowerCase())) score += 15;
-      // Budget preference: get avg spend
       const avgSpend = db.prepare('SELECT AVG(o.cost) as avg FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.user_id = ? AND b.payment_status = ?').get(req.params.userId, 'paid');
       if (avgSpend.avg) { const diff = Math.abs(o.cost - avgSpend.avg); if (diff < 200) score += 20; else if (diff < 500) score += 10; }
-      // Popularity bonus
       score += Math.min(o.current_participants * 2, 20);
-      // Date proximity bonus (upcoming preferred)
       const daysAway = (new Date(o.date) - new Date()) / (1000*60*60*24);
       if (daysAway > 0 && daysAway < 30) score += 15;
       else if (daysAway > 0 && daysAway < 60) score += 8;
-      // Review rating bonus
       const review = db.prepare('SELECT AVG(rating) as avg FROM reviews WHERE outing_id = ?').get(o.id);
       if (review.avg) score += review.avg * 5;
       return { ...o, score, matchReasons: getMatchReasons(o, userInterests, bookedLocations, avgSpend.avg) };
@@ -696,7 +990,7 @@ app.post('/api/whatsapp-link', authMiddleware, (req, res) => {
   res.json({ link });
 });
 
-// ─── FORGOT PASSWORD ─────────────────────────────────────────────────
+// ─── FORGOT PASSWORD ────────────────────────────────────────────
 app.post('/api/auth/forgot-password', [
   body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
 ], async (req, res) => {
@@ -705,8 +999,11 @@ app.post('/api/auth/forgot-password', [
   const user = db.prepare('SELECT id, name FROM users WHERE email = ?').get(email);
   if (!user) return res.json({ success: true }); // Don't reveal if email exists
   const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 30).toISOString(); // 30 min
-  db.prepare('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?,?,?)').run(user.id, token, expiresAt);
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex'); // Store hashed token
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 30).toISOString();
+  db.prepare('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?,?,?)').run(user.id, hashedToken, expiresAt);
+  securityLog('PASSWORD_RESET_REQUESTED', { userId: user.id, ip: req.ip });
+
   if (emailEnabled) {
     const resetUrl = `${process.env.PASSWORD_RESET_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
     try {
@@ -719,36 +1016,54 @@ app.post('/api/auth/forgot-password', [
             <h1 style="margin:0;font-size:24px">🔑 Password Reset</h1>
           </div>
           <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
-            <p>Hi <strong>${user.name}</strong>,</p>
-            <p>We received a request to reset your password for VIBES@Outing.</p>
+            <p>Hi <strong>${sanitize(user.name)}</strong>,</p>
+            <p>We received a request to reset your password.</p>
             <p><a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#6C3CE1;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Reset Password</a></p>
             <p style="color:#64748B;font-size:14px">This link is valid for 30 minutes. If you didn't request this, just ignore this email.</p>
           </div>
         </div>`
       });
-      console.log('📧 Password reset email sent to:', email);
     } catch (err) { console.error('Email error:', err.message); }
   } else {
-    console.log('📧 Password reset email skipped (not configured). Token:', token);
+    console.log('📧 Password reset token (dev):', token);
   }
-  // In dev mode (no email), return reset link so user can still reset
   const resetLink = !emailEnabled ? `${process.env.PASSWORD_RESET_URL || 'http://localhost:3000'}/reset-password?token=${token}` : null;
-  res.json({ success: true, ...(resetLink && { dev_reset_link: resetLink }) });
+  res.json({ success: true, ...(resetLink && !IS_PROD && { dev_reset_link: resetLink }) });
 });
 
 app.post('/api/auth/reset-password', [
   body('token').trim().notEmpty().isHexadecimal().isLength({ min: 64, max: 64 }).withMessage('Invalid token'),
-  body('password').isLength({ min: 6, max: 128 }).withMessage('Password must be 6-128 characters'),
+  body('password').isLength({ min: 8, max: 128 }).withMessage('Password must be 8-128 characters')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Password must contain uppercase, lowercase, and a number'),
 ], async (req, res) => {
   if (!validate(req, res)) return;
   const { token, password } = req.body;
-  const reset = db.prepare('SELECT * FROM password_resets WHERE token = ? AND used = 0').get(token);
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+  const reset = db.prepare('SELECT * FROM password_resets WHERE token = ? AND used = 0').get(hashedToken);
   if (!reset) return res.status(400).json({ success: false, message: 'Invalid or expired token' });
   if (new Date(reset.expires_at) < new Date()) return res.status(400).json({ success: false, message: 'Token expired' });
   const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
   db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, reset.user_id);
   db.prepare('UPDATE password_resets SET used = 1 WHERE id = ?').run(reset.id);
+  // Invalidate all unused reset tokens for this user
+  db.prepare('UPDATE password_resets SET used = 1 WHERE user_id = ? AND used = 0').run(reset.user_id);
+  securityLog('PASSWORD_RESET_COMPLETED', { userId: reset.user_id });
   res.json({ success: true });
+});
+
+// ─── SECURITY: Global error handler — never leak stack traces ───
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err.message);
+  securityLog('UNHANDLED_ERROR', { error: err.message, path: req.path, ip: req.ip });
+  res.status(err.status || 500).json({
+    success: false,
+    message: IS_PROD ? 'Internal server error' : err.message,
+  });
+});
+
+// ─── SECURITY: 404 handler ──────────────────────────────────────
+app.get('/api/*', (req, res) => {
+  res.status(404).json({ success: false, message: 'Endpoint not found' });
 });
 
 // ─── SPA FALLBACK & START ───────────────────────────────────────
@@ -758,6 +1073,8 @@ app.get('*', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`\n🚀 VIBES@Outing Platform running at http://localhost:${PORT}\n`);
-  console.log(`   Admin Login: admin@vibes-outing.com / admin123\n`);
+  console.log(`\n🚀 VIBES@Outing Platform running at http://localhost:${PORT}`);
+  console.log(`   Environment: ${IS_PROD ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+  if (!IS_PROD) console.log(`   Admin Login: admin@vibes-outing.com / admin123`);
+  console.log('');
 });
