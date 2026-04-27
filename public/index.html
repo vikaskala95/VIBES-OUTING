@@ -4,9 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VIBES@Outing — GenZ Group Outings | Discover, Join & Explore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 <style>
 @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeInDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
@@ -307,12 +310,22 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
   .cards-grid{grid-template-columns:1fr}
   .dashboard{grid-template-columns:1fr}
   .sidebar{display:none}
+  .mobile-admin-nav{display:flex !important;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem}
+  .mobile-admin-nav a{padding:.5rem .75rem;border-radius:999px;font-size:.75rem;font-weight:600;background:#F1F5F9;color:var(--text);text-decoration:none;white-space:nowrap}
+  .mobile-admin-nav a.active{background:var(--primary);color:#fff}
   .form-row{grid-template-columns:1fr}
   .stats-bar{gap:1.5rem}
   .nav-links .hide-mobile{display:none}
   .cat-card{flex:0 0 160px;min-width:160px;height:210px}
   .categories-row{gap:1rem;padding-left:.5rem;padding-right:.5rem}
 }
+.mobile-admin-nav{display:none}
+/* Loading spinner */
+.loading-spinner{display:flex;justify-content:center;align-items:center;padding:3rem;color:var(--primary)}
+.loading-spinner::after{content:'';width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Focus visible for accessibility */
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:4px}
 @media(max-width:480px){
   .hero h1{font-size:1.65rem}
   .hero-buttons{flex-direction:column;align-items:center}
@@ -324,8 +337,8 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 <body>
 
 <!-- NAV -->
-<nav class="nav" id="navbar">
-  <a href="#" class="nav-logo" onclick="navigate('home')"><i class="fas fa-compass"></i><span style="display:flex;flex-direction:column;line-height:1.2">VIBES@Outing<span style="font-size:.65rem;font-weight:400;color:var(--text-light);font-style:italic;letter-spacing:.3px">Less planning, more feeling — enjoy the moment ✨</span></span></a>
+<nav class="nav" id="navbar" role="navigation" aria-label="Main navigation">
+  <a href="#" class="nav-logo" onclick="navigate('home')" aria-label="VIBES@Outing Home"><i class="fas fa-compass"></i><span style="display:flex;flex-direction:column;line-height:1.2">VIBES@Outing<span style="font-size:.65rem;font-weight:400;color:var(--text-light);font-style:italic;letter-spacing:.3px">Less planning, more feeling — enjoy the moment ✨</span></span></a>
   <div class="nav-links" id="navLinks"></div>
 </nav>
 
@@ -347,6 +360,23 @@ let currentUser = JSON.parse(sessionStorage.getItem('vibes_user') || 'null');
 let authToken = sessionStorage.getItem('vibes_token') || null;
 let outings = [];
 let currentPage = 'home';
+
+// ─── SECURITY: Client-side HTML escaping (defense-in-depth) ─────
+function escapeHtml(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function safeImageUrl(url) {
+  if (!url || typeof url !== 'string') return 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600';
+  // Only allow http/https URLs
+  try { const u = new URL(url); if (u.protocol === 'http:' || u.protocol === 'https:') return url; } catch(e) {}
+  return 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600';
+}
+
+// ─── BROWSER HISTORY ────────────────────────────────────────────
+window.addEventListener('popstate', (e) => {
+  if (e.state && e.state.page) { currentPage = e.state.page; navigate(e.state.page, true); }
+});
 
 // ─── API ────────────────────────────────────────────────────────
 const api = async (url, opts = {}) => {
@@ -439,22 +469,8 @@ async function handleForgotPassword(e) {
   e.preventDefault();
   const email = document.getElementById('forgotEmail').value;
   const data = await api('/auth/forgot-password', { method: 'POST', body: { email } });
-  if (data.dev_reset_link) {
-    // Dev mode — email not configured, show reset link directly
-    openModal(`
-      <button class="close" onclick="closeModal()">&times;</button>
-      <h2><i class="fas fa-tools" style="color:var(--warning)"></i> Dev Mode</h2>
-      <p style="color:var(--text-light);margin-bottom:1rem">Email is not configured. Use this link to reset your password:</p>
-      <div style="background:#F8FAFC;padding:1rem;border-radius:10px;word-break:break-all;margin-bottom:1rem">
-        <a href="${data.dev_reset_link}" style="color:var(--primary);font-weight:600;font-size:.85rem">${data.dev_reset_link}</a>
-      </div>
-      <button class="btn btn-primary btn-block" onclick="window.location.href='${data.dev_reset_link}'"><i class="fas fa-key"></i> Reset Password Now</button>
-      <p style="text-align:center;margin-top:1rem;font-size:.75rem;color:var(--danger)">⚠ This link is only shown because email is not configured. Configure SMTP in .env for production.</p>
-    `);
-  } else {
-    toast('If your email exists, a reset link was sent. Check your inbox!', 'success');
-    closeModal();
-  }
+  toast(data.message || 'If your email is registered, a reset link has been sent. Check your inbox!', 'success');
+  closeModal();
 }
 
 function showSignup() {
@@ -467,7 +483,7 @@ function showSignup() {
         <div class="form-group"><label>Email</label><input type="email" id="signEmail" required placeholder="you@email.com"></div>
         <div class="form-group"><label>Phone</label><input type="tel" id="signPhone" placeholder="9876543210"></div>
       </div>
-      <div class="form-group"><label>Password</label><input type="password" id="signPass" required minlength="6" placeholder="Min 6 characters"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="signPass" required minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}" placeholder="Min 8 chars, upper+lower+number" title="Must contain uppercase, lowercase, and a number (min 8 chars)"></div>
       <div class="form-group"><label>Interests</label><input type="text" id="signInterests" placeholder="Trekking, Beaches, Food..."></div>
       <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-rocket"></i> Sign Up</button>
     </form>
@@ -488,15 +504,15 @@ async function handleSignup(e) {
   else toast(data.message, 'error');
 }
 
-function logout() { currentUser = null; authToken = null; sessionStorage.removeItem('vibes_user'); sessionStorage.removeItem('vibes_token'); fetch('/api/auth/logout', { method: 'POST' }); renderNav(); navigate('home'); toast('Logged out'); }
+function logout() { currentUser = null; authToken = null; sessionStorage.removeItem('vibes_user'); sessionStorage.removeItem('vibes_token'); if (chatInterval) { clearInterval(chatInterval); chatInterval = null; } fetch('/api/auth/logout', { method: 'POST' }); renderNav(); navigate('home'); toast('Logged out'); }
 
 function showResetPassword(token) {
   openModal(`
     <button class="close" onclick="closeModal()">&times;</button>
     <h2><i class="fas fa-key" style="color:var(--primary)"></i> Set New Password</h2>
     <form onsubmit="handleResetPassword(event, '${token}')">
-      <div class="form-group"><label>New Password</label><input type="password" id="resetPass" required minlength="6" placeholder="Min 6 characters"></div>
-      <div class="form-group"><label>Confirm Password</label><input type="password" id="resetPassConfirm" required minlength="6" placeholder="Repeat password"></div>
+      <div class="form-group"><label>New Password</label><input type="password" id="resetPass" required minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}" placeholder="Min 8 chars, upper+lower+number" title="Must contain uppercase, lowercase, and a number (min 8 chars)"></div>
+      <div class="form-group"><label>Confirm Password</label><input type="password" id="resetPassConfirm" required minlength="8" placeholder="Repeat password"></div>
       <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-save"></i> Reset Password</button>
     </form>
   `);
@@ -522,10 +538,18 @@ async function handleResetPassword(e, token) {
 })();
 
 // ─── PAGES ──────────────────────────────────────────────────────
-async function navigate(page) {
+async function navigate(page, skipHistory) {
   currentPage = page;
   const app = document.getElementById('app');
   cleanupHeroSlider();
+
+  // Browser history support
+  if (!skipHistory) {
+    history.pushState({ page }, '', '#' + page);
+  }
+
+  // Show loading spinner
+  app.innerHTML = '<div class="loading-spinner"></div>';
 
   if (page === 'home') await renderHome(app);
   else if (page === 'outings') await renderOutings(app);
@@ -540,8 +564,10 @@ async function navigate(page) {
 
 // ─── HOME PAGE ──────────────────────────────────────────────────
 async function renderHome(app) {
-  outings = await api('/outings');
+  const [outingsData, statsData] = await Promise.all([api('/outings'), api('/public-stats')]);
+  outings = outingsData;
   const featured = outings.slice(0, 3);
+  const stats = statsData || { outings: outings.length, users: 0, destinations: 0, avgRating: 4.8 };
   app.innerHTML = `
     <section class="hero" id="heroSection" data-parallax>
       <!-- Background slider -->
@@ -607,10 +633,10 @@ async function renderHome(app) {
       <button class="hero-playpause" id="heroPlayPause" onclick="toggleSlider()" title="Pause slideshow"><i class="fas fa-pause"></i></button>
     </section>
     <div class="stats-bar">
-      <div class="stat-item"><div class="num">${outings.length}+</div><div class="label">Epic Outings</div></div>
-      <div class="stat-item"><div class="num">500+</div><div class="label">GenZ Explorers</div></div>
-      <div class="stat-item"><div class="num">10+</div><div class="label">Destinations</div></div>
-      <div class="stat-item"><div class="num">4.8★</div><div class="label">Avg Vibe Check</div></div>
+      <div class="stat-item"><div class="num">${stats.outings}+</div><div class="label">Epic Outings</div></div>
+      <div class="stat-item"><div class="num">${stats.users}+</div><div class="label">GenZ Explorers</div></div>
+      <div class="stat-item"><div class="num">${stats.destinations}+</div><div class="label">Destinations</div></div>
+      <div class="stat-item"><div class="num">${stats.avgRating}★</div><div class="label">Avg Vibe Check</div></div>
     </div>
 
     <!-- CATEGORY SECTION -->
@@ -689,21 +715,25 @@ async function renderHome(app) {
 function outingCard(o) {
   const spotsLeft = o.max_participants - o.current_participants;
   const dateStr = new Date(o.date).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+  const imgUrl = safeImageUrl(o.image_url);
+  const title = escapeHtml(o.title);
+  const location = escapeHtml(o.location);
+  const desc = escapeHtml(o.description || '');
   return `
     <div class="card">
-      <div class="card-img" style="background-image:url('${o.image_url || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600'}');cursor:pointer" onclick="navigate('outing-${o.id}')">
-        <span class="badge">${o.location}</span>
+      <div class="card-img" style="background-image:url('${imgUrl}');cursor:pointer" onclick="navigate('outing-${o.id}')">
+        <span class="badge">${location}</span>
         <span class="spots-left"><i class="fas fa-users"></i> ${spotsLeft} spots left</span>
       </div>
       <div class="card-body">
-        <h3 style="cursor:pointer" onclick="navigate('outing-${o.id}')">${o.title}</h3>
+        <h3 style="cursor:pointer" onclick="navigate('outing-${o.id}')">${title}</h3>
         <div class="card-meta">
           <span><i class="far fa-calendar"></i> ${dateStr}</span>
-          <span><i class="far fa-clock"></i> ${o.time}</span>
-          <span><i class="fas fa-map-marker-alt"></i> ${o.location}</span>
+          <span><i class="far fa-clock"></i> ${escapeHtml(o.time)}</span>
+          <span><i class="fas fa-map-marker-alt"></i> ${location}</span>
         </div>
-        <p>${o.description || ''}</p>
-        ${o.matchReasons ? `<div class="rec-reasons">${o.matchReasons.map(r => `<span class="rec-reason">${r}</span>`).join('')}</div>` : ''}
+        <p>${desc}</p>
+        ${o.matchReasons ? `<div class="rec-reasons">${o.matchReasons.map(r => `<span class="rec-reason">${escapeHtml(r)}</span>`).join('')}</div>` : ''}
         <div class="card-footer" style="margin-top:.75rem">
           <div class="price">
             <span style="text-decoration:line-through;color:var(--text-light);font-size:.85rem;font-weight:400">₹${o.cost}</span>
@@ -812,12 +842,12 @@ async function confirmBooking(e, outingId, cost) {
 
   // Step 1: Create Razorpay order on server (20% token)
   const orderRes = await api('/bookings/create-order', { method: 'POST', body: {
-    user_id: currentUser.id, outing_id: outingId, participants, participant_names: participantNames
+    outing_id: outingId, participants, participant_names: participantNames
   }});
 
   if (!orderRes.success) {
     if (orderRes.message && orderRes.message.includes('API keys')) {
-      const fallback = await api('/bookings', { method: 'POST', body: { user_id: currentUser.id, outing_id: outingId, participants, participant_names: participantNames, total_amount: totalAmount } });
+      const fallback = await api('/bookings', { method: 'POST', body: { outing_id: outingId, participants, participant_names: participantNames, total_amount: totalAmount } });
       if (fallback.success) { closeModal(); toast('🎉 Token booking confirmed (demo)! Paid ₹' + fallback.token_amount + ' | Remaining ₹' + fallback.remaining_amount, 'success'); navigate(currentPage); }
       else toast(fallback.message, 'error');
       return;
@@ -910,7 +940,7 @@ function renderSuggest(app) {
 
 async function submitSuggestion(e) {
   e.preventDefault();
-  await api('/suggestions', { method: 'POST', body: { user_id: currentUser.id, title: document.getElementById('sugTitle').value, location: document.getElementById('sugLocation').value, description: document.getElementById('sugDesc').value, budget: document.getElementById('sugBudget').value } });
+  await api('/suggestions', { method: 'POST', body: { title: document.getElementById('sugTitle').value, location: document.getElementById('sugLocation').value, description: document.getElementById('sugDesc').value, budget: document.getElementById('sugBudget').value } });
   toast('✅ Suggestion submitted! Admin will review it.', 'success');
   navigate('home');
 }
@@ -1042,7 +1072,6 @@ function showVerifyId() {
 async function submitVerification(e) {
   e.preventDefault();
   const data = await api('/verify-id', { method: 'POST', body: {
-    user_id: currentUser.id,
     full_name: document.getElementById('vFullName').value,
     id_type: document.getElementById('vIdType').value,
     id_number: document.getElementById('vIdNumber').value,
@@ -1064,14 +1093,14 @@ async function renderOutingDetail(app, outingId) {
   app.innerHTML = `
     <section class="section" style="max-width:800px">
       <div style="margin-bottom:1rem"><a href="#" onclick="navigate('outings')" style="color:var(--primary);font-size:.9rem"><i class="fas fa-arrow-left"></i> Back to Outings</a></div>
-      <div style="border-radius:var(--radius);overflow:hidden;height:300px;background:url('${o.image_url || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800'}') center/cover;margin-bottom:1.5rem"></div>
+      <div style="border-radius:var(--radius);overflow:hidden;height:300px;background:url('${safeImageUrl(o.image_url)}') center/cover;margin-bottom:1.5rem"></div>
       <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:1rem">
         <div>
-          <h1 style="font-size:1.8rem;margin-bottom:.5rem">${o.title}</h1>
+          <h1 style="font-size:1.8rem;margin-bottom:.5rem">${escapeHtml(o.title)}</h1>
           <div class="card-meta" style="margin-bottom:1rem">
-            <span><i class="fas fa-map-marker-alt"></i> ${o.location}</span>
+            <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(o.location)}</span>
             <span><i class="far fa-calendar"></i> ${dateStr}</span>
-            <span><i class="far fa-clock"></i> ${o.time}</span>
+            <span><i class="far fa-clock"></i> ${escapeHtml(o.time)}</span>
             <span><i class="fas fa-users"></i> ${spotsLeft} spots left</span>
           </div>
         </div>
@@ -1084,7 +1113,7 @@ async function renderOutingDetail(app, outingId) {
       </div>
       <div style="background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:2rem">
         <h3 style="margin-bottom:.75rem">About this Outing</h3>
-        <p style="color:var(--text-light);line-height:1.8">${o.description || 'No description available.'}</p>
+        <p style="color:var(--text-light);line-height:1.8">${escapeHtml(o.description || 'No description available.')}</p>
       </div>
       ${hasBooked ? `<div style="margin-bottom:2rem"><button class="btn btn-primary" onclick="navigate('chat-${outingId}')" style="margin-right:.5rem"><i class="fas fa-comments"></i> Group Chat</button></div>` : ''}
       
@@ -1097,8 +1126,8 @@ async function renderOutingDetail(app, outingId) {
         ${reviewData.reviews.length ? reviewData.reviews.map(r => `
           <div class="review-card">
             <div class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
-            <div class="reviewer">${r.user_name} <span style="color:var(--text-light);font-weight:400">• ${new Date(r.created_at).toLocaleDateString('en-IN')}</span></div>
-            ${r.comment ? `<div class="review-text">${r.comment}</div>` : ''}
+            <div class="reviewer">${escapeHtml(r.user_name)} <span style="color:var(--text-light);font-weight:400">• ${new Date(r.created_at).toLocaleDateString('en-IN')}</span></div>
+            ${r.comment ? `<div class="review-text">${escapeHtml(r.comment)}</div>` : ''}
           </div>
         `).join('') : `<p style="color:var(--text-light);font-size:.9rem">No reviews yet.${hasBooked ? ' Be the first to review!' : ' Book this outing to leave a review.'}</p>`}
       </div>
@@ -1132,7 +1161,7 @@ function resetStars() { const n = window._selectedRating; document.querySelector
 
 async function submitReview(outingId) {
   if (!window._selectedRating) return toast('Please select a rating', 'error');
-  const data = await api('/reviews', { method: 'POST', body: { user_id: currentUser.id, outing_id: outingId, rating: window._selectedRating, comment: document.getElementById('reviewComment').value } });
+  const data = await api('/reviews', { method: 'POST', body: { outing_id: outingId, rating: window._selectedRating, comment: document.getElementById('reviewComment').value } });
   if (data.success) { closeModal(); toast('⭐ Review submitted!', 'success'); navigate('outing-' + outingId); }
   else toast(data.message, 'error');
 }
@@ -1164,10 +1193,11 @@ async function renderChat(app, outingId) {
   const chatDiv = document.getElementById('chatMessages');
   chatDiv.scrollTop = chatDiv.scrollHeight;
 
-  // Auto-refresh chat every 3 seconds
+  // Auto-refresh chat every 3 seconds (pause when tab hidden)
   if (chatInterval) clearInterval(chatInterval);
   chatInterval = setInterval(async () => {
     if (!currentPage.startsWith('chat-')) { clearInterval(chatInterval); return; }
+    if (document.visibilityState === 'hidden') return; // BUG-006: skip when tab not visible
     const newMsgs = await api('/chat/' + outingId);
     const chatEl = document.getElementById('chatMessages');
     if (chatEl && newMsgs.length) {
@@ -1181,8 +1211,8 @@ function chatBubble(m) {
   const isMine = currentUser && m.user_id === currentUser.id;
   const time = new Date(m.created_at).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
   return `<div class="chat-msg ${isMine ? 'mine' : 'other'}">
-    ${!isMine ? `<div class="msg-name">${m.user_name}</div>` : ''}
-    ${m.message}
+    ${!isMine ? `<div class="msg-name">${escapeHtml(m.user_name)}</div>` : ''}
+    ${escapeHtml(m.message)}
     <div class="msg-time">${time}</div>
   </div>`;
 }
@@ -1192,7 +1222,7 @@ async function sendChat(outingId) {
   const msg = input.value.trim();
   if (!msg) return;
   input.value = '';
-  const data = await api('/chat', { method: 'POST', body: { outing_id: outingId, user_id: currentUser.id, message: msg } });
+  const data = await api('/chat', { method: 'POST', body: { outing_id: outingId, message: msg } });
   if (data.success) {
     const msgs = await api('/chat/' + outingId);
     const chatEl = document.getElementById('chatMessages');
@@ -1240,7 +1270,17 @@ async function renderAdmin(app) {
         <a href="#" class="${adminTab==='suggestions'?'active':''}" onclick="adminTab='suggestions';renderAdmin(document.getElementById('app'))"><i class="fas fa-lightbulb"></i> Suggestions <span style="background:var(--warning);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.pendingSuggestions}</span></a>
         <a href="#" class="${adminTab==='verifications'?'active':''}" onclick="adminTab='verifications';renderAdmin(document.getElementById('app'))"><i class="fas fa-id-card"></i> ID Verify <span style="background:var(--warning);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.pendingVerifications || 0}</span></a>
       </div>
-      <div class="dash-content" id="adminContent"></div>
+      <div class="dash-content">
+        <div class="mobile-admin-nav" role="navigation" aria-label="Admin navigation">
+          <a href="#" class="${adminTab==='overview'?'active':''}" onclick="adminTab='overview';renderAdmin(document.getElementById('app'))">📊 Overview</a>
+          <a href="#" class="${adminTab==='outings'?'active':''}" onclick="adminTab='outings';renderAdmin(document.getElementById('app'))">📅 Outings</a>
+          <a href="#" class="${adminTab==='bookings'?'active':''}" onclick="adminTab='bookings';renderAdmin(document.getElementById('app'))">🧾 Bookings</a>
+          <a href="#" class="${adminTab==='users'?'active':''}" onclick="adminTab='users';renderAdmin(document.getElementById('app'))">👥 Users</a>
+          <a href="#" class="${adminTab==='suggestions'?'active':''}" onclick="adminTab='suggestions';renderAdmin(document.getElementById('app'))">💡 Suggestions</a>
+          <a href="#" class="${adminTab==='verifications'?'active':''}" onclick="adminTab='verifications';renderAdmin(document.getElementById('app'))">🛡️ Verify</a>
+        </div>
+        <div id="adminContent"></div>
+      </div>
     </div>
   `;
   if (adminTab === 'overview') renderAdminOverview(stats);
@@ -1365,7 +1405,7 @@ function adminResetPassword(userId, name, email) {
     <h2><i class="fas fa-key" style="color:var(--warning)"></i> Reset Password</h2>
     <p style="color:var(--text-light);margin-bottom:1rem">Reset password for <strong>${name}</strong> (${email})</p>
     <form onsubmit="submitAdminReset(event, ${userId})">
-      <div class="form-group"><label>New Password</label><input type="password" id="adminNewPass" required minlength="6" placeholder="Min 6 characters"></div>
+      <div class="form-group"><label>New Password</label><input type="password" id="adminNewPass" required minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}" placeholder="Min 8 chars, upper+lower+number" title="Must contain uppercase, lowercase, and a number"></div>
       <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-save"></i> Reset Password</button>
     </form>
   `);
@@ -1534,10 +1574,11 @@ function generateParticles() {
 }
 
 // Cursor-based parallax shift
+let heroParallaxHandler = null;
 function initParallax() {
   const hero = document.getElementById('heroSection');
   if (!hero || window.innerWidth < 768) return;
-  hero.addEventListener('mousemove', (e) => {
+  heroParallaxHandler = (e) => {
     const rect = hero.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
@@ -1545,7 +1586,8 @@ function initParallax() {
     const ambient = hero.querySelector('.hero-ambient');
     if (content) content.style.transform = `translate(${x * 12}px, ${y * 10}px)`;
     if (ambient) ambient.style.transform = `translate(${x * -8}px, ${y * -6}px)`;
-  });
+  };
+  hero.addEventListener('mousemove', heroParallaxHandler);
   hero.addEventListener('mouseleave', () => {
     const content = document.getElementById('heroContent');
     const ambient = hero.querySelector('.hero-ambient');
@@ -1594,6 +1636,11 @@ function initHeroEffects() {
 // Cleanup slider on navigation away
 function cleanupHeroSlider() {
   if (heroSliderInterval) { clearInterval(heroSliderInterval); heroSliderInterval = null; }
+  if (heroParallaxHandler) {
+    const hero = document.getElementById('heroSection');
+    if (hero) hero.removeEventListener('mousemove', heroParallaxHandler);
+    heroParallaxHandler = null;
+  }
 }
 
 // ─── INIT ───────────────────────────────────────────────────────

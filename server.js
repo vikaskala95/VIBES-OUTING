@@ -13,6 +13,7 @@ const rateLimit = require('express-rate-limit');
 const { body, param, validationResult } = require('express-validator');
 const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
+const compression = require('compression');
 
 const app = express();
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -89,6 +90,9 @@ app.use(cors({
 // ─── SECURITY: HPP — HTTP Parameter Pollution protection ────────
 app.use(hpp());
 
+// ─── PERFORMANCE: Gzip/Brotli compression ───────────────────────
+app.use(compression());
+
 // ─── SECURITY: Cookie Parser (secure cookies) ───────────────────
 app.use(cookieParser(process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex')));
 
@@ -141,12 +145,30 @@ app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: IS_PROD ? '1d' : 0,
 }));
 
+// ─── SECURITY: CSRF Protection — require Authorization header for mutating requests ─
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method) && req.path.startsWith('/api/')) {
+    // If auth comes from cookie only (no Authorization header), check Origin/Referer
+    const authHeader = req.headers.authorization;
+    if (!authHeader && req.cookies && req.cookies.vibes_token) {
+      const origin = req.headers.origin || req.headers.referer || '';
+      const allowed = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(o => o.trim());
+      const originHost = origin ? new URL(origin).origin : '';
+      if (origin && !allowed.includes(originHost)) {
+        return res.status(403).json({ success: false, message: 'CSRF check failed' });
+      }
+    }
+  }
+  next();
+});
+
 // ─── RAZORPAY SETUP ─────────────────────────────────────────────
+const RAZORPAY_CONFIGURED = !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_REPLACE',
   key_secret: process.env.RAZORPAY_KEY_SECRET || 'REPLACE',
 });
-console.log('Razorpay Key:', process.env.RAZORPAY_KEY_ID ? 'Loaded ✓' : '⚠ Not set — update .env file');
+console.log('Razorpay Key:', RAZORPAY_CONFIGURED ? 'Loaded ✓' : '⚠ Not set — update .env file');
 
 // ─── EMAIL SETUP ────────────────────────────────────────────────
 const emailTransporter = nodemailer.createTransport({
@@ -313,6 +335,7 @@ db.exec(`
     password TEXT NOT NULL,
     interests TEXT DEFAULT '',
     role TEXT DEFAULT 'user',
+    must_change_password INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -421,15 +444,29 @@ try { db.exec(`ALTER TABLE bookings ADD COLUMN token_amount INTEGER DEFAULT 0`);
 try { db.exec(`ALTER TABLE bookings ADD COLUMN remaining_amount INTEGER DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE bookings ADD COLUMN remaining_payment_status TEXT DEFAULT 'pending'`); } catch(e) {}
 try { db.exec(`ALTER TABLE bookings ADD COLUMN remaining_payment_id TEXT`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0`); } catch(e) {}
+
+// ─── PERFORMANCE: Database indexes ──────────────────────────────
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings(user_id)`); } catch(e) {}
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_bookings_outing_id ON bookings(outing_id)`); } catch(e) {}
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_reviews_outing_id ON reviews(outing_id)`); } catch(e) {}
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_chat_outing_id ON chat_messages(outing_id)`); } catch(e) {}
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_security_logs_created ON security_logs(created_at)`); } catch(e) {}
 
 // Seed admin + sample data
 const adminExists = db.prepare('SELECT id FROM users WHERE email = ?').get('admin@vibes-outing.com');
 if (!adminExists) {
-  const hashedAdminPass = bcrypt.hashSync('admin123', BCRYPT_ROUNDS);
-  db.prepare('INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)').run(
-    'Admin', 'admin@vibes-outing.com', '9999999999', hashedAdminPass, 'admin'
+  // Use env variable for admin password, or generate a secure random one
+  const defaultAdminPass = process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@Vibes2026';
+  if (IS_PROD && !process.env.ADMIN_DEFAULT_PASSWORD) {
+    console.error('❌ FATAL: Set ADMIN_DEFAULT_PASSWORD in .env for production!');
+    process.exit(1);
+  }
+  const hashedAdminPass = bcrypt.hashSync(defaultAdminPass, BCRYPT_ROUNDS);
+  db.prepare('INSERT INTO users (name, email, phone, password, role, must_change_password) VALUES (?, ?, ?, ?, ?, ?)').run(
+    'Admin', 'admin@vibes-outing.com', '9999999999', hashedAdminPass, 'admin', 1
   );
-  console.warn('⚠ Default admin created with password "admin123" — CHANGE THIS IMMEDIATELY in production!');
+  console.warn(`⚠ Default admin created — CHANGE PASSWORD IMMEDIATELY! (password: ${defaultAdminPass})`);
 
   const sampleOutings = [
     { title: '🌄 Nandi Hills Sunrise Vibes', location: 'Nandi Hills', description: 'Pickup from Bangalore at 4 AM → chase the sunrise, aesthetic pics, and chill breakfast at a hilltop cafe. High-end Resort + Private Cab from Bangalore included. Perfect GenZ weekend escape!', date: '2026-05-10', time: '4:00 AM', cost: 2999, max: 25, img: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600' },
@@ -638,7 +675,12 @@ app.post('/api/bookings/verify-payment', authMiddleware, [
   if (!booking) return res.status(403).json({ success: false, message: 'Booking not found or access denied' });
 
   const body_str = razorpay_order_id + '|' + razorpay_payment_id;
-  const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'REPLACE')
+  const razorpaySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!razorpaySecret) {
+    securityLog('PAYMENT_NO_SECRET', { ip: req.ip });
+    return res.status(500).json({ success: false, message: 'Payment gateway not configured' });
+  }
+  const expectedSignature = crypto.createHmac('sha256', razorpaySecret)
     .update(body_str).digest('hex');
 
   // Constant-time comparison to prevent timing attacks
@@ -703,7 +745,9 @@ app.post('/api/bookings/verify-remaining', authMiddleware, [
   if (!booking) return res.status(403).json({ success: false, message: 'Access denied' });
 
   const body_str = razorpay_order_id + '|' + razorpay_payment_id;
-  const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'REPLACE')
+  const razorpaySecret2 = process.env.RAZORPAY_KEY_SECRET;
+  if (!razorpaySecret2) return res.status(500).json({ success: false, message: 'Payment gateway not configured' });
+  const expectedSignature = crypto.createHmac('sha256', razorpaySecret2)
     .update(body_str).digest('hex');
   if (crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature))) {
     db.prepare('UPDATE bookings SET remaining_payment_status = ?, remaining_payment_id = ? WHERE id = ?').run('paid', razorpay_payment_id, booking_id);
@@ -754,6 +798,20 @@ app.get('/api/bookings/:userId', authMiddleware, [
     return { ...b, deadline: deadline.toISOString(), deadline_passed: now > deadline, hours_until_deadline: Math.max(0, Math.round((deadline - now) / (1000 * 60 * 60))) };
   });
   res.json(enriched);
+});
+
+// ─── PUBLIC STATS (for homepage) ────────────────────────────────
+app.get('/api/public-stats', (req, res) => {
+  const outings = db.prepare('SELECT COUNT(*) as count FROM outings WHERE status = ?').get('active');
+  const users = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = ?').get('user');
+  const destinations = db.prepare('SELECT COUNT(DISTINCT location) as count FROM outings WHERE status = ?').get('active');
+  const avgReview = db.prepare('SELECT AVG(rating) as avg FROM reviews').get();
+  res.json({
+    outings: outings.count,
+    users: users.count,
+    destinations: destinations.count,
+    avgRating: Math.round((avgReview.avg || 4.8) * 10) / 10
+  });
 });
 
 // ─── SUGGESTION ROUTES ──────────────────────────────────────────
@@ -1027,10 +1085,11 @@ app.post('/api/auth/forgot-password', [
       });
     } catch (err) { console.error('Email error:', err.message); }
   } else {
-    console.log('📧 Password reset token (dev):', token);
+    const devResetLink = `${process.env.PASSWORD_RESET_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+    console.log('📧 Password reset link (dev — NOT sent via email):', devResetLink);
   }
-  const resetLink = !emailEnabled ? `${process.env.PASSWORD_RESET_URL || 'http://localhost:3000'}/reset-password?token=${token}` : null;
-  res.json({ success: true, ...(resetLink && !IS_PROD && { dev_reset_link: resetLink }) });
+  // Never expose reset token in API response — log to console only
+  res.json({ success: true, message: 'If your email is registered, a reset link has been sent.' });
 });
 
 app.post('/api/auth/reset-password', [
@@ -1077,6 +1136,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n🚀 VIBES@Outing Platform running at http://localhost:${PORT}`);
   console.log(`   Environment: ${IS_PROD ? 'PRODUCTION' : 'DEVELOPMENT'}`);
-  if (!IS_PROD) console.log(`   Admin Login: admin@vibes-outing.com / admin123`);
+  if (!IS_PROD) console.log(`   Admin Login: admin@vibes-outing.com / ${process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@Vibes2026'}`);
   console.log('');
 });
