@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "test": "node tests/test_all.js",
     "build": "npm install",
     "audit": "npm audit",
     "audit:fix": "npm audit fix"

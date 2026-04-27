@@ -1,0 +1,9 @@
+node_modules
+.env
+vibes.db
+vibes.db-shm
+vibes.db-wal
+*.md
+tests/
+.git
+.gitignore
