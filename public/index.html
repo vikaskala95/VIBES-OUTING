@@ -376,6 +376,7 @@ function safeImageUrl(url) {
 // ─── BROWSER HISTORY ────────────────────────────────────────────
 window.addEventListener('popstate', (e) => {
   if (e.state && e.state.page) { currentPage = e.state.page; navigate(e.state.page, true); }
+  else { const p = window.location.pathname.replace(/^\//, '') || 'home'; navigate(p, true); }
 });
 
 // ─── API ────────────────────────────────────────────────────────
@@ -545,7 +546,7 @@ async function navigate(page, skipHistory) {
 
   // Browser history support
   if (!skipHistory) {
-    history.pushState({ page }, '', '#' + page);
+    history.pushState({ page }, '', '/' + (page === 'home' ? '' : page));
   }
 
   // Show loading spinner
@@ -1645,7 +1646,9 @@ function cleanupHeroSlider() {
 
 // ─── INIT ───────────────────────────────────────────────────────
 renderNav();
-navigate('home');
+// Parse path-based route on initial load
+const initPath = window.location.pathname.replace(/^\//, '') || 'home';
+navigate(initPath);
 </script>
 </body>
 </html>

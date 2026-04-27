@@ -225,6 +225,17 @@ const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'vibes.db');
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+db.pragma('wal_autocheckpoint = 100');
+
+// Periodic WAL checkpoint to ensure data is flushed to the main DB file
+setInterval(() => {
+  try {
+    db.pragma('wal_checkpoint(TRUNCATE)');
+    console.log('✅ WAL checkpoint completed');
+  } catch (e) {
+    console.error('WAL checkpoint error:', e.message);
+  }
+}, 5 * 60 * 1000); // Every 5 minutes
 
 // ─── SECURITY: JWT Auth Middleware ──────────────────────────────
 function generateToken(user) {
@@ -1154,8 +1165,13 @@ const server = app.listen(PORT, () => {
 function gracefulShutdown(signal) {
   console.log(`\n${signal} received. Shutting down gracefully...`);
   server.close(() => {
-    try { db.close(); } catch (e) {}
-    console.log('Server closed.');
+    try {
+      db.pragma('wal_checkpoint(TRUNCATE)');
+      db.close();
+      console.log('✅ Database checkpointed and closed.');
+    } catch (e) {
+      console.error('DB close error:', e.message);
+    }
     process.exit(0);
   });
   setTimeout(() => { process.exit(1); }, 10000);
