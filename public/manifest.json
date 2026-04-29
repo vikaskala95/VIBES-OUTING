@@ -1,0 +1,28 @@
+{
+  "name": "VIBES@Outing",
+  "short_name": "VIBES",
+  "description": "Team outing platform — discover, book & vibe!",
+  "start_url": "https://www.vibesouting.in/",
+  "display": "standalone",
+  "background_color": "#1E1B2E",
+  "theme_color": "#6C3CE1",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["travel", "lifestyle"],
+  "prefer_related_applications": false
+}

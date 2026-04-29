@@ -1,9 +1,9 @@
 # 🧪 VIBES@Outing — Test Report
 
-**Date:** 2026-04-27 08:35:31  
+**Date:** 2026-04-28 18:30:27  
 **Environment:** Development (localhost:3000)  
 **Node.js:** v22.17.0  
-**Total Duration:** 5.43s  
+**Total Duration:** 5.25s  
 
 ---
 
@@ -25,75 +25,75 @@
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | Server is reachable | ✅ PASS | 37ms | — |
-| 2 | API returns JSON for outings | ✅ PASS | 12ms | — |
-| 3 | Unknown API returns 404 | ✅ PASS | 5ms | — |
+| 1 | Server is reachable | ✅ PASS | 31ms | — |
+| 2 | API returns JSON for outings | ✅ PASS | 7ms | — |
+| 3 | Unknown API returns 404 | ✅ PASS | 3ms | — |
 | 4 | Public stats endpoint works | ✅ PASS | 3ms | — |
-| 5 | Static files served | ✅ PASS | 4ms | — |
+| 5 | Static files served | ✅ PASS | 3ms | — |
 
 ### Auth (13/13 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | Signup — valid user | ✅ PASS | 344ms | — |
-| 2 | Signup — duplicate email rejected | ✅ PASS | 282ms | — |
-| 3 | Signup — missing name rejected | ✅ PASS | 4ms | — |
-| 4 | Signup — weak password rejected | ✅ PASS | 3ms | — |
-| 5 | Signup — invalid email rejected | ✅ PASS | 3ms | — |
-| 6 | Login — valid credentials | ✅ PASS | 248ms | — |
-| 7 | Login — wrong password | ✅ PASS | 261ms | — |
-| 8 | Login — non-existent user | ✅ PASS | 284ms | — |
-| 9 | Login — missing fields | ✅ PASS | 3ms | — |
-| 10 | Admin login | ✅ PASS | 249ms | — |
+| 1 | Signup — valid user | ✅ PASS | 294ms | — |
+| 2 | Signup — duplicate email rejected | ✅ PASS | 223ms | — |
+| 3 | Signup — missing name rejected | ✅ PASS | 2ms | — |
+| 4 | Signup — weak password rejected | ✅ PASS | 2ms | — |
+| 5 | Signup — invalid email rejected | ✅ PASS | 2ms | — |
+| 6 | Login — valid credentials | ✅ PASS | 225ms | — |
+| 7 | Login — wrong password | ✅ PASS | 226ms | — |
+| 8 | Login — non-existent user | ✅ PASS | 225ms | — |
+| 9 | Login — missing fields | ✅ PASS | 2ms | — |
+| 10 | Admin login | ✅ PASS | 219ms | — |
 | 11 | Logout | ✅ PASS | 2ms | — |
 | 12 | Protected route rejects unauthenticated | ✅ PASS | 2ms | — |
-| 13 | Invalid token rejected | ✅ PASS | 2ms | — |
+| 13 | Invalid token rejected | ✅ PASS | 1ms | — |
 
 ### Outings (8/8 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | GET /api/outings — list all | ✅ PASS | 2ms | — |
+| 1 | GET /api/outings — list all | ✅ PASS | 3ms | — |
 | 2 | GET /api/outings/:id — valid ID | ✅ PASS | 3ms | — |
-| 3 | GET /api/outings/:id — invalid ID | ✅ PASS | 2ms | — |
-| 4 | GET /api/outings/:id — non-numeric ID | ✅ PASS | 2ms | — |
+| 3 | GET /api/outings/:id — invalid ID | ✅ PASS | 3ms | — |
+| 4 | GET /api/outings/:id — non-numeric ID | ✅ PASS | 3ms | — |
 | 5 | POST create — non-admin rejected | ✅ PASS | 3ms | — |
-| 6 | POST create — admin can create | ✅ PASS | 4ms | — |
+| 6 | POST create — admin can create | ✅ PASS | 3ms | — |
 | 7 | DELETE — admin can delete | ✅ PASS | 5ms | — |
-| 8 | DELETE — non-admin rejected | ✅ PASS | 1ms | — |
+| 8 | DELETE — non-admin rejected | ✅ PASS | 2ms | — |
 
 ### Bookings (7/7 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | POST /api/bookings — demo booking | ✅ PASS | 5ms | — |
-| 2 | POST /api/bookings — unauthenticated rejected | ✅ PASS | 1ms | — |
-| 3 | GET /api/bookings/:userId — own bookings | ✅ PASS | 3ms | — |
+| 1 | POST /api/bookings — demo booking | ✅ PASS | 12ms | — |
+| 2 | POST /api/bookings — unauthenticated rejected | ✅ PASS | 2ms | — |
+| 3 | GET /api/bookings/:userId — own bookings | ✅ PASS | 4ms | — |
 | 4 | GET /api/bookings/:userId — IDOR prevention (other user) | ✅ PASS | 3ms | — |
-| 5 | POST /api/bookings/create-order — Razorpay order | ✅ PASS | 339ms | — |
+| 5 | POST /api/bookings/create-order — Razorpay order | ✅ PASS | 390ms | — |
 | 6 | POST /api/bookings — non-existent outing | ✅ PASS | 2ms | — |
-| 7 | Booking — exceeding max participants | ✅ PASS | 2ms | — |
+| 7 | Booking — exceeding max participants | ✅ PASS | 1ms | — |
 
 ### Suggestions (6/6 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
 | 1 | POST — create suggestion | ✅ PASS | 3ms | — |
-| 2 | POST — unauthenticated rejected | ✅ PASS | 1ms | — |
-| 3 | GET — list suggestions | ✅ PASS | 3ms | — |
-| 4 | POST — missing title rejected | ✅ PASS | 2ms | — |
-| 5 | PUT — admin approve suggestion | ✅ PASS | 1ms | — |
+| 2 | POST — unauthenticated rejected | ✅ PASS | 2ms | — |
+| 3 | GET — list suggestions | ✅ PASS | 2ms | — |
+| 4 | POST — missing title rejected | ✅ PASS | 1ms | — |
+| 5 | PUT — admin approve suggestion | ✅ PASS | 2ms | — |
 | 6 | PUT — non-admin rejected | ✅ PASS | 2ms | — |
 
 ### Reviews (7/7 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | GET /api/reviews/:outingId | ✅ PASS | 4ms | — |
+| 1 | GET /api/reviews/:outingId | ✅ PASS | 3ms | — |
 | 2 | POST — must have booked to review | ✅ PASS | 3ms | — |
 | 3 | POST — review booked outing | ✅ PASS | 2ms | — |
-| 4 | POST — duplicate review rejected | ✅ PASS | 2ms | — |
-| 5 | POST — invalid rating rejected | ✅ PASS | 1ms | — |
+| 4 | POST — duplicate review rejected | ✅ PASS | 1ms | — |
+| 5 | POST — invalid rating rejected | ✅ PASS | 2ms | — |
 | 6 | POST — unauthenticated rejected | ✅ PASS | 1ms | — |
 | 7 | GET — invalid outing ID | ✅ PASS | 2ms | — |
 
@@ -104,7 +104,7 @@
 | 1 | GET — unauthenticated rejected | ✅ PASS | 3ms | — |
 | 2 | GET — authenticated user can view | ✅ PASS | 2ms | — |
 | 3 | POST — booked user can send message | ✅ PASS | 2ms | — |
-| 4 | POST — message appears in chat | ✅ PASS | 2ms | — |
+| 4 | POST — message appears in chat | ✅ PASS | 1ms | — |
 | 5 | POST — empty message rejected | ✅ PASS | 2ms | — |
 | 6 | POST — unauthenticated rejected | ✅ PASS | 1ms | — |
 
@@ -112,48 +112,48 @@
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | POST — submit verification | ✅ PASS | 3ms | — |
-| 2 | GET — own verification status | ✅ PASS | 4ms | — |
-| 3 | GET — IDOR prevention | ✅ PASS | 3ms | — |
+| 1 | POST — submit verification | ✅ PASS | 4ms | — |
+| 2 | GET — own verification status | ✅ PASS | 3ms | — |
+| 3 | GET — IDOR prevention | ✅ PASS | 2ms | — |
 | 4 | POST — invalid ID type rejected | ✅ PASS | 2ms | — |
 | 5 | POST — unauthenticated rejected | ✅ PASS | 1ms | — |
-| 6 | Admin — list verifications | ✅ PASS | 3ms | — |
+| 6 | Admin — list verifications | ✅ PASS | 2ms | — |
 | 7 | Admin — approve verification | ✅ PASS | 4ms | — |
 
 ### Admin (6/6 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | GET /api/admin/stats | ✅ PASS | 6ms | — |
-| 2 | GET /api/admin/users | ✅ PASS | 4ms | — |
-| 3 | GET /api/admin/bookings | ✅ PASS | 3ms | — |
-| 4 | GET /api/admin/security-logs | ✅ PASS | 3ms | — |
+| 1 | GET /api/admin/stats | ✅ PASS | 4ms | — |
+| 2 | GET /api/admin/users | ✅ PASS | 2ms | — |
+| 3 | GET /api/admin/bookings | ✅ PASS | 2ms | — |
+| 4 | GET /api/admin/security-logs | ✅ PASS | 2ms | — |
 | 5 | Non-admin rejected from admin routes | ✅ PASS | 2ms | — |
-| 6 | Admin — users list has no passwords | ✅ PASS | 2ms | — |
+| 6 | Admin — users list has no passwords | ✅ PASS | 1ms | — |
 
 ### Recommendations (4/4 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | GET — own recommendations | ✅ PASS | 4ms | — |
+| 1 | GET — own recommendations | ✅ PASS | 9ms | — |
 | 2 | GET — IDOR prevention | ✅ PASS | 3ms | — |
-| 3 | GET — unauthenticated rejected | ✅ PASS | 2ms | — |
-| 4 | Results exclude booked outings | ✅ PASS | 2ms | — |
+| 3 | GET — unauthenticated rejected | ✅ PASS | 1ms | — |
+| 4 | Results exclude booked outings | ✅ PASS | 3ms | — |
 
 ### Security (13/13 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | X-Powered-By header is absent | ✅ PASS | 2ms | — |
-| 2 | X-Content-Type-Options: nosniff | ✅ PASS | 1ms | — |
-| 3 | X-Frame-Options present | ✅ PASS | 1ms | — |
-| 4 | Content-Security-Policy present | ✅ PASS | 2ms | — |
+| 1 | X-Powered-By header is absent | ✅ PASS | 5ms | — |
+| 2 | X-Content-Type-Options: nosniff | ✅ PASS | 4ms | — |
+| 3 | X-Frame-Options present | ✅ PASS | 3ms | — |
+| 4 | Content-Security-Policy present | ✅ PASS | 4ms | — |
 | 5 | Referrer-Policy present | ✅ PASS | 2ms | — |
 | 6 | Permissions-Policy present | ✅ PASS | 1ms | — |
-| 7 | XSS in input is sanitized | ✅ PASS | 3ms | — |
-| 8 | SQL injection in param is safe | ✅ PASS | 4ms | — |
-| 9 | JSON body size limit enforced | ✅ PASS | 4ms | — |
-| 10 | Password not in login response | ✅ PASS | 234ms | — |
+| 7 | XSS in input is sanitized | ✅ PASS | 2ms | — |
+| 8 | SQL injection in param is safe | ✅ PASS | 3ms | — |
+| 9 | JSON body size limit enforced | ✅ PASS | 5ms | — |
+| 10 | Password not in login response | ✅ PASS | 219ms | — |
 | 11 | Dotfiles access denied | ✅ PASS | 3ms | — |
 | 12 | No dev_reset_link in forgot-password response | ✅ PASS | 1ms | — |
 | 13 | Compression header present | ✅ PASS | 2ms | — |
@@ -163,23 +163,23 @@
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
 | 1 | POST forgot-password — valid email (no leak) | ✅ PASS | 3ms | — |
-| 2 | POST forgot-password — non-existent email (same response) | ✅ PASS | 1ms | — |
+| 2 | POST forgot-password — non-existent email (same response) | ✅ PASS | 2ms | — |
 | 3 | POST forgot-password — invalid email rejected | ✅ PASS | 1ms | — |
-| 4 | POST reset-password — invalid token | ✅ PASS | 2ms | — |
+| 4 | POST reset-password — invalid token | ✅ PASS | 1ms | — |
 | 5 | POST reset-password — weak password rejected | ✅ PASS | 1ms | — |
 
 ### Edge (10/10 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | GET outing with ID 0 | ✅ PASS | 3ms | — |
-| 2 | GET outing with negative ID | ✅ PASS | 2ms | — |
-| 3 | GET outing with very large ID | ✅ PASS | 2ms | — |
+| 1 | GET outing with ID 0 | ✅ PASS | 7ms | — |
+| 2 | GET outing with negative ID | ✅ PASS | 6ms | — |
+| 3 | GET outing with very large ID | ✅ PASS | 4ms | — |
 | 4 | POST with empty JSON body | ✅ PASS | 1ms | — |
-| 5 | POST with null body fields | ✅ PASS | 0ms | — |
+| 5 | POST with null body fields | ✅ PASS | 1ms | — |
 | 6 | Special characters in search (GET) | ✅ PASS | 1ms | — |
 | 7 | Very long title in suggestion | ✅ PASS | 2ms | — |
-| 8 | Booking with 0 participants | ✅ PASS | 2ms | — |
+| 8 | Booking with 0 participants | ✅ PASS | 3ms | — |
 | 9 | Review with rating 0 | ✅ PASS | 2ms | — |
 | 10 | Review with rating 6 | ✅ PASS | 1ms | — |
 
@@ -187,8 +187,8 @@
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | GET /api/razorpay-key | ✅ PASS | 3ms | — |
-| 2 | SPA fallback — unknown route returns index.html | ✅ PASS | 4ms | — |
+| 1 | GET /api/razorpay-key | ✅ PASS | 7ms | — |
+| 2 | SPA fallback — unknown route returns index.html | ✅ PASS | 9ms | — |
 | 3 | Multiple concurrent requests handled | ✅ PASS | 6ms | — |
 | 4 | OPTIONS request (CORS preflight) | ✅ PASS | 1ms | — |
 
@@ -198,7 +198,7 @@
 |---|-----------|--------|------|-------|
 | 1 | Outing data has required fields | ✅ PASS | 1ms | — |
 | 2 | Booking amounts calculate correctly (20% token) | ✅ PASS | 0ms | — |
-| 3 | Outing participant count is non-negative | ✅ PASS | 1ms | — |
+| 3 | Outing participant count is non-negative | ✅ PASS | 0ms | — |
 | 4 | Review average is between 0 and 5 | ✅ PASS | 1ms | — |
 
 ---

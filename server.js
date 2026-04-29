@@ -225,17 +225,6 @@ const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'vibes.db');
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
-db.pragma('wal_autocheckpoint = 100');
-
-// Periodic WAL checkpoint to ensure data is flushed to the main DB file
-setInterval(() => {
-  try {
-    db.pragma('wal_checkpoint(TRUNCATE)');
-    console.log('✅ WAL checkpoint completed');
-  } catch (e) {
-    console.error('WAL checkpoint error:', e.message);
-  }
-}, 5 * 60 * 1000); // Every 5 minutes
 
 // ─── SECURITY: JWT Auth Middleware ──────────────────────────────
 function generateToken(user) {
@@ -470,21 +459,22 @@ if (!adminExists) {
   // Use env variable for admin password, or generate a secure random one
   const defaultAdminPass = process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@Vibes2026';
   if (IS_PROD && !process.env.ADMIN_DEFAULT_PASSWORD) {
-    console.warn('⚠ WARNING: Using default admin password in production. Set ADMIN_DEFAULT_PASSWORD in env vars!');
+    console.error('❌ FATAL: Set ADMIN_DEFAULT_PASSWORD in .env for production!');
+    process.exit(1);
   }
   const hashedAdminPass = bcrypt.hashSync(defaultAdminPass, BCRYPT_ROUNDS);
   db.prepare('INSERT INTO users (name, email, phone, password, role, must_change_password) VALUES (?, ?, ?, ?, ?, ?)').run(
     'Admin', 'admin@vibes-outing.com', '9999999999', hashedAdminPass, 'admin', 1
   );
-  console.warn('⚠ Default admin created — CHANGE PASSWORD IMMEDIATELY! Check ADMIN_DEFAULT_PASSWORD env var or use the default.');
+  console.warn(`⚠ Default admin created — CHANGE PASSWORD IMMEDIATELY! (password: ${defaultAdminPass})`);
 
   const sampleOutings = [
-    { title: '🌄 Nandi Hills Sunrise Vibes', location: 'Nandi Hills', description: 'Pickup from Bangalore at 4 AM → chase the sunrise, aesthetic pics, and chill breakfast at a hilltop cafe. High-end Resort + Private Cab from Bangalore included. Perfect GenZ weekend escape!', date: '2026-05-29', time: '4:00 AM', cost: 2999, max: 25, img: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600' },
-    { title: '🏞️ Bheemeshwari Adventure Day', location: 'Bheemeshwari', description: 'Starts from Bangalore → Kayaking, coracle ride, zipline & bonfire by the river. One epic day trip with High-end Resort + Private Cab from Bangalore. No boring stuff, only vibes!', date: '2026-05-29', time: '6:00 AM', cost: 4999, max: 20, img: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600' },
-    { title: '⛰️ Chikmagalur Coffee & Chill (2D/1N)', location: 'Chikmagalur', description: 'Pickup from Bangalore → 2-day getaway — Mullayanagiri trek, coffee plantation tour, campfire & stargazing. High-end Resort + Private Cab from Bangalore. Peak aesthetic energy.', date: '2026-05-29', time: '6:00 AM', cost: 12999, max: 20, img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600' },
-    { title: '🏰 Mysore Royal Day Out', location: 'Mysore', description: 'Starts from Bangalore → Palace visit, Chamundi Hills, street food crawl & Brindavan Gardens light show. One iconic day with High-end Resort + Private Cab from Bangalore.', date: '2026-06-05', time: '7:00 AM', cost: 1999, max: 30, img: 'https://images.unsplash.com/photo-1567337710282-00832b415979?w=600' },
-    { title: '🌿 Ooty Mountain Escape (2D/1N)', location: 'Ooty', description: 'Pickup from Bangalore → Toy train, botanical gardens, lake boating & cozy resort stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Main character energy guaranteed.', date: '2026-06-05', time: '5:00 AM', cost: 9999, max: 20, img: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600' },
-    { title: '☕ Coorg Rainforest Retreat (2D/1N)', location: 'Coorg', description: 'Starts from Bangalore → Abbey Falls, Raja Seat sunset, coffee trail & private villa stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Touch grass, literally.', date: '2026-05-27', time: '6:00 AM', cost: 10999, max: 20, img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600' },
+    { title: '🌄 Nandi Hills Sunrise Vibes', location: 'Nandi Hills', description: 'Pickup from Bangalore at 4 AM → chase the sunrise, aesthetic pics, and chill breakfast at a hilltop cafe. High-end Resort + Private Cab from Bangalore included. Perfect GenZ weekend escape!', date: '2026-05-10', time: '4:00 AM', cost: 2999, max: 25, img: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600' },
+    { title: '🏞️ Bheemeshwari Adventure Day', location: 'Bheemeshwari', description: 'Starts from Bangalore → Kayaking, coracle ride, zipline & bonfire by the river. One epic day trip with High-end Resort + Private Cab from Bangalore. No boring stuff, only vibes!', date: '2026-05-17', time: '6:00 AM', cost: 4999, max: 20, img: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600' },
+    { title: '⛰️ Chikmagalur Coffee & Chill (2D/1N)', location: 'Chikmagalur', description: 'Pickup from Bangalore → 2-day getaway — Mullayanagiri trek, coffee plantation tour, campfire & stargazing. High-end Resort + Private Cab from Bangalore. Peak aesthetic energy.', date: '2026-05-24', time: '6:00 AM', cost: 12999, max: 20, img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600' },
+    { title: '🏰 Mysore Royal Day Out', location: 'Mysore', description: 'Starts from Bangalore → Palace visit, Chamundi Hills, street food crawl & Brindavan Gardens light show. One iconic day with High-end Resort + Private Cab from Bangalore.', date: '2026-06-07', time: '7:00 AM', cost: 1999, max: 30, img: 'https://images.unsplash.com/photo-1567337710282-00832b415979?w=600' },
+    { title: '🌿 Ooty Mountain Escape (2D/1N)', location: 'Ooty', description: 'Pickup from Bangalore → Toy train, botanical gardens, lake boating & cozy resort stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Main character energy guaranteed.', date: '2026-06-14', time: '5:00 AM', cost: 9999, max: 20, img: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600' },
+    { title: '☕ Coorg Rainforest Retreat (2D/1N)', location: 'Coorg', description: 'Starts from Bangalore → Abbey Falls, Raja Seat sunset, coffee trail & private villa stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Touch grass, literally.', date: '2026-06-21', time: '6:00 AM', cost: 10999, max: 20, img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600' },
     { title: '🌊 Wayanad Wild Weekend (2D/1N)', location: 'Wayanad', description: 'Pickup from Bangalore → Edakkal Caves, bamboo rafting, Banasura dam & treehouse stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Nature but make it aesthetic.', date: '2026-06-28', time: '5:00 AM', cost: 10999, max: 20, img: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600' },
     { title: '🏜️ Gandikota Grand Canyon (2D/1N)', location: 'Gandikota', description: 'Starts from Bangalore → India\'s Grand Canyon — cliff camping, Pennar river, fort ruins & astrophotography. 2-day trip with High-end Resort + Private Cab from Bangalore. Underrated gem!', date: '2026-07-05', time: '5:00 AM', cost: 10999, max: 20, img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600' },
     { title: '🛕 Lepakshi Heritage & Vibes', location: 'Lepakshi', description: 'Pickup from Bangalore → Hanging Pillar temple, Nandi bull statue, mural art & local food. One day cultural trip with High-end Resort + Private Cab from Bangalore. History but cool.', date: '2026-07-12', time: '7:00 AM', cost: 5999, max: 25, img: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600' },
@@ -506,16 +496,6 @@ function setAuthCookie(res, token) {
     path: '/',
   });
 }
-
-// ─── HEALTH CHECK (for load balancers / uptime monitors) ────────
-app.get('/api/health', (req, res) => {
-  try {
-    db.prepare('SELECT 1').get();
-    res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
-  } catch (e) {
-    res.status(503).json({ status: 'error', message: 'Database unavailable' });
-  }
-});
 
 // ─── AUTH ROUTES (SECURED) ───────────────────────────────────────
 app.post('/api/auth/signup', [
@@ -1026,11 +1006,7 @@ app.get('/api/recommendations/:userId', authMiddleware, [
   if (!user) return res.json([]);
   const userInterests = (user.interests || '').toLowerCase().split(',').map(i => i.trim()).filter(Boolean);
   const bookedOutingIds = db.prepare('SELECT outing_id FROM bookings WHERE user_id = ? AND payment_status = ?').all(req.params.userId, 'paid').map(b => b.outing_id);
-  const bookedLocations = db.prepare('SELECT DISTINCT o.location FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.user_id = ? AND b.payment_status = ?').all(req.params.userId, 'paid').map(r => r.location.toLowerCase());
-  const avgSpend = db.prepare('SELECT AVG(o.cost) as avg FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.user_id = ? AND b.payment_status = ?').get(req.params.userId, 'paid');
   const allOutings = db.prepare('SELECT * FROM outings WHERE status = ? ORDER BY date ASC').all('active');
-  const reviewAvgs = {};
-  db.prepare('SELECT outing_id, AVG(rating) as avg FROM reviews GROUP BY outing_id').all().forEach(r => { reviewAvgs[r.outing_id] = r.avg; });
 
   const scored = allOutings
     .filter(o => !bookedOutingIds.includes(o.id))
@@ -1038,13 +1014,16 @@ app.get('/api/recommendations/:userId', authMiddleware, [
       let score = 0;
       const desc = ((o.description || '') + ' ' + o.title + ' ' + o.location).toLowerCase();
       userInterests.forEach(interest => { if (desc.includes(interest)) score += 30; });
+      const bookedLocations = db.prepare('SELECT DISTINCT o.location FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.user_id = ? AND b.payment_status = ?').all(req.params.userId, 'paid').map(r => r.location.toLowerCase());
       if (bookedLocations.includes(o.location.toLowerCase())) score += 15;
+      const avgSpend = db.prepare('SELECT AVG(o.cost) as avg FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.user_id = ? AND b.payment_status = ?').get(req.params.userId, 'paid');
       if (avgSpend.avg) { const diff = Math.abs(o.cost - avgSpend.avg); if (diff < 200) score += 20; else if (diff < 500) score += 10; }
       score += Math.min(o.current_participants * 2, 20);
       const daysAway = (new Date(o.date) - new Date()) / (1000*60*60*24);
       if (daysAway > 0 && daysAway < 30) score += 15;
       else if (daysAway > 0 && daysAway < 60) score += 8;
-      if (reviewAvgs[o.id]) score += reviewAvgs[o.id] * 5;
+      const review = db.prepare('SELECT AVG(rating) as avg FROM reviews WHERE outing_id = ?').get(o.id);
+      if (review.avg) score += review.avg * 5;
       return { ...o, score, matchReasons: getMatchReasons(o, userInterests, bookedLocations, avgSpend.avg) };
     })
     .sort((a, b) => b.score - a.score)
@@ -1154,27 +1133,9 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`\n🚀 VIBES@Outing Platform running at http://localhost:${PORT}`);
   console.log(`   Environment: ${IS_PROD ? 'PRODUCTION' : 'DEVELOPMENT'}`);
-  if (!IS_PROD) console.log(`   Admin Login: admin@vibes-outing.com (check ADMIN_DEFAULT_PASSWORD env var)`);
+  if (!IS_PROD) console.log(`   Admin Login: admin@vibes-outing.com / ${process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@Vibes2026'}`);
   console.log('');
 });
-
-// ─── GRACEFUL SHUTDOWN ──────────────────────────────────────────
-function gracefulShutdown(signal) {
-  console.log(`\n${signal} received. Shutting down gracefully...`);
-  server.close(() => {
-    try {
-      db.pragma('wal_checkpoint(TRUNCATE)');
-      db.close();
-      console.log('✅ Database checkpointed and closed.');
-    } catch (e) {
-      console.error('DB close error:', e.message);
-    }
-    process.exit(0);
-  });
-  setTimeout(() => { process.exit(1); }, 10000);
-}
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));

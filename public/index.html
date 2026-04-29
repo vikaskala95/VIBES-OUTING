@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#6C3CE1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VIBES">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <title>VIBES@Outing — GenZ Group Outings | Discover, Join & Explore</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -738,7 +744,7 @@ function outingCard(o) {
         <div class="card-footer" style="margin-top:.75rem">
           <div class="price">
             <span style="text-decoration:line-through;color:var(--text-light);font-size:.85rem;font-weight:400">₹${o.cost}</span>
-            <br>₹${Math.ceil(o.cost * 0.20)} <small>/person token</small>
+            <br>₹${ Math.ceil(o.cost * 0.20)} <small>/person token</small>
           </div>
           <div style="display:flex;gap:.5rem">
             <button class="btn btn-sm" style="background:#F1F5F9;color:var(--text)" onclick="navigate('outing-${o.id}')"><i class="fas fa-info-circle"></i></button>
@@ -848,7 +854,7 @@ async function confirmBooking(e, outingId, cost) {
 
   if (!orderRes.success) {
     if (orderRes.message && orderRes.message.includes('API keys')) {
-      const fallback = await api('/bookings', { method: 'POST', body: { outing_id: outingId, participants, participant_names: participantNames, total_amount: totalAmount } });
+      const fallback = await api('/bookings', { method: 'POST', body: { outing_id: outingId, participants, participant_names, total_amount: totalAmount } });
       if (fallback.success) { closeModal(); toast('🎉 Token booking confirmed (demo)! Paid ₹' + fallback.token_amount + ' | Remaining ₹' + fallback.remaining_amount, 'success'); navigate(currentPage); }
       else toast(fallback.message, 'error');
       return;
@@ -1649,6 +1655,44 @@ renderNav();
 // Parse path-based route on initial load
 const initPath = window.location.pathname.replace(/^\//, '') || 'home';
 navigate(initPath);
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('✅ SW registered:', reg.scope);
+    }).catch(err => console.log('SW registration failed:', err));
+  });
+}
+
+// PWA Install Prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show install banner
+  const banner = document.createElement('div');
+  banner.id = 'pwa-install-banner';
+  banner.innerHTML = `
+    <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#6C3CE1,#8B5CF6);color:#fff;padding:14px 24px;border-radius:16px;display:flex;align-items:center;gap:12px;z-index:99999;box-shadow:0 8px 32px rgba(108,60,225,.4);font-family:Inter,sans-serif;max-width:90vw">
+      <span style="font-size:1.5rem">📲</span>
+      <span style="font-size:.95rem;font-weight:500">Install VIBES app for the best experience!</span>
+      <button onclick="installPWA()" style="background:#fff;color:#6C3CE1;border:none;padding:8px 18px;border-radius:10px;font-weight:700;cursor:pointer;white-space:nowrap">Install</button>
+      <button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer">✕</button>
+    </div>`;
+  document.body.appendChild(banner);
+});
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(choice => {
+      if (choice.outcome === 'accepted') console.log('✅ App installed');
+      document.getElementById('pwa-install-banner')?.remove();
+      deferredPrompt = null;
+    });
+  }
+}
 </script>
 </body>
 </html>
