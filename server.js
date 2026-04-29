@@ -75,7 +75,7 @@ app.use((req, res, next) => {
 });
 
 // ─── SECURITY: CORS — strict origin rules ──────────────────────
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(o => o.trim());
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://vibesouting.in').split(',').map(o => o.trim());
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) callback(null, true);
@@ -152,7 +152,7 @@ app.use((req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader && req.cookies && req.cookies.vibes_token) {
       const origin = req.headers.origin || req.headers.referer || '';
-      const allowed = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(o => o.trim());
+      const allowed = (process.env.ALLOWED_ORIGINS || 'https://vibesouting.in').split(',').map(o => o.trim());
       const originHost = origin ? new URL(origin).origin : '';
       if (origin && !allowed.includes(originHost)) {
         return res.status(403).json({ success: false, message: 'CSRF check failed' });
@@ -1065,7 +1065,7 @@ app.post('/api/auth/forgot-password', [
   securityLog('PASSWORD_RESET_REQUESTED', { userId: user.id, ip: req.ip });
 
   if (emailEnabled) {
-    const resetUrl = `${process.env.PASSWORD_RESET_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+    const resetUrl = `${process.env.PASSWORD_RESET_URL || 'https://vibesouting.in'}/reset-password?token=${token}`;
     try {
       await emailTransporter.sendMail({
         from: `"VIBES@Outing" <${process.env.SMTP_USER}>`,
@@ -1085,7 +1085,7 @@ app.post('/api/auth/forgot-password', [
       });
     } catch (err) { console.error('Email error:', err.message); }
   } else {
-    const devResetLink = `${process.env.PASSWORD_RESET_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+    const devResetLink = `${process.env.PASSWORD_RESET_URL || 'https://vibesouting.in'}/reset-password?token=${token}`;
     console.log('📧 Password reset link (dev — NOT sent via email):', devResetLink);
   }
   // Never expose reset token in API response — log to console only
