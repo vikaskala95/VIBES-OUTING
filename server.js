@@ -46,7 +46,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://images.unsplash.com", "https://*.unsplash.com", "https://img.icons8.com", "https://*.razorpay.com"],
-      connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com", "https://vibesouting.in", "https://www.vibesouting.in"],
+      connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com", "https://vibesouting.in", "https://www.vibesouting.in", "https://api.vibesouting.in"],
       frameSrc: ["'self'", "https://api.razorpay.com", "https://checkout.razorpay.com"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -138,12 +138,14 @@ app.use('/api/auth/forgot-password', passwordResetLimiter);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
-// ─── SECURITY: Serve static files with security headers ─────────
-app.use(express.static(path.join(__dirname, 'public'), {
-  dotfiles: 'deny',
-  etag: true,
-  maxAge: IS_PROD ? '1d' : 0,
-}));
+// ─── STATIC FILES: Serve in dev/monolith mode, skip in API-only mode ─
+if (!process.env.API_ONLY) {
+  app.use(express.static(path.join(__dirname, 'public'), {
+    dotfiles: 'deny',
+    etag: true,
+    maxAge: IS_PROD ? '1d' : 0,
+  }));
+}
 
 // ─── SECURITY: CSRF Protection — require Authorization header for mutating requests ─
 app.use((req, res, next) => {
@@ -1127,10 +1129,12 @@ app.get('/api/*', (req, res) => {
   res.status(404).json({ success: false, message: 'Endpoint not found' });
 });
 
-// ─── SPA FALLBACK & START ───────────────────────────────────────
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// ─── SPA FALLBACK (only in monolith mode) ───────────────────────
+if (!process.env.API_ONLY) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

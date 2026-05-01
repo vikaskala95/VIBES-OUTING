@@ -23,9 +23,11 @@ services:
       - key: RAZORPAY_KEY_SECRET
         sync: false
       - key: ALLOWED_ORIGINS
-        value: https://www.vibesouting.in,https://vibesouting.in
+        value: https://www.vibesouting.in,https://vibesouting.in,https://api.vibesouting.in
       - key: PASSWORD_RESET_URL
         value: https://www.vibesouting.in
+      - key: API_ONLY
+        value: "true"
     disk:
       name: vibes-data
       mountPath: /var/data
