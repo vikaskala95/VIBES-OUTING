@@ -493,7 +493,7 @@ function setAuthCookie(res, token) {
   res.cookie('vibes_token', token, {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'strict',
+    sameSite: IS_PROD ? 'none' : 'strict', // 'none' required for cross-origin (Vercel→Railway)
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: '/',
   });

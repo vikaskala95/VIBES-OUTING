@@ -379,7 +379,7 @@ window.addEventListener('popstate', (e) => {
 });
 
 // ─── API ────────────────────────────────────────────────────────
-const API_BASE = window.location.hostname === 'localhost' ? '' : 'https://api.vibesouting.in';
+const API_BASE = window.location.hostname === 'localhost' ? '' : 'https://vibesouting-production.up.railway.app';
 const api = async (url, opts = {}) => {
   try {
     const headers = { 'Content-Type': 'application/json' };

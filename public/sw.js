@@ -23,8 +23,8 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const { request } = event;
-  // Network-first for API calls (same-origin or api.vibesouting.in)
-  if (request.url.includes('/api/') || request.url.includes('api.vibesouting.in')) {
+  // Network-first for API calls (same-origin or Railway backend)
+  if (request.url.includes('/api/') || request.url.includes('vibesouting-production.up.railway.app')) {
     event.respondWith(fetch(request).catch(() => new Response(JSON.stringify({ success: false, message: 'Offline' }), { headers: { 'Content-Type': 'application/json' } })));
     return;
   }
