@@ -12,7 +12,11 @@ Open http://localhost:3000
 
 ## Admin Login
 - Email: `admin@vibes-outing.com`
-- Password: `admin123`
+- Password: `Admin@Vibes2026`
+
+## Adding New Outings
+- No code change is needed for live outings if you create them from the admin dashboard.
+- To change the default seeded catalog for fresh databases, edit `data/default-outings.json`.
 
 ## Environment Variables
 Create a `.env` file:

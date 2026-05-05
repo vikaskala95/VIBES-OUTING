@@ -1,0 +1,112 @@
+[
+  {
+    "title": "🌄 Nandi Hills Sunrise Vibes",
+    "location": "Nandi Hills",
+    "description": "Pickup from Bangalore at 4 AM → chase the sunrise, aesthetic pics, and chill breakfast at a hilltop cafe. High-end Resort + Private Cab from Bangalore included. Perfect GenZ weekend escape!",
+    "date": "2026-05-10",
+    "time": "4:00 AM",
+    "cost": 2999,
+    "max": 25,
+    "img": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600"
+  },
+  {
+    "title": "🏞️ Bheemeshwari Adventure Day",
+    "location": "Bheemeshwari",
+    "description": "Starts from Bangalore → Kayaking, coracle ride, zipline & bonfire by the river. One epic day trip with High-end Resort + Private Cab from Bangalore. No boring stuff, only vibes!",
+    "date": "2026-05-17",
+    "time": "6:00 AM",
+    "cost": 4999,
+    "max": 20,
+    "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600"
+  },
+  {
+    "title": "⛰️ Chikmagalur Coffee & Chill (2D/1N)",
+    "location": "Chikmagalur",
+    "description": "Pickup from Bangalore → 2-day getaway — Mullayanagiri trek, coffee plantation tour, campfire & stargazing. High-end Resort + Private Cab from Bangalore. Peak aesthetic energy.",
+    "date": "2026-05-24",
+    "time": "6:00 AM",
+    "cost": 12999,
+    "max": 20,
+    "img": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600"
+  },
+  {
+    "title": "🏰 Mysore Royal Day Out",
+    "location": "Mysore",
+    "description": "Starts from Bangalore → Palace visit, Chamundi Hills, street food crawl & Brindavan Gardens light show. One iconic day with High-end Resort + Private Cab from Bangalore.",
+    "date": "2026-06-07",
+    "time": "7:00 AM",
+    "cost": 1999,
+    "max": 30,
+    "img": "https://images.unsplash.com/photo-1567337710282-00832b415979?w=600"
+  },
+  {
+    "title": "🌿 Ooty Mountain Escape (2D/1N)",
+    "location": "Ooty",
+    "description": "Pickup from Bangalore → Toy train, botanical gardens, lake boating & cozy resort stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Main character energy guaranteed.",
+    "date": "2026-06-14",
+    "time": "5:00 AM",
+    "cost": 9999,
+    "max": 20,
+    "img": "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600"
+  },
+  {
+    "title": "☕ Coorg Rainforest Retreat (2D/1N)",
+    "location": "Coorg",
+    "description": "Starts from Bangalore → Abbey Falls, Raja Seat sunset, coffee trail & private villa stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Touch grass, literally.",
+    "date": "2026-06-21",
+    "time": "6:00 AM",
+    "cost": 10999,
+    "max": 20,
+    "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600"
+  },
+  {
+    "title": "🌊 Wayanad Wild Weekend (2D/1N)",
+    "location": "Wayanad",
+    "description": "Pickup from Bangalore → Edakkal Caves, bamboo rafting, Banasura dam & treehouse stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Nature but make it aesthetic.",
+    "date": "2026-06-28",
+    "time": "5:00 AM",
+    "cost": 10999,
+    "max": 20,
+    "img": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600"
+  },
+  {
+    "title": "🏜️ Gandikota Grand Canyon (2D/1N)",
+    "location": "Gandikota",
+    "description": "Starts from Bangalore → India's Grand Canyon — cliff camping, Pennar river, fort ruins & astrophotography. 2-day trip with High-end Resort + Private Cab from Bangalore. Underrated gem!",
+    "date": "2026-07-05",
+    "time": "5:00 AM",
+    "cost": 10999,
+    "max": 20,
+    "img": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600"
+  },
+  {
+    "title": "🛕 Lepakshi Heritage & Vibes",
+    "location": "Lepakshi",
+    "description": "Pickup from Bangalore → Hanging Pillar temple, Nandi bull statue, mural art & local food. One day cultural trip with High-end Resort + Private Cab from Bangalore. History but cool.",
+    "date": "2026-07-12",
+    "time": "7:00 AM",
+    "cost": 5999,
+    "max": 25,
+    "img": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600"
+  },
+  {
+    "title": "🌲 Sakleshpur Green Route Trek",
+    "location": "Sakleshpur",
+    "description": "Starts from Bangalore → Railway track trek, waterfall dip, homestay & campfire. High-end Resort + Private Cab from Bangalore. The most Insta-worthy trek near Bangalore!",
+    "date": "2026-07-19",
+    "time": "5:00 AM",
+    "cost": 9999,
+    "max": 20,
+    "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600"
+  },
+  {
+    "title": "🏖️ Goa Beach Blowout (2D/1N)",
+    "location": "Goa",
+    "description": "Fly from Bangalore → Beach hopping, water sports, sunset parties, night market crawl & seafood feast. 2-day trip with High-end Resort + Private Cab in Goa. The ultimate GenZ getaway. No FOMO!",
+    "date": "2026-07-26",
+    "time": "6:00 AM",
+    "cost": 11999,
+    "max": 25,
+    "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600"
+  }
+]
