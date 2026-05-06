@@ -395,7 +395,7 @@ window.addEventListener('popstate', (e) => {
 });
 
 // ─── API ────────────────────────────────────────────────────────
-const API_BASE = window.location.hostname === 'localhost' ? '' : 'https://vibesouting-production.up.railway.app';
+const API_BASE = window.VIBES_API_BASE || (window.location.hostname === 'localhost' ? '' : window.location.origin);
 const api = async (url, opts = {}) => {
   try {
     const headers = { 'Content-Type': 'application/json' };
@@ -485,10 +485,32 @@ function showForgotPassword() {
 
 async function handleForgotPassword(e) {
   e.preventDefault();
-  const email = document.getElementById('forgotEmail').value;
-  const data = await api('/auth/forgot-password', { method: 'POST', body: { email } });
-  toast(data.message || 'If your email is registered, a reset link has been sent. Check your inbox!', 'success');
-  closeModal();
+  const emailInput = document.getElementById('forgotEmail');
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const email = emailInput.value;
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+  }
+
+  try {
+    const data = await api('/auth/forgot-password', { method: 'POST', body: { email } });
+    if (data.success) {
+      toast(data.message || 'If your email is registered, a reset link has been sent. Check your inbox!', 'success');
+      closeModal();
+    } else {
+      toast(data.message || 'Unable to send reset link right now. Please try again.', 'error');
+    }
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    toast('Unable to send reset link right now. Please try again.', 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Reset Link';
+    }
+  }
 }
 
 function showSignup() {

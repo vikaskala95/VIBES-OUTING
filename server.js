@@ -20,6 +20,11 @@ const compression = require('compression');
 const app = express();
 const IS_PROD = process.env.NODE_ENV === 'production';
 
+function envFlag(value, defaultValue = false) {
+  if (value === undefined || value === null || value === '') return defaultValue;
+  return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
+}
+
 // ─── SECURITY: Trust proxy (for reverse proxies) ────────────────
 app.set('trust proxy', 1);
 
@@ -77,11 +82,32 @@ app.use((req, res, next) => {
 });
 
 // ─── SECURITY: CORS — strict origin rules ──────────────────────
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://vibesouting.in').split(',').map(o => o.trim());
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'https://vibesouting.in,https://www.vibesouting.in,http://localhost:3000,http://127.0.0.1:3000')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+const allowedOriginRegexes = (process.env.ALLOWED_ORIGIN_REGEX || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean)
+  .map((pattern) => {
+    try { return new RegExp(pattern); } catch (_) { return null; }
+  })
+  .filter(Boolean);
+const allowVercelPreview = envFlag(process.env.ALLOW_VERCEL_PREVIEWS, false);
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  if (allowVercelPreview && /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;
+  return allowedOriginRegexes.some((re) => re.test(origin));
+}
+
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-    else callback(new Error('Not allowed by CORS'));
+    if (isAllowedOrigin(origin)) return callback(null, true);
+    console.warn(`[CORS] Blocked origin: ${origin || 'unknown'}`);
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -156,9 +182,14 @@ app.use((req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader && req.cookies && req.cookies.vibes_token) {
       const origin = req.headers.origin || req.headers.referer || '';
-      const allowed = (process.env.ALLOWED_ORIGINS || 'https://vibesouting.in').split(',').map(o => o.trim());
-      const originHost = origin ? new URL(origin).origin : '';
-      if (origin && !allowed.includes(originHost)) {
+      let originHost = '';
+      try {
+        originHost = origin ? new URL(origin).origin : '';
+      } catch (_) {
+        return res.status(403).json({ success: false, message: 'CSRF check failed' });
+      }
+      if (origin && !isAllowedOrigin(originHost)) {
+        console.warn(`[CSRF] Blocked request from origin: ${originHost}`);
         return res.status(403).json({ success: false, message: 'CSRF check failed' });
       }
     }
@@ -175,47 +206,153 @@ const razorpay = new Razorpay({
 console.log('Razorpay Key:', RAZORPAY_CONFIGURED ? 'Loaded ✓' : '⚠ Not set — update .env file');
 
 // ─── EMAIL SETUP ────────────────────────────────────────────────
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
+const MAIL_PROVIDER = (process.env.MAIL_PROVIDER || 'smtp').toLowerCase();
+const isSendgridProvider = MAIL_PROVIDER === 'sendgrid';
+const sendgridApiKey = process.env.SENDGRID_API_KEY || '';
+const smtpHost = process.env.SMTP_HOST || (isSendgridProvider ? 'smtp.sendgrid.net' : 'smtp.gmail.com');
+const smtpPort = parseInt(process.env.SMTP_PORT || (isSendgridProvider ? '587' : '587'), 10);
+const smtpSecure = process.env.SMTP_SECURE !== undefined
+  ? envFlag(process.env.SMTP_SECURE)
+  : smtpPort === 465;
+const smtpUser = process.env.SMTP_USER || (isSendgridProvider && sendgridApiKey ? 'apikey' : '');
+const smtpPass = process.env.SMTP_PASS || (isSendgridProvider ? sendgridApiKey : '');
+const smtpFrom = process.env.SMTP_FROM || smtpUser;
+const smtpFromName = process.env.SMTP_FROM_NAME || 'VIBES@Outing';
+const emailEnabled = !!(smtpHost && smtpPort && smtpUser && smtpPass && smtpFrom);
+let emailTransportHealthy = false;
+
+const emailTransporter = emailEnabled ? nodemailer.createTransport({
+  host: smtpHost,
+  port: smtpPort,
+  secure: smtpSecure,
+  requireTLS: envFlag(process.env.SMTP_REQUIRE_TLS, false),
   auth: {
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
+    user: smtpUser,
+    pass: smtpPass,
   },
-});
-const emailEnabled = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
-console.log('Email:', emailEnabled ? 'Configured ✓' : '⚠ Not set — add SMTP_USER/SMTP_PASS to .env');
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 20000,
+}) : null;
+
+function maskEmail(email) {
+  if (!email || !email.includes('@')) return 'unknown';
+  const [name, domain] = email.split('@');
+  const masked = name.length <= 2 ? `${name[0] || '*'}*` : `${name[0]}***${name[name.length - 1]}`;
+  return `${masked}@${domain}`;
+}
+
+async function verifyEmailTransport() {
+  if (!emailEnabled || !emailTransporter) {
+    console.warn('Email: disabled. Missing SMTP credentials or sender configuration.');
+    return;
+  }
+  try {
+    await emailTransporter.verify();
+    emailTransportHealthy = true;
+    console.log(`Email: configured ✓ provider=${MAIL_PROVIDER} host=${smtpHost} port=${smtpPort} secure=${smtpSecure}`);
+  } catch (err) {
+    emailTransportHealthy = false;
+    console.error('[EMAIL] Transport verify failed:', {
+      provider: MAIL_PROVIDER,
+      host: smtpHost,
+      port: smtpPort,
+      user: smtpUser ? `${smtpUser.slice(0, 3)}***` : 'missing',
+      code: err.code,
+      responseCode: err.responseCode,
+      message: err.message,
+    });
+    securityLog('EMAIL_TRANSPORT_VERIFY_FAILED', {
+      provider: MAIL_PROVIDER,
+      host: smtpHost,
+      code: err.code,
+      responseCode: err.responseCode,
+      message: err.message,
+    });
+  }
+}
+
+async function sendEmailWithLogging({ to, subject, html, context }) {
+  if (!emailEnabled || !emailTransporter) {
+    console.warn(`[EMAIL] Skipped (${context}) because SMTP is not configured. recipient=${maskEmail(to)}`);
+    return { ok: false, reason: 'smtp_not_configured' };
+  }
+  try {
+    const info = await emailTransporter.sendMail({
+      from: `"${sanitize(smtpFromName)}" <${smtpFrom}>`,
+      to,
+      subject,
+      html,
+    });
+    emailTransportHealthy = true;
+    console.log(`[EMAIL] Sent (${context}) recipient=${maskEmail(to)} messageId=${info.messageId || 'unknown'}`);
+    return { ok: true, info };
+  } catch (err) {
+    emailTransportHealthy = false;
+    console.error('[EMAIL] Send failed:', {
+      context,
+      recipient: maskEmail(to),
+      provider: MAIL_PROVIDER,
+      host: smtpHost,
+      code: err.code,
+      responseCode: err.responseCode,
+      response: err.response,
+      command: err.command,
+      message: err.message,
+    });
+    securityLog('EMAIL_SEND_FAILED', {
+      context,
+      provider: MAIL_PROVIDER,
+      host: smtpHost,
+      code: err.code,
+      responseCode: err.responseCode,
+      message: err.message,
+    });
+    return { ok: false, reason: err.code || 'send_failed' };
+  }
+}
 
 async function sendBookingEmail(userEmail, userName, outingTitle, outingDate, outingLocation, amount, paymentId) {
-  if (!emailEnabled) return console.log('📧 Email skipped (not configured). Would send to:', userEmail);
-  try {
-    await emailTransporter.sendMail({
-      from: `"VIBES@Outing" <${process.env.SMTP_USER}>`,
-      to: userEmail,
-      subject: `✅ Booking Confirmed — ${outingTitle}`,
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
-          <div style="background:linear-gradient(135deg,#6C3CE1,#8B5CF6);color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center">
-            <h1 style="margin:0;font-size:24px">🎉 Booking Confirmed!</h1>
-          </div>
-          <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
-            <p>Hi <strong>${sanitize(userName)}</strong>,</p>
-            <p>Your VIBES@Outing is locked in! 🔥</p>
-            <div style="background:#F8FAFC;padding:16px;border-radius:8px;margin:16px 0">
-              <p style="margin:4px 0"><strong>🗓 Outing:</strong> ${sanitize(outingTitle)}</p>
-              <p style="margin:4px 0"><strong>📍 Location:</strong> ${sanitize(outingLocation)}</p>
-              <p style="margin:4px 0"><strong>📅 Date:</strong> ${sanitize(outingDate)}</p>
-              <p style="margin:4px 0"><strong>💰 Amount:</strong> ₹${parseInt(amount)}</p>
-              <p style="margin:4px 0"><strong>🔑 Payment ID:</strong> ${sanitize(paymentId)}</p>
-            </div>
-            <p style="color:#64748B;font-size:14px">See you there! 🚀<br>— Team VIBES@Outing</p>
-          </div>
+  const result = await sendEmailWithLogging({
+    to: userEmail,
+    subject: `✅ Booking Confirmed — ${outingTitle}`,
+    context: 'booking_confirmation',
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+        <div style="background:linear-gradient(135deg,#6C3CE1,#8B5CF6);color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+          <h1 style="margin:0;font-size:24px">🎉 Booking Confirmed!</h1>
         </div>
-      `
-    });
-    console.log('📧 Booking email sent to:', userEmail);
-  } catch (err) { console.error('Email error:', err.message); }
+        <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
+          <p>Hi <strong>${sanitize(userName)}</strong>,</p>
+          <p>Your VIBES@Outing is locked in! 🔥</p>
+          <div style="background:#F8FAFC;padding:16px;border-radius:8px;margin:16px 0">
+            <p style="margin:4px 0"><strong>🗓 Outing:</strong> ${sanitize(outingTitle)}</p>
+            <p style="margin:4px 0"><strong>📍 Location:</strong> ${sanitize(outingLocation)}</p>
+            <p style="margin:4px 0"><strong>📅 Date:</strong> ${sanitize(outingDate)}</p>
+            <p style="margin:4px 0"><strong>💰 Amount:</strong> ₹${parseInt(amount)}</p>
+            <p style="margin:4px 0"><strong>🔑 Payment ID:</strong> ${sanitize(paymentId)}</p>
+          </div>
+          <p style="color:#64748B;font-size:14px">See you there! 🚀<br>— Team VIBES@Outing</p>
+        </div>
+      </div>
+    `,
+  });
+  if (result.ok) {
+    securityLog('BOOKING_EMAIL_SENT', { recipient: maskEmail(userEmail) });
+  }
+}
+
+function buildResetUrl(token) {
+  const fallbackBase = process.env.APP_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.PASSWORD_RESET_URL || fallbackBase;
+  try {
+    const url = new URL('/reset-password', baseUrl);
+    url.searchParams.set('token', token);
+    return url.toString();
+  } catch (_) {
+    const safeBase = baseUrl.replace(/\/$/, '');
+    return `${safeBase}/reset-password?token=${token}`;
+  }
 }
 
 function getWhatsAppLink(phone, outingTitle, outingDate, outingLocation, amount) {
@@ -493,7 +630,7 @@ async function initDatabase() {
   }
 
   // ─── Seed admin + sample data (same for both backends) ─────────
-  const adminResult = await dbQuery('SELECT id FROM users WHERE email = $1', ['admin@vibes-outing.com']);
+  const adminResult = await dbQuery('SELECT id FROM users WHERE email = $1', ['vibesoutingsupport@gmail.com']);
   if (adminResult.rows.length === 0) {
     const defaultAdminPass = process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@Vibes2026';
     if (IS_PROD && !process.env.ADMIN_DEFAULT_PASSWORD) {
@@ -503,7 +640,7 @@ async function initDatabase() {
     const hashedAdminPass = bcrypt.hashSync(defaultAdminPass, BCRYPT_ROUNDS);
     await dbQuery(
       'INSERT INTO users (name, email, phone, password, role, must_change_password) VALUES ($1, $2, $3, $4, $5, $6)',
-      ['Admin', 'admin@vibes-outing.com', '9999999999', hashedAdminPass, 'admin', 1]
+      ['Admin', 'vibesoutingsupport@gmail.com', '9999999999', hashedAdminPass, 'admin', 1]
     );
     console.warn(`⚠ Default admin created — CHANGE PASSWORD IMMEDIATELY! (password: ${defaultAdminPass})`);
   }
@@ -1151,41 +1288,68 @@ app.post('/api/auth/forgot-password', [
 ], async (req, res) => {
   if (!validate(req, res)) return;
   const { email } = req.body;
-  const userResult = await dbQuery('SELECT id, name FROM users WHERE email = $1', [email]);
-  const user = userResult.rows[0];
-  if (!user) return res.json({ success: true }); // Don't reveal if email exists
-  const token = crypto.randomBytes(32).toString('hex');
-  const hashedToken = crypto.createHash('sha256').update(token).digest('hex'); // Store hashed token
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 30).toISOString();
-  await dbQuery('INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1,$2,$3)', [user.id, hashedToken, expiresAt]);
-  securityLog('PASSWORD_RESET_REQUESTED', { userId: user.id, ip: req.ip });
 
-  if (emailEnabled) {
-    const resetUrl = `${process.env.PASSWORD_RESET_URL || 'https://vibesouting.in'}/reset-password?token=${token}`;
-    try {
-      await emailTransporter.sendMail({
-        from: `"VIBES@Outing" <${process.env.SMTP_USER}>`,
-        to: email,
-        subject: 'Reset your VIBES@Outing password',
-        html: `<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
-          <div style="background:linear-gradient(135deg,#6C3CE1,#8B5CF6);color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center">
-            <h1 style="margin:0;font-size:24px">🔑 Password Reset</h1>
-          </div>
-          <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
-            <p>Hi <strong>${sanitize(user.name)}</strong>,</p>
-            <p>We received a request to reset your password.</p>
-            <p><a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#6C3CE1;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Reset Password</a></p>
-            <p style="color:#64748B;font-size:14px">This link is valid for 30 minutes. If you didn't request this, just ignore this email.</p>
-          </div>
-        </div>`
+  try {
+    if (!emailEnabled) {
+      console.error('[PASSWORD_RESET] Email service unavailable: SMTP not configured.');
+      return res.status(503).json({ success: false, message: 'Password reset service is temporarily unavailable. Please try again shortly.' });
+    }
+
+    const userResult = await dbQuery('SELECT id, name FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+    const user = userResult.rows[0];
+
+    if (!user) {
+      securityLog('PASSWORD_RESET_REQUEST_UNKNOWN_EMAIL', { emailHash: crypto.createHash('sha256').update(email).digest('hex'), ip: req.ip });
+      return res.json({ success: true, message: 'If your email is registered, a reset link has been sent.' });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 30).toISOString();
+
+    await dbQuery('UPDATE password_resets SET used = 1 WHERE user_id = $1 AND used = 0', [user.id]);
+    await dbQuery('INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1,$2,$3)', [user.id, hashedToken, expiresAt]);
+    securityLog('PASSWORD_RESET_REQUESTED', { userId: user.id, ip: req.ip, email: maskEmail(email) });
+
+    const resetUrl = buildResetUrl(token);
+    const emailResult = await sendEmailWithLogging({
+      to: email,
+      subject: 'Reset your VIBES@Outing password',
+      context: 'password_reset',
+      html: `<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+        <div style="background:linear-gradient(135deg,#6C3CE1,#8B5CF6);color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+          <h1 style="margin:0;font-size:24px">🔑 Password Reset</h1>
+        </div>
+        <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
+          <p>Hi <strong>${sanitize(user.name)}</strong>,</p>
+          <p>We received a request to reset your password.</p>
+          <p><a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#6C3CE1;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Reset Password</a></p>
+          <p style="color:#64748B;font-size:14px">This link is valid for 30 minutes. If you did not request this, you can safely ignore this email.</p>
+        </div>
+      </div>`,
+    });
+
+    if (!emailResult.ok) {
+      console.error('[PASSWORD_RESET] Failed to deliver reset email after token generation.', {
+        reason: emailResult.reason,
+        email: maskEmail(email),
       });
-    } catch (err) { console.error('Email error:', err.message); }
-  } else {
-    const devResetLink = `${process.env.PASSWORD_RESET_URL || 'https://vibesouting.in'}/reset-password?token=${token}`;
-    console.log('📧 Password reset link (dev — NOT sent via email):', devResetLink);
+      securityLog('PASSWORD_RESET_EMAIL_FAILED', { userId: user.id, reason: emailResult.reason, ip: req.ip });
+    } else {
+      securityLog('PASSWORD_RESET_EMAIL_SENT', { userId: user.id, ip: req.ip });
+    }
+
+    return res.json({ success: true, message: 'If your email is registered, a reset link has been sent.' });
+  } catch (err) {
+    console.error('[PASSWORD_RESET] Route error:', {
+      email: maskEmail(email),
+      code: err.code,
+      message: err.message,
+      stack: IS_PROD ? undefined : err.stack,
+    });
+    securityLog('PASSWORD_RESET_ROUTE_ERROR', { ip: req.ip, code: err.code, message: err.message });
+    return res.status(500).json({ success: false, message: 'Unable to process request right now. Please try again shortly.' });
   }
-  // Never expose reset token in API response — log to console only
-  res.json({ success: true, message: 'If your email is registered, a reset link has been sent.' });
 });
 
 app.post('/api/auth/reset-password', [
@@ -1239,8 +1403,11 @@ initDatabase().then(() => {
     console.log(`\n🚀 VIBES@Outing Platform running at http://localhost:${PORT}`);
     console.log(`   Environment: ${IS_PROD ? 'PRODUCTION' : 'DEVELOPMENT'}`);
     console.log('   Database: PostgreSQL ✓');
-    if (!IS_PROD) console.log(`   Admin Login: admin@vibes-outing.com / ${process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@Vibes2026'}`);
+    if (!IS_PROD) console.log(`   Admin Login: vibesoutingsupport@gmail.com / ${process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@Vibes2026'}`);
     console.log('');
+    verifyEmailTransport().catch((err) => {
+      console.error('Email transport verification error:', err.message);
+    });
   });
 }).catch(err => {
   console.error('❌ Failed to initialize database:', err.message || err.code || err);

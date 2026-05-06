@@ -188,7 +188,7 @@ async function authTests() {
 
   // --- Admin Login ---
   await test('Auth', 'Admin login', async () => {
-    const r = await req('POST', '/api/auth/login', { email: 'admin@vibes-outing.com', password: ADMIN_PASS });
+    const r = await req('POST', '/api/auth/login', { email: 'vibesoutingsupport@gmail.com', password: ADMIN_PASS });
     // Admin password may differ if set via env variable
     if (r.status === 200 && r.body.success) {
       adminToken = r.body.token;
