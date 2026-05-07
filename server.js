@@ -673,6 +673,22 @@ async function initDatabase() {
       )`);
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)').catch(() => {});
 
+    // Support tickets table
+    await dbQuery(`CREATE TABLE IF NOT EXISTS support_tickets (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        category TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        priority TEXT DEFAULT 'Medium',
+        message TEXT NOT NULL,
+        status TEXT DEFAULT 'open',
+        admin_reply TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status)').catch(() => {});
+
     // Wallet transactions table
     await dbQuery(`CREATE TABLE IF NOT EXISTS wallet_transactions (
         id SERIAL PRIMARY KEY,
@@ -703,6 +719,11 @@ async function initDatabase() {
     // Notifications table
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT DEFAULT 'general', title TEXT NOT NULL, message TEXT NOT NULL, read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)`); } catch(e) {}
+
+    // Support tickets table
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS support_tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, category TEXT NOT NULL, subject TEXT NOT NULL, priority TEXT DEFAULT 'Medium', message TEXT NOT NULL, status TEXT DEFAULT 'open', admin_reply TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status)`); } catch(e) {}
 
     // Wallet transactions table
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS wallet_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, description TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
@@ -1152,6 +1173,7 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) =>
   const revenue = (await dbQuery("SELECT COALESCE(SUM(total_amount), 0) as total FROM bookings WHERE payment_status = $1", ['paid'])).rows[0];
   const pendingSuggestions = (await dbQuery("SELECT COUNT(*) as count FROM suggestions WHERE status = $1", ['pending'])).rows[0];
   const pendingVerifications = (await dbQuery("SELECT COUNT(*) as count FROM id_verifications WHERE status = $1", ['pending'])).rows[0];
+  const openTickets = (await dbQuery("SELECT COUNT(*) as count FROM support_tickets WHERE status IN ($1, $2)", ['open', 'in-progress'])).rows[0];
   const totalReviews = (await dbQuery('SELECT COUNT(*) as count FROM reviews')).rows[0];
   const recentSecurityEvents = (await dbQuery(
     USE_PG
@@ -1165,6 +1187,7 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) =>
     revenue: parseInt(revenue.total),
     pendingSuggestions: parseInt(pendingSuggestions.count),
     pendingVerifications: parseInt(pendingVerifications.count),
+    openTickets: parseInt(openTickets.count),
     totalReviews: parseInt(totalReviews.count),
     securityEvents24h: parseInt(recentSecurityEvents.count)
   });
@@ -1525,6 +1548,83 @@ app.get('/api/wallet/:userId', authMiddleware, [
   const credits = txns.rows.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0);
   const debits = txns.rows.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0);
   res.json({ balance: credits - debits, transactions: txns.rows });
+});
+
+// ─── SUPPORT TICKETS API ────────────────────────────────────────
+app.post('/api/support-tickets', authMiddleware, [
+  body('category').trim().notEmpty().escape(),
+  body('subject').trim().notEmpty().isLength({ max: 200 }).escape(),
+  body('priority').trim().isIn(['Low', 'Medium', 'High', 'Urgent']),
+  body('message').trim().notEmpty().isLength({ max: 2000 }).escape(),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { category, subject, priority, message } = req.body;
+  const result = await dbQuery(
+    'INSERT INTO support_tickets (user_id, category, subject, priority, message) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+    [req.user.id, category, subject, priority, message]
+  );
+  const ticketId = result.rows[0].id;
+  // Notify user via in-app notification
+  await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+    [req.user.id, 'support', 'Ticket #' + ticketId + ' Created', 'We received your ' + category + ' ticket. We\'ll respond within 24 hours.']);
+  // Send email to admin
+  sendEmailWithLogging({
+    to: 'vibesoutingsupport@gmail.com',
+    subject: `🎫 New Support Ticket #${ticketId} — ${category}`,
+    context: 'support_ticket_new',
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+        <div style="background:linear-gradient(135deg,#6C3CE1,#8B5CF6);color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+          <h1 style="margin:0;font-size:24px">🎫 New Support Ticket</h1>
+        </div>
+        <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
+          <p><strong>Ticket ID:</strong> #${ticketId}</p>
+          <p><strong>Category:</strong> ${sanitize(category)}</p>
+          <p><strong>Priority:</strong> ${sanitize(priority)}</p>
+          <p><strong>Subject:</strong> ${sanitize(subject)}</p>
+          <div style="background:#F8FAFC;padding:16px;border-radius:8px;margin:12px 0">
+            <p style="margin:0">${sanitize(message)}</p>
+          </div>
+          <p style="color:#64748B;font-size:14px">From user ID: ${req.user.id} (${sanitize(req.user.email)})</p>
+        </div>
+      </div>
+    `,
+  }).catch(() => {});
+  res.json({ success: true, ticketId });
+});
+
+app.get('/api/support-tickets/mine', authMiddleware, async (req, res) => {
+  const result = await dbQuery('SELECT * FROM support_tickets WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]);
+  res.json(result.rows);
+});
+
+app.get('/api/admin/support-tickets', authMiddleware, adminMiddleware, async (req, res) => {
+  const result = await dbQuery(`
+    SELECT st.*, u.name as user_name, u.email as user_email
+    FROM support_tickets st JOIN users u ON st.user_id = u.id
+    ORDER BY CASE st.priority WHEN 'Urgent' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 WHEN 'Low' THEN 4 END, st.created_at DESC
+  `);
+  res.json(result.rows);
+});
+
+app.put('/api/admin/support-tickets/:id', authMiddleware, adminMiddleware, [
+  param('id').isInt().toInt(),
+  body('status').trim().isIn(['open', 'in-progress', 'resolved', 'closed']),
+  body('admin_reply').optional().trim().isLength({ max: 2000 }).escape(),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { status, admin_reply } = req.body;
+  const ticket = (await dbQuery('SELECT * FROM support_tickets WHERE id = $1', [req.params.id])).rows[0];
+  if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+  if (admin_reply) {
+    await dbQuery('UPDATE support_tickets SET status = $1, admin_reply = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3', [status, admin_reply, req.params.id]);
+  } else {
+    await dbQuery('UPDATE support_tickets SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [status, req.params.id]);
+  }
+  // Notify user about ticket update
+  await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+    [ticket.user_id, 'support', 'Ticket #' + ticket.id + ' Updated', 'Your support ticket has been updated to: ' + status + (admin_reply ? '. Reply: ' + admin_reply : '')]);
+  res.json({ success: true });
 });
 
 // ─── SECURITY: Global error handler — never leak stack traces ───

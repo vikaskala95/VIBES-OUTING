@@ -1727,6 +1727,7 @@ async function renderAdmin(app) {
         <a href="#" class="${adminTab==='users'?'active':''}" onclick="adminTab='users';renderAdmin(document.getElementById('app'))"><i class="fas fa-users"></i> Users</a>
         <a href="#" class="${adminTab==='suggestions'?'active':''}" onclick="adminTab='suggestions';renderAdmin(document.getElementById('app'))"><i class="fas fa-lightbulb"></i> Suggestions <span style="background:var(--warning);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.pendingSuggestions}</span></a>
         <a href="#" class="${adminTab==='verifications'?'active':''}" onclick="adminTab='verifications';renderAdmin(document.getElementById('app'))"><i class="fas fa-id-card"></i> ID Verify <span style="background:var(--warning);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.pendingVerifications || 0}</span></a>
+        <a href="#" class="${adminTab==='tickets'?'active':''}" onclick="adminTab='tickets';renderAdmin(document.getElementById('app'))"><i class="fas fa-headset"></i> Tickets <span style="background:var(--danger);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.openTickets || 0}</span></a>
       </div>
       <div class="dash-content">
         <div class="mobile-admin-nav" role="navigation" aria-label="Admin navigation">
@@ -1736,6 +1737,7 @@ async function renderAdmin(app) {
           <a href="#" class="${adminTab==='users'?'active':''}" onclick="adminTab='users';renderAdmin(document.getElementById('app'))">👥 Users</a>
           <a href="#" class="${adminTab==='suggestions'?'active':''}" onclick="adminTab='suggestions';renderAdmin(document.getElementById('app'))">💡 Suggestions</a>
           <a href="#" class="${adminTab==='verifications'?'active':''}" onclick="adminTab='verifications';renderAdmin(document.getElementById('app'))">🛡️ Verify</a>
+          <a href="#" class="${adminTab==='tickets'?'active':''}" onclick="adminTab='tickets';renderAdmin(document.getElementById('app'))">🎫 Tickets</a>
         </div>
         <div id="adminContent"></div>
       </div>
@@ -1747,6 +1749,7 @@ async function renderAdmin(app) {
   else if (adminTab === 'users') renderAdminUsers();
   else if (adminTab === 'suggestions') renderAdminSuggestions();
   else if (adminTab === 'verifications') renderAdminVerifications();
+  else if (adminTab === 'tickets') renderAdminTickets();
 }
 
 function renderAdminOverview(stats) {
@@ -2291,12 +2294,12 @@ function renderContactSupport(app) {
           <div style="text-align:center;padding:1rem;background:#F8FAFC;border-radius:12px">
             <i class="fas fa-envelope" style="font-size:1.5rem;color:var(--primary);margin-bottom:.5rem;display:block"></i>
             <strong style="font-size:.85rem">Email</strong>
-            <p style="font-size:.82rem;color:var(--text-light)">support@vibesouting.in</p>
+            <p style="font-size:.82rem;color:var(--text-light)">vibesoutingsupport@gmail.com</p>
           </div>
           <div style="text-align:center;padding:1rem;background:#F8FAFC;border-radius:12px">
             <i class="fab fa-whatsapp" style="font-size:1.5rem;color:#25D366;margin-bottom:.5rem;display:block"></i>
             <strong style="font-size:.85rem">WhatsApp</strong>
-            <p style="font-size:.82rem;color:var(--text-light)">+91 98765 43210</p>
+            <p style="font-size:.82rem;color:var(--text-light)">+91 95715 83107</p>
           </div>
           <div style="text-align:center;padding:1rem;background:#F8FAFC;border-radius:12px">
             <i class="fas fa-clock" style="font-size:1.5rem;color:var(--warning);margin-bottom:.5rem;display:block"></i>
@@ -2327,13 +2330,36 @@ function showSupportTicket(category) {
   openModal(`
     <button class="close" onclick="closeModal()">&times;</button>
     <h2><i class="fas fa-life-ring" style="color:var(--primary)"></i> ${category}</h2>
-    <form onsubmit="event.preventDefault();toast('Support ticket submitted! We\\'ll respond within 24 hours.','success');closeModal()">
-      <div class="form-group"><label>Subject</label><input type="text" required placeholder="Brief description of your issue"></div>
-      <div class="form-group"><label>Priority</label><select><option>Low</option><option>Medium</option><option selected>High</option><option>Urgent</option></select></div>
-      <div class="form-group"><label>Describe Your Issue</label><textarea required placeholder="Tell us what happened..." rows="4"></textarea></div>
+    <form id="supportTicketForm">
+      <div class="form-group"><label>Subject</label><input type="text" id="ticketSubject" required placeholder="Brief description of your issue"></div>
+      <div class="form-group"><label>Priority</label><select id="ticketPriority"><option>Low</option><option>Medium</option><option selected>High</option><option>Urgent</option></select></div>
+      <div class="form-group"><label>Describe Your Issue</label><textarea id="ticketMessage" required placeholder="Tell us what happened..." rows="4"></textarea></div>
       <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-paper-plane"></i> Submit Ticket</button>
     </form>
   `);
+  document.getElementById('supportTicketForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+    try {
+      const res = await api('/support-tickets', 'POST', {
+        category,
+        subject: document.getElementById('ticketSubject').value.trim(),
+        priority: document.getElementById('ticketPriority').value,
+        message: document.getElementById('ticketMessage').value.trim()
+      });
+      if (res.success) {
+        toast('Ticket #' + res.ticketId + ' submitted! We will respond within 24 hours.', 'success');
+        closeModal();
+      } else {
+        toast(res.message || 'Failed to submit ticket', 'error');
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Ticket';
+      }
+    } catch (err) {
+      toast('Error submitting ticket. Please try again.', 'error');
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Ticket';
+    }
+  };
 }
 
 // ─── CANCELLATION POLICY PAGE ──────────────────────────────────
@@ -2803,6 +2829,95 @@ function showAddMoney() {
       <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-plus"></i> Add Money</button>
     </form>
   `);
+}
+
+// ─── ADMIN: SUPPORT TICKETS ────────────────────────────────────
+async function renderAdminTickets() {
+  const tickets = await api('/admin/support-tickets');
+  const c = document.getElementById('adminContent');
+  if (!tickets || !tickets.length) {
+    c.innerHTML = '<h2 style="margin-bottom:1rem">🎫 Support Tickets</h2><p style="color:var(--text-light)">No support tickets yet.</p>';
+    return;
+  }
+  const statusColors = { open: 'var(--danger)', 'in-progress': 'var(--warning)', resolved: 'var(--success)', closed: 'var(--text-light)' };
+  const priorityColors = { Urgent: '#DC2626', High: '#F59E0B', Medium: '#3B82F6', Low: '#6B7280' };
+  c.innerHTML = `
+    <h2 style="margin-bottom:1rem">🎫 Support Tickets (${tickets.length})</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>User</th><th>Category</th><th>Subject</th><th>Priority</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+        <tbody>
+          ${tickets.map(t => `
+            <tr>
+              <td><strong>${t.id}</strong></td>
+              <td>${escapeHtml(t.user_name)}<br><small style="color:var(--text-light)">${escapeHtml(t.user_email)}</small></td>
+              <td>${escapeHtml(t.category)}</td>
+              <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t.subject)}</td>
+              <td><span style="color:${priorityColors[t.priority] || '#6B7280'};font-weight:600">${escapeHtml(t.priority)}</span></td>
+              <td><span style="background:${statusColors[t.status] || '#6B7280'};color:#fff;padding:2px 8px;border-radius:10px;font-size:.75rem">${t.status}</span></td>
+              <td><small>${new Date(t.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</small></td>
+              <td><button class="btn btn-sm" onclick="showTicketDetail(${t.id})"><i class="fas fa-eye"></i></button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function showTicketDetail(ticketId) {
+  const tickets = await api('/admin/support-tickets');
+  const t = tickets.find(x => x.id === ticketId);
+  if (!t) { toast('Ticket not found', 'error'); return; }
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-ticket-alt" style="color:var(--primary)"></i> Ticket #${t.id}</h2>
+    <div style="background:#F8FAFC;padding:1rem;border-radius:8px;margin:.75rem 0">
+      <p style="margin:4px 0"><strong>User:</strong> ${escapeHtml(t.user_name)} (${escapeHtml(t.user_email)})</p>
+      <p style="margin:4px 0"><strong>Category:</strong> ${escapeHtml(t.category)}</p>
+      <p style="margin:4px 0"><strong>Priority:</strong> ${escapeHtml(t.priority)}</p>
+      <p style="margin:4px 0"><strong>Status:</strong> ${t.status}</p>
+      <p style="margin:4px 0"><strong>Created:</strong> ${new Date(t.created_at).toLocaleString('en-IN')}</p>
+    </div>
+    <div style="margin:.75rem 0">
+      <strong>Subject:</strong>
+      <p>${escapeHtml(t.subject)}</p>
+    </div>
+    <div style="margin:.75rem 0">
+      <strong>Message:</strong>
+      <p style="background:#fff;border:1px solid #E2E8F0;padding:1rem;border-radius:8px;white-space:pre-wrap">${escapeHtml(t.message)}</p>
+    </div>
+    ${t.admin_reply ? '<div style="margin:.75rem 0"><strong>Admin Reply:</strong><p style="background:#EEF2FF;border:1px solid #C7D2FE;padding:1rem;border-radius:8px;white-space:pre-wrap">' + escapeHtml(t.admin_reply) + '</p></div>' : ''}
+    <form id="ticketReplyForm">
+      <div class="form-group"><label>Update Status</label>
+        <select id="ticketStatus">
+          <option ${t.status==='open'?'selected':''}>open</option>
+          <option ${t.status==='in-progress'?'selected':''}>in-progress</option>
+          <option ${t.status==='resolved'?'selected':''}>resolved</option>
+          <option ${t.status==='closed'?'selected':''}>closed</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Reply to User (optional)</label><textarea id="ticketReply" rows="3" placeholder="Type your reply..."></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-reply"></i> Update Ticket</button>
+    </form>
+  `);
+  document.getElementById('ticketReplyForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+    const payload = { status: document.getElementById('ticketStatus').value };
+    const reply = document.getElementById('ticketReply').value.trim();
+    if (reply) payload.admin_reply = reply;
+    const res = await api('/admin/support-tickets/' + ticketId, 'PUT', payload);
+    if (res.success) {
+      toast('Ticket updated!', 'success');
+      closeModal();
+      renderAdminTickets();
+    } else {
+      toast(res.message || 'Update failed', 'error');
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-reply"></i> Update Ticket';
+    }
+  };
 }
 
 // ─── INIT ───────────────────────────────────────────────────────
