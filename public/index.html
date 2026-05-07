@@ -605,7 +605,7 @@ async function navigate(page, skipHistory) {
 // ─── HOME PAGE ──────────────────────────────────────────────────
 async function renderHome(app) {
   const [outingsData, statsData] = await Promise.all([api('/outings'), api('/public-stats')]);
-  outings = outingsData;
+  outings = Array.isArray(outingsData) ? outingsData : [];
   const featured = outings.slice(0, 3);
   const stats = statsData || { outings: outings.length, users: 0, destinations: 0, avgRating: 4.8 };
   app.innerHTML = `
@@ -791,7 +791,8 @@ function outingCard(o) {
 
 // ─── OUTINGS PAGE ───────────────────────────────────────────────
 async function renderOutings(app) {
-  outings = await api('/outings');
+  const data = await api('/outings');
+  outings = Array.isArray(data) ? data : [];
   app.innerHTML = `
     <section class="section">
       <h2 class="section-title">🗺️ All Outings</h2>
@@ -1348,7 +1349,8 @@ function renderAdminOverview(stats) {
 }
 
 async function renderAdminOutings() {
-  outings = await api('/outings');
+  const data = await api('/outings');
+  outings = Array.isArray(data) ? data : [];
   document.getElementById('adminContent').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
       <h2>📅 Manage Outings</h2>

@@ -756,8 +756,13 @@ app.post('/api/auth/logout', (req, res) => {
 
 // ─── OUTING ROUTES ──────────────────────────────────────────────
 app.get('/api/outings', async (req, res) => {
-  const result = await dbQuery('SELECT * FROM outings WHERE status = $1 ORDER BY date ASC', ['active']);
-  res.json(result.rows);
+  try {
+    const result = await dbQuery('SELECT * FROM outings WHERE status = $1 ORDER BY date ASC', ['active']);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('[/api/outings] Failed to fetch outings:', error.message);
+    res.status(500).json({ error: 'Failed to fetch outings' });
+  }
 });
 
 app.get('/api/outings/:id', [
