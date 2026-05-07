@@ -127,7 +127,7 @@ app.use(cookieParser(process.env.SESSION_SECRET || crypto.randomBytes(32).toStri
 // ─── SECURITY: Rate Limiting — Brute-force & DDoS mitigation ───
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10, // Strict: only 10 login attempts per 15 min per IP
+  max: 100, // Relaxed: Railway proxy shares IP across all users
   message: { success: false, message: 'Too many attempts. Please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -484,8 +484,8 @@ function securityLog(event, details = {}) {
 }
 
 // ─── SECURITY: Account lockout tracking ─────────────────────────
-const loginAttempts = new Map(); // ip -> { count, lastAttempt }
-const LOCKOUT_THRESHOLD = 5;
+const loginAttempts = new Map(); // email -> { count, lastAttempt }
+const LOCKOUT_THRESHOLD = 10;
 const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
 
 function checkAccountLockout(identifier) {
@@ -715,7 +715,7 @@ app.post('/api/auth/login', [
 ], async (req, res) => {
   if (!validate(req, res)) return;
   const { email, password } = req.body;
-  const lockoutKey = `${req.ip}_${email}`;
+  const lockoutKey = email; // Use email only — Railway proxy shares IP across users
 
   // Check account lockout
   if (checkAccountLockout(lockoutKey)) {
