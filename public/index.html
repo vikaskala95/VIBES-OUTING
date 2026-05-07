@@ -2342,12 +2342,12 @@ function showSupportTicket(category) {
     const btn = e.target.querySelector('button[type="submit"]');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
     try {
-      const res = await api('/support-tickets', 'POST', {
+      const res = await api('/support-tickets', { method: 'POST', body: {
         category,
         subject: document.getElementById('ticketSubject').value.trim(),
         priority: document.getElementById('ticketPriority').value,
         message: document.getElementById('ticketMessage').value.trim()
-      });
+      }});
       if (res.success) {
         toast('Ticket #' + res.ticketId + ' submitted! We will respond within 24 hours.', 'success');
         closeModal();
@@ -2908,7 +2908,7 @@ async function showTicketDetail(ticketId) {
     const payload = { status: document.getElementById('ticketStatus').value };
     const reply = document.getElementById('ticketReply').value.trim();
     if (reply) payload.admin_reply = reply;
-    const res = await api('/admin/support-tickets/' + ticketId, 'PUT', payload);
+    const res = await api('/admin/support-tickets/' + ticketId, { method: 'PUT', body: payload });
     if (res.success) {
       toast('Ticket updated!', 'success');
       closeModal();

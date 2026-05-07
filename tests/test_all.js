@@ -926,6 +926,187 @@ async function dataIntegrityTests() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  16. NOTIFICATION TESTS
+// ═══════════════════════════════════════════════════════════════
+async function notificationTests() {
+  section('16. NOTIFICATION TESTS');
+
+  await test('Notifications', 'Get notifications — requires auth', async () => {
+    const r = await req('GET', '/api/notifications/1');
+    assert(r.status === 401, `Expected 401, got ${r.status}`);
+  });
+
+  await test('Notifications', 'Get notifications — authenticated', async () => {
+    const r = await req('GET', `/api/notifications/${testUserId}`, null, userToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(Array.isArray(r.body), 'Expected array');
+  });
+
+  await test('Notifications', 'Get notifications — IDOR prevention', async () => {
+    const r = await req('GET', '/api/notifications/999999', null, userToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(Array.isArray(r.body) && r.body.length === 0, 'Should return empty array for other user');
+  });
+
+  await test('Notifications', 'Mark all read — authenticated', async () => {
+    const r = await req('PUT', '/api/notifications/read-all', {}, userToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+  });
+
+  await test('Notifications', 'Invalid user ID — validation', async () => {
+    const r = await req('GET', '/api/notifications/abc', null, userToken);
+    assert(r.status === 400 || r.status === 422, `Expected 400/422, got ${r.status}`);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  17. WALLET TESTS
+// ═══════════════════════════════════════════════════════════════
+async function walletTests() {
+  section('17. WALLET TESTS');
+
+  await test('Wallet', 'Get wallet — requires auth', async () => {
+    const r = await req('GET', '/api/wallet/1');
+    assert(r.status === 401, `Expected 401, got ${r.status}`);
+  });
+
+  await test('Wallet', 'Get wallet — authenticated', async () => {
+    const r = await req('GET', `/api/wallet/${testUserId}`, null, userToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(typeof r.body.balance === 'number', 'Expected balance number');
+    assert(Array.isArray(r.body.transactions), 'Expected transactions array');
+  });
+
+  await test('Wallet', 'Get wallet — IDOR prevention (other user)', async () => {
+    const r = await req('GET', '/api/wallet/999999', null, userToken);
+    assert(r.status === 403, `Expected 403, got ${r.status}`);
+  });
+
+  await test('Wallet', 'Get wallet — admin can view any', async () => {
+    const r = await req('GET', `/api/wallet/${testUserId}`, null, adminToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+  });
+
+  await test('Wallet', 'Invalid user ID — validation', async () => {
+    const r = await req('GET', '/api/wallet/abc', null, userToken);
+    assert(r.status === 400 || r.status === 422, `Expected 400/422, got ${r.status}`);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  18. SUPPORT TICKET TESTS
+// ═══════════════════════════════════════════════════════════════
+let testTicketId = null;
+
+async function supportTicketTests() {
+  section('18. SUPPORT TICKET TESTS');
+
+  await test('Tickets', 'Submit ticket — requires auth', async () => {
+    const r = await req('POST', '/api/support-tickets', {
+      category: 'Booking Issue', subject: 'Test', priority: 'Medium', message: 'Test message'
+    });
+    assert(r.status === 401, `Expected 401, got ${r.status}`);
+  });
+
+  await test('Tickets', 'Submit ticket — valid', async () => {
+    const r = await req('POST', '/api/support-tickets', {
+      category: 'Booking Issue',
+      subject: 'Cannot see my booking',
+      priority: 'High',
+      message: 'I booked an outing but cannot see it in my dashboard.'
+    }, userToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(r.body.success === true, 'Expected success');
+    assert(typeof r.body.ticketId === 'number', 'Expected ticketId');
+    testTicketId = r.body.ticketId;
+  });
+
+  await test('Tickets', 'Submit ticket — missing fields', async () => {
+    const r = await req('POST', '/api/support-tickets', {
+      category: 'Booking Issue'
+    }, userToken);
+    assert(r.status === 400 || r.status === 422, `Expected 400/422, got ${r.status}`);
+  });
+
+  await test('Tickets', 'Submit ticket — invalid priority', async () => {
+    const r = await req('POST', '/api/support-tickets', {
+      category: 'Test', subject: 'Test', priority: 'SuperUrgent', message: 'Test'
+    }, userToken);
+    assert(r.status === 400 || r.status === 422, `Expected 400/422, got ${r.status}`);
+  });
+
+  await test('Tickets', 'Get my tickets — user', async () => {
+    const r = await req('GET', '/api/support-tickets/mine', null, userToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(Array.isArray(r.body), 'Expected array');
+    assert(r.body.length >= 1, 'Expected at least 1 ticket');
+  });
+
+  await test('Tickets', 'Admin — list all tickets', async () => {
+    const r = await req('GET', '/api/admin/support-tickets', null, adminToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(Array.isArray(r.body), 'Expected array');
+    assert(r.body.length >= 1, 'Expected at least 1 ticket');
+  });
+
+  await test('Tickets', 'Admin — list tickets denied for user', async () => {
+    const r = await req('GET', '/api/admin/support-tickets', null, userToken);
+    assert(r.status === 403, `Expected 403, got ${r.status}`);
+  });
+
+  await test('Tickets', 'Admin — update ticket status', async () => {
+    if (!testTicketId) { skipped++; return; }
+    const r = await req('PUT', `/api/admin/support-tickets/${testTicketId}`, {
+      status: 'in-progress'
+    }, adminToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(r.body.success === true, 'Expected success');
+  });
+
+  await test('Tickets', 'Admin — reply to ticket', async () => {
+    if (!testTicketId) { skipped++; return; }
+    const r = await req('PUT', `/api/admin/support-tickets/${testTicketId}`, {
+      status: 'resolved',
+      admin_reply: 'Your booking is now visible. Please refresh the page.'
+    }, adminToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(r.body.success === true, 'Expected success');
+  });
+
+  await test('Tickets', 'Admin — update non-existent ticket', async () => {
+    const r = await req('PUT', '/api/admin/support-tickets/999999', {
+      status: 'closed'
+    }, adminToken);
+    assert(r.status === 404, `Expected 404, got ${r.status}`);
+  });
+
+  await test('Tickets', 'Admin — invalid status value', async () => {
+    if (!testTicketId) { skipped++; return; }
+    const r = await req('PUT', `/api/admin/support-tickets/${testTicketId}`, {
+      status: 'invalid-status'
+    }, adminToken);
+    assert(r.status === 400 || r.status === 422, `Expected 400/422, got ${r.status}`);
+  });
+
+  await test('Tickets', 'XSS prevention in ticket', async () => {
+    const r = await req('POST', '/api/support-tickets', {
+      category: 'Test',
+      subject: '<script>alert("xss")</script>',
+      priority: 'Low',
+      message: '<img onerror=alert(1) src=x>'
+    }, userToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    // Verify the ticket was sanitized
+    const tickets = await req('GET', '/api/support-tickets/mine', null, userToken);
+    const t = tickets.body.find(x => x.id === r.body.ticketId);
+    if (t) {
+      assert(!t.subject.includes('<script>'), 'Subject should be sanitized');
+      assert(!t.message.includes('onerror'), 'Message should be sanitized');
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  RUN ALL TESTS & GENERATE REPORT
 // ═══════════════════════════════════════════════════════════════
 async function runAll() {
@@ -968,6 +1149,12 @@ async function runAll() {
   await miscTests();
   await delay(200);
   await dataIntegrityTests();
+  await delay(200);
+  await notificationTests();
+  await delay(200);
+  await walletTests();
+  await delay(200);
+  await supportTicketTests();
 
   const totalTime = Date.now() - startTime;
   const total = passed + failed;
@@ -1043,6 +1230,9 @@ function generateReport(totalTime, total) {
   md += `| 13 | **Edge Case Tests** | Boundary values, null inputs, overflow | ${RESULTS.filter(r => r.category === 'Edge').length} |\n`;
   md += `| 14 | **Miscellaneous Tests** | CORS, concurrency, SPA fallback | ${RESULTS.filter(r => r.category === 'Misc').length} |\n`;
   md += `| 15 | **Data Integrity Tests** | Schema validation, calculation accuracy | ${RESULTS.filter(r => r.category === 'Integrity').length} |\n`;
+  md += `| 16 | **Notification Tests** | In-app notifications, read/unread, IDOR | ${RESULTS.filter(r => r.category === 'Notifications').length} |\n`;
+  md += `| 17 | **Wallet Tests** | Balance, transactions, access control | ${RESULTS.filter(r => r.category === 'Wallet').length} |\n`;
+  md += `| 18 | **Support Ticket Tests** | Create, admin manage, XSS prevention | ${RESULTS.filter(r => r.category === 'Tickets').length} |\n`;
 
   if (failed > 0) {
     md += `\n---\n\n## ❌ Failed Tests Detail\n\n`;
