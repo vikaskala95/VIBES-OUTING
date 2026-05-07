@@ -207,7 +207,9 @@ console.log('Razorpay Key:', RAZORPAY_CONFIGURED ? 'Loaded ✓' : '⚠ Not set �
 
 // ─── EMAIL SETUP ────────────────────────────────────────────────
 const MAIL_PROVIDER = (process.env.MAIL_PROVIDER || 'smtp').toLowerCase();
+const isResendProvider = MAIL_PROVIDER === 'resend';
 const isSendgridProvider = MAIL_PROVIDER === 'sendgrid';
+const resendApiKey = process.env.RESEND_API_KEY || '';
 const sendgridApiKey = process.env.SENDGRID_API_KEY || '';
 const smtpHost = process.env.SMTP_HOST || (isSendgridProvider ? 'smtp.sendgrid.net' : 'smtp.gmail.com');
 const smtpPort = parseInt(process.env.SMTP_PORT || (isSendgridProvider ? '587' : '587'), 10);
@@ -216,12 +218,16 @@ const smtpSecure = process.env.SMTP_SECURE !== undefined
   : smtpPort === 465;
 const smtpUser = process.env.SMTP_USER || (isSendgridProvider && sendgridApiKey ? 'apikey' : '');
 const smtpPass = process.env.SMTP_PASS || (isSendgridProvider ? sendgridApiKey : '');
-const smtpFrom = process.env.SMTP_FROM || smtpUser;
+const smtpFrom = process.env.SMTP_FROM || (isResendProvider ? 'onboarding@resend.dev' : smtpUser);
 const smtpFromName = process.env.SMTP_FROM_NAME || 'VIBES@Outing';
-const emailEnabled = !!(smtpHost && smtpPort && smtpUser && smtpPass && smtpFrom);
+
+const emailEnabled = isResendProvider
+  ? !!resendApiKey
+  : !!(smtpHost && smtpPort && smtpUser && smtpPass && smtpFrom);
 let emailTransportHealthy = false;
 
-const emailTransporter = emailEnabled ? nodemailer.createTransport({
+// Nodemailer transport (only for SMTP / SendGrid providers)
+const emailTransporter = (!isResendProvider && emailEnabled) ? nodemailer.createTransport({
   host: smtpHost,
   port: smtpPort,
   secure: smtpSecure,
@@ -242,9 +248,45 @@ function maskEmail(email) {
   return `${masked}@${domain}`;
 }
 
+// ── Resend HTTP send ────────────────────────────────────────────
+async function sendViaResend({ to, subject, html }) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `${smtpFromName} <${smtpFrom}>`,
+      to: [to],
+      subject,
+      html,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data.message || `Resend API error ${res.status}`);
+    err.code = `RESEND_${res.status}`;
+    err.responseCode = res.status;
+    err.response = JSON.stringify(data);
+    throw err;
+  }
+  return { messageId: data.id, response: 'Resend accepted' };
+}
+
 async function verifyEmailTransport() {
-  if (!emailEnabled || !emailTransporter) {
-    console.warn('Email: disabled. Missing SMTP credentials or sender configuration.');
+  if (!emailEnabled) {
+    console.warn('Email: disabled. Missing credentials or sender configuration.');
+    return;
+  }
+  if (isResendProvider) {
+    // Resend has no verify method; just validate the API key exists
+    emailTransportHealthy = !!resendApiKey;
+    console.log(`Email: configured ✓ provider=resend from=${smtpFrom}`);
+    return;
+  }
+  if (!emailTransporter) {
+    console.warn('Email: disabled. No SMTP transporter created.');
     return;
   }
   try {
@@ -273,17 +315,25 @@ async function verifyEmailTransport() {
 }
 
 async function sendEmailWithLogging({ to, subject, html, context }) {
-  if (!emailEnabled || !emailTransporter) {
-    console.warn(`[EMAIL] Skipped (${context}) because SMTP is not configured. recipient=${maskEmail(to)}`);
-    return { ok: false, reason: 'smtp_not_configured' };
+  if (!emailEnabled) {
+    console.warn(`[EMAIL] Skipped (${context}) because email is not configured. recipient=${maskEmail(to)}`);
+    return { ok: false, reason: 'email_not_configured' };
   }
   try {
-    const info = await emailTransporter.sendMail({
-      from: `"${sanitize(smtpFromName)}" <${smtpFrom}>`,
-      to,
-      subject,
-      html,
-    });
+    let info;
+    if (isResendProvider) {
+      info = await sendViaResend({ to, subject, html });
+    } else {
+      if (!emailTransporter) {
+        return { ok: false, reason: 'smtp_not_configured' };
+      }
+      info = await emailTransporter.sendMail({
+        from: `"${sanitize(smtpFromName)}" <${smtpFrom}>`,
+        to,
+        subject,
+        html,
+      });
+    }
     emailTransportHealthy = true;
     console.log(`[EMAIL] Sent (${context}) recipient=${maskEmail(to)} messageId=${info.messageId || 'unknown'}`);
     return { ok: true, info };
@@ -293,7 +343,6 @@ async function sendEmailWithLogging({ to, subject, html, context }) {
       context,
       recipient: maskEmail(to),
       provider: MAIL_PROVIDER,
-      host: smtpHost,
       code: err.code,
       responseCode: err.responseCode,
       response: err.response,
@@ -303,7 +352,6 @@ async function sendEmailWithLogging({ to, subject, html, context }) {
     securityLog('EMAIL_SEND_FAILED', {
       context,
       provider: MAIL_PROVIDER,
-      host: smtpHost,
       code: err.code,
       responseCode: err.responseCode,
       message: err.message,
