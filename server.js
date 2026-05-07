@@ -394,12 +394,13 @@ function buildResetUrl(token) {
   const fallbackBase = process.env.APP_BASE_URL || 'http://localhost:3000';
   const baseUrl = process.env.PASSWORD_RESET_URL || fallbackBase;
   try {
-    const url = new URL('/reset-password', baseUrl);
+    const url = new URL('/', baseUrl);
+    url.searchParams.set('action', 'reset-password');
     url.searchParams.set('token', token);
     return url.toString();
   } catch (_) {
     const safeBase = baseUrl.replace(/\/$/, '');
-    return `${safeBase}/reset-password?token=${token}`;
+    return `${safeBase}/?action=reset-password&token=${token}`;
   }
 }
 

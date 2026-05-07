@@ -547,33 +547,127 @@ async function handleSignup(e) {
 function logout() { currentUser = null; authToken = null; sessionStorage.removeItem('vibes_user'); sessionStorage.removeItem('vibes_token'); if (chatInterval) { clearInterval(chatInterval); chatInterval = null; } fetch(API_BASE + '/api/auth/logout', { method: 'POST', credentials: 'include' }); renderNav(); navigate('home'); toast('Logged out'); }
 
 function showResetPassword(token) {
-  openModal(`
-    <button class="close" onclick="closeModal()">&times;</button>
-    <h2><i class="fas fa-key" style="color:var(--primary)"></i> Set New Password</h2>
-    <form onsubmit="handleResetPassword(event, '${token}')">
-      <div class="form-group"><label>New Password</label><input type="password" id="resetPass" required minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}" placeholder="Min 8 chars, upper+lower+number" title="Must contain uppercase, lowercase, and a number (min 8 chars)"></div>
-      <div class="form-group"><label>Confirm Password</label><input type="password" id="resetPassConfirm" required minlength="8" placeholder="Repeat password"></div>
-      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-save"></i> Reset Password</button>
-    </form>
-  `);
+  // Render full-page reset form instead of a modal for better UX from email links
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:2rem">
+      <div class="card" style="max-width:440px;width:100%;padding:2.5rem;text-align:center">
+        <div style="margin-bottom:1.5rem">
+          <i class="fas fa-shield-alt" style="font-size:3rem;color:var(--primary)"></i>
+        </div>
+        <h2 style="margin-bottom:.5rem;color:var(--dark)">Reset Your Password</h2>
+        <p style="color:var(--gray);margin-bottom:1.5rem;font-size:.95rem">Enter your new password below</p>
+        <form id="resetPasswordForm">
+          <div class="form-group" style="text-align:left">
+            <label><i class="fas fa-lock"></i> New Password</label>
+            <div style="position:relative">
+              <input type="password" id="resetPass" required minlength="8" 
+                pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}" 
+                placeholder="Min 8 chars, upper + lower + number" 
+                title="Must contain uppercase, lowercase, and a number (min 8 chars)"
+                style="padding-right:2.5rem">
+              <span onclick="toggleResetPassVis('resetPass', this)" style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--gray)"><i class="fas fa-eye"></i></span>
+            </div>
+          </div>
+          <div class="form-group" style="text-align:left">
+            <label><i class="fas fa-lock"></i> Confirm Password</label>
+            <div style="position:relative">
+              <input type="password" id="resetPassConfirm" required minlength="8" 
+                placeholder="Repeat your new password"
+                style="padding-right:2.5rem">
+              <span onclick="toggleResetPassVis('resetPassConfirm', this)" style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--gray)"><i class="fas fa-eye"></i></span>
+            </div>
+          </div>
+          <div id="resetPassStrength" style="margin-bottom:1rem;font-size:.85rem"></div>
+          <button class="btn btn-primary btn-block" type="submit" id="resetSubmitBtn">
+            <i class="fas fa-save"></i> Update Password
+          </button>
+        </form>
+        <p style="margin-top:1.5rem;font-size:.85rem;color:var(--gray)">
+          <a href="#" onclick="navigate('home');showLogin();return false" style="color:var(--primary);font-weight:600">
+            <i class="fas fa-arrow-left"></i> Back to Login
+          </a>
+        </p>
+      </div>
+    </div>
+  `;
+  // Password strength indicator
+  document.getElementById('resetPass').addEventListener('input', function() {
+    const v = this.value, el = document.getElementById('resetPassStrength');
+    const hasLower = /[a-z]/.test(v), hasUpper = /[A-Z]/.test(v), hasNum = /\d/.test(v);
+    const score = (v.length >= 8 ? 1 : 0) + (hasLower ? 1 : 0) + (hasUpper ? 1 : 0) + (hasNum ? 1 : 0) + (v.length >= 12 ? 1 : 0);
+    const labels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+    const colors = ['', '#e74c3c', '#f39c12', '#3498db', '#27ae60', '#2ecc71'];
+    el.innerHTML = v.length > 0 ? `<span style="color:${colors[score]}"><i class="fas fa-${score >= 4 ? 'check-circle' : score >= 2 ? 'info-circle' : 'exclamation-circle'}"></i> ${labels[score]}</span>` : '';
+  });
+  // Form submit handler
+  document.getElementById('resetPasswordForm').addEventListener('submit', function(e) { handleResetPassword(e, token); });
+}
+
+function toggleResetPassVis(inputId, toggle) {
+  const inp = document.getElementById(inputId);
+  const isPass = inp.type === 'password';
+  inp.type = isPass ? 'text' : 'password';
+  toggle.innerHTML = `<i class="fas fa-eye${isPass ? '-slash' : ''}"></i>`;
 }
 
 async function handleResetPassword(e, token) {
   e.preventDefault();
   const password = document.getElementById('resetPass').value;
-  const confirm = document.getElementById('resetPassConfirm').value;
-  if (password !== confirm) return toast('Passwords do not match', 'error');
-  const res = await fetch(API_BASE + '/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ token, password }) });
-  const data = await res.json();
-  if (data.success) { toast('Password updated! Please login.', 'success'); closeModal(); showLogin(); }
-  else toast(data.message || 'Reset failed', 'error');
+  const confirmPass = document.getElementById('resetPassConfirm').value;
+  if (password !== confirmPass) return toast('Passwords do not match', 'error');
+  const btn = document.getElementById('resetSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+  try {
+    const res = await fetch(API_BASE + '/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ token, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      // Show success screen
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:2rem">
+          <div class="card" style="max-width:440px;width:100%;padding:2.5rem;text-align:center">
+            <div style="margin-bottom:1.5rem">
+              <i class="fas fa-check-circle" style="font-size:4rem;color:#27ae60"></i>
+            </div>
+            <h2 style="color:var(--dark);margin-bottom:.5rem">Password Updated!</h2>
+            <p style="color:var(--gray);margin-bottom:1.5rem">Your password has been reset successfully.<br>You can now login with your new password.</p>
+            <button class="btn btn-primary btn-block" onclick="window.history.replaceState({}, '', '/');navigate('home');showLogin()">
+              <i class="fas fa-sign-in-alt"></i> Go to Login
+            </button>
+          </div>
+        </div>
+      `;
+      toast('Password updated successfully!', 'success');
+    } else {
+      toast(data.message || 'Reset failed. The link may have expired.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save"></i> Update Password';
+    }
+  } catch (err) {
+    console.error('Reset password error:', err);
+    toast('Something went wrong. Please try again.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save"></i> Update Password';
+  }
 }
 
-// Check for reset-password token in URL on page load
+// Check for reset-password token in URL on page load (supports both path and query param)
 (function() {
   const params = new URLSearchParams(window.location.search);
-  if (window.location.pathname === '/reset-password' && params.get('token')) {
-    setTimeout(() => showResetPassword(params.get('token')), 500);
+  const isResetPath = window.location.pathname === '/reset-password';
+  const isResetAction = params.get('action') === 'reset-password';
+  const token = params.get('token');
+  if ((isResetPath || isResetAction) && token) {
+    // Clean the URL without reloading
+    window.history.replaceState({}, '', '/');
+    setTimeout(() => showResetPassword(token), 500);
   }
 })();
 
