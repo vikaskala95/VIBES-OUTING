@@ -209,7 +209,7 @@ input,textarea,select{font-family:inherit}
 .card-body h3:hover{color:var(--primary)}
 .card-meta{display:flex;flex-wrap:wrap;gap:.75rem;margin-bottom:.75rem;font-size:.85rem;color:var(--text-light)}
 .card-meta span{display:flex;align-items:center;gap:.3rem}
-.card-body p{font-size:.9rem;color:var(--text-light);margin-bottom:1rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.7}
+.card-body p{font-size:.9rem;color:var(--text-light);margin-bottom:1rem;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.7}
 .card-footer{display:flex;justify-content:space-between;align-items:center}
 .price{font-size:1.2rem;font-weight:800;color:var(--primary);background:linear-gradient(135deg,var(--primary),var(--primary-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;color:transparent}
 .price small{font-size:.75rem;font-weight:400;-webkit-text-fill-color:var(--text-light)}
@@ -309,8 +309,155 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 .cat-card:hover .cat-card-icon{opacity:1;background:rgba(139,92,246,.3);transform:scale(1.1);border-color:rgba(139,92,246,.4)}
 
 /* FOOTER */
-.footer{background:linear-gradient(135deg,#1E293B,#0F172A);color:#fff;padding:3.5rem 2rem;text-align:center}
-.footer p{opacity:.6;font-size:.85rem;line-height:1.8}
+.footer{background:linear-gradient(135deg,#1E293B,#0F172A);color:#fff;padding:0;text-align:left}
+.footer-main{max-width:1200px;margin:0 auto;padding:3.5rem 2rem 2rem;display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:2.5rem}
+.footer-brand{display:flex;flex-direction:column;gap:.75rem}
+.footer-brand .logo{font-size:1.3rem;font-weight:800;display:flex;align-items:center;gap:.6rem;color:#fff}
+.footer-brand .logo i{background:linear-gradient(135deg,var(--primary),var(--primary-light));width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.footer-brand .tagline{font-size:.85rem;color:rgba(255,255,255,.5);line-height:1.6}
+.footer-socials{display:flex;gap:.6rem;margin-top:.5rem}
+.footer-socials a{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6);font-size:.9rem;transition:all .3s}
+.footer-socials a:hover{background:var(--primary);color:#fff;transform:translateY(-2px)}
+.footer-col h4{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);margin-bottom:1rem}
+.footer-col a{display:block;font-size:.88rem;color:rgba(255,255,255,.65);padding:.3rem 0;transition:all .2s}
+.footer-col a:hover{color:#fff;padding-left:.3rem}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.08);padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;max-width:1200px;margin:0 auto}
+.footer-bottom p{font-size:.8rem;color:rgba(255,255,255,.4)}
+.footer-bottom-links{display:flex;gap:1.5rem}
+.footer-bottom-links a{font-size:.78rem;color:rgba(255,255,255,.4);transition:color .2s}
+.footer-bottom-links a:hover{color:#fff}
+
+/* CONTENT PAGES (About, Careers, Legal, etc.) */
+.content-page{max-width:900px;margin:0 auto;padding:3rem 2rem}
+.content-page .page-hero{text-align:center;margin-bottom:3rem}
+.content-page .page-hero h1{font-size:2.2rem;font-weight:800;margin-bottom:.5rem;letter-spacing:-.5px}
+.content-page .page-hero p{color:var(--text-light);font-size:1.05rem;max-width:600px;margin:0 auto}
+.content-page .page-hero .hero-icon{width:72px;height:72px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin:0 auto 1.25rem}
+.content-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:2rem;margin-bottom:1.5rem}
+.content-card h2{font-size:1.2rem;font-weight:700;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.content-card h3{font-size:1rem;font-weight:600;margin:1rem 0 .5rem;color:var(--text)}
+.content-card p,.content-card li{font-size:.9rem;color:var(--text-light);line-height:1.8}
+.content-card ul{padding-left:1.25rem;margin:.5rem 0}
+.content-card ul li{margin-bottom:.35rem}
+
+/* TEAM GRID */
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1.25rem;margin-top:1rem}
+.team-member{text-align:center;padding:1.5rem 1rem;border-radius:var(--radius);background:#F8FAFC;transition:all .3s}
+.team-member:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.team-member .avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;margin:0 auto .75rem}
+.team-member h4{font-size:.9rem;font-weight:700}
+.team-member p{font-size:.78rem;color:var(--text-light)}
+
+/* STATS COUNTER GRID */
+.counter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1.25rem;margin:1.5rem 0}
+.counter-item{text-align:center;padding:1.25rem;border-radius:12px;background:linear-gradient(135deg,rgba(108,60,225,.04),rgba(108,60,225,.08))}
+.counter-item .num{font-size:1.8rem;font-weight:800;color:var(--primary)}
+.counter-item .label{font-size:.78rem;color:var(--text-light);margin-top:.25rem}
+
+/* JOB CARDS */
+.job-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:1.5rem;transition:all .3s;cursor:pointer}
+.job-card:hover{border-color:var(--primary);box-shadow:var(--shadow-lg);transform:translateY(-3px)}
+.job-card h3{font-size:1rem;font-weight:700;margin-bottom:.5rem}
+.job-card .job-meta{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem}
+.job-card .job-meta span{font-size:.78rem;background:#F1F5F9;padding:.2rem .6rem;border-radius:999px;color:var(--text-light)}
+.job-card p{font-size:.85rem;color:var(--text-light);line-height:1.7}
+
+/* SUPPORT FORM */
+.support-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.support-category{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);padding:1.5rem;text-align:center;cursor:pointer;transition:all .3s}
+.support-category:hover{border-color:var(--primary);background:rgba(108,60,225,.03);transform:translateY(-3px)}
+.support-category i{font-size:1.5rem;color:var(--primary);margin-bottom:.5rem}
+.support-category h4{font-size:.9rem;font-weight:600}
+.support-category p{font-size:.78rem;color:var(--text-light)}
+
+/* LEGAL SIDEBAR NAV */
+.legal-layout{display:grid;grid-template-columns:220px 1fr;gap:2rem;max-width:1100px;margin:0 auto;padding:3rem 2rem}
+.legal-sidebar{position:sticky;top:90px;height:fit-content}
+.legal-sidebar a{display:block;padding:.5rem .75rem;border-radius:8px;font-size:.85rem;color:var(--text-light);margin-bottom:.25rem;transition:all .2s;border-left:3px solid transparent}
+.legal-sidebar a:hover,.legal-sidebar a.active{background:rgba(108,60,225,.06);color:var(--primary);border-left-color:var(--primary)}
+
+/* WISHLIST */
+.wishlist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem}
+.wishlist-card{position:relative}
+.wishlist-heart{position:absolute;top:12px;right:12px;z-index:5;background:rgba(255,255,255,.9);width:36px;height:36px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:all .3s;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.wishlist-heart:hover{transform:scale(1.15)}
+.wishlist-heart.active{color:var(--danger);background:#fff}
+
+/* NOTIFICATION PANEL */
+.notif-panel{position:absolute;top:100%;right:0;width:360px;max-height:480px;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-xl);overflow:hidden;z-index:200;display:none}
+.notif-panel.show{display:block}
+.notif-panel .notif-header{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.notif-panel .notif-header h4{font-size:.9rem;font-weight:700}
+.notif-list{overflow-y:auto;max-height:400px}
+.notif-item{padding:.85rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s;display:flex;gap:.75rem;align-items:flex-start}
+.notif-item:hover{background:#F8FAFC}
+.notif-item.unread{background:rgba(108,60,225,.03);border-left:3px solid var(--primary)}
+.notif-item .notif-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+.notif-item .notif-body h5{font-size:.85rem;font-weight:600;margin-bottom:.15rem}
+.notif-item .notif-body p{font-size:.78rem;color:var(--text-light)}
+.notif-item .notif-body .notif-time{font-size:.7rem;color:var(--text-light);margin-top:.2rem}
+
+/* WALLET */
+.wallet-card{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;border-radius:20px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden}
+.wallet-card::before{content:'';position:absolute;top:-50%;right:-20%;width:200px;height:200px;background:rgba(255,255,255,.08);border-radius:50%}
+.wallet-card::after{content:'';position:absolute;bottom:-30%;left:-10%;width:150px;height:150px;background:rgba(255,255,255,.05);border-radius:50%}
+.wallet-card h4{font-size:.85rem;opacity:.7;margin-bottom:.25rem}
+.wallet-card .balance{font-size:2.5rem;font-weight:800;position:relative;z-index:1}
+.wallet-card .wallet-actions{display:flex;gap:.75rem;margin-top:1rem;position:relative;z-index:1}
+.wallet-card .wallet-actions button{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.2);padding:.5rem 1rem;border-radius:999px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .3s;backdrop-filter:blur(8px)}
+.wallet-card .wallet-actions button:hover{background:rgba(255,255,255,.35);transform:translateY(-1px)}
+.txn-list{margin-top:1rem}
+.txn-item{display:flex;justify-content:space-between;align-items:center;padding:.75rem 0;border-bottom:1px solid var(--border)}
+.txn-item:last-child{border-bottom:none}
+.txn-item .txn-info{display:flex;align-items:center;gap:.75rem}
+.txn-item .txn-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem}
+.txn-item .txn-info h5{font-size:.88rem;font-weight:600}
+.txn-item .txn-info p{font-size:.75rem;color:var(--text-light)}
+.txn-item .txn-amount{font-weight:700;font-size:.95rem}
+.txn-item .txn-amount.credit{color:var(--success)}
+.txn-item .txn-amount.debit{color:var(--danger)}
+
+/* PARTNER PAGE */
+.partner-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;margin:1.5rem 0}
+.partner-step{text-align:center;padding:1.5rem;border-radius:var(--radius);background:#fff;border:1.5px solid var(--border);transition:all .3s}
+.partner-step:hover{border-color:var(--primary);transform:translateY(-4px);box-shadow:var(--shadow)}
+.partner-step .step-num{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;margin:0 auto .75rem}
+.partner-step h4{font-size:.9rem;font-weight:700;margin-bottom:.25rem}
+.partner-step p{font-size:.8rem;color:var(--text-light)}
+
+/* ACCORDION (mobile footer + FAQ) */
+.accordion-item{border-bottom:1px solid rgba(255,255,255,.08)}
+.accordion-header{display:flex;justify-content:space-between;align-items:center;padding:.75rem 0;cursor:pointer;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);transition:color .2s}
+.accordion-header:hover{color:rgba(255,255,255,.7)}
+.accordion-header i{transition:transform .3s;font-size:.7rem}
+.accordion-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.accordion-body.open{max-height:300px}
+.accordion-body a{display:block;font-size:.88rem;color:rgba(255,255,255,.65);padding:.3rem 0;transition:all .2s}
+.accordion-body a:hover{color:#fff;padding-left:.3rem}
+
+/* RESPONSIVE for new components */
+@media(max-width:768px){
+  .footer-main{grid-template-columns:1fr;gap:0;padding:2rem 1.5rem 1rem}
+  .footer-brand{margin-bottom:1rem}
+  .footer-col{display:none}
+  .footer-accordion{display:block !important}
+  .footer-bottom{flex-direction:column;text-align:center;padding:1rem 1.5rem}
+  .legal-layout{grid-template-columns:1fr;padding:2rem 1rem}
+  .legal-sidebar{position:static;display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.5rem}
+  .legal-sidebar a{border-left:none;border-bottom:2px solid transparent}
+  .support-grid{grid-template-columns:1fr}
+  .content-page{padding:2rem 1rem}
+  .content-page .page-hero h1{font-size:1.7rem}
+  .team-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .notif-panel{width:100vw;right:-1rem;border-radius:0 0 var(--radius) var(--radius)}
+  .wallet-card .balance{font-size:2rem}
+  .wishlist-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .wishlist-grid{grid-template-columns:1fr}
+  .counter-grid{grid-template-columns:1fr 1fr}
+  .partner-steps{grid-template-columns:1fr}
+}
 
 /* RESPONSIVE */
 @media(max-width:1024px){
@@ -503,12 +650,18 @@ function renderNav() {
       <a href="#" onclick="navigate('outings')">Outings</a>
       <a href="#" onclick="navigate('suggest')" class="hide-mobile">Suggest</a>
       ${isAdmin ? `<a href="#" onclick="navigate('admin')">Admin</a>` : `
-        <a href="#" onclick="navigate('recommendations')">🤖 For You</a>
-        <a href="#" onclick="navigate('dashboard')">My Dashboard</a>
+        <a href="#" onclick="navigate('recommendations')" class="hide-mobile">🤖 For You</a>
+        <a href="#" onclick="navigate('wishlist')" class="hide-mobile" title="Wishlist"><i class="fas fa-heart"></i></a>
+        <a href="#" onclick="navigate('wallet')" class="hide-mobile" title="Wallet"><i class="fas fa-wallet"></i></a>
+        <a href="#" onclick="navigate('dashboard')">Dashboard</a>
       `}
+      <div style="position:relative;display:inline-flex">
+        <a href="#" onclick="navigate('notifications')" title="Notifications" style="position:relative"><i class="fas fa-bell"></i><span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;font-size:.6rem;width:16px;height:16px;border-radius:50%;align-items:center;justify-content:center;font-weight:700">0</span></a>
+      </div>
       <span class="user-badge"><i class="fas fa-user"></i> ${currentUser.name}</span>
       <button onclick="logout()" class="btn btn-sm btn-danger">Logout</button>
     `;
+    fetchNotifications();
   } else {
     n.innerHTML = `
       <a href="#" onclick="navigate('outings')">Outings</a>
@@ -755,6 +908,23 @@ async function navigate(page, skipHistory) {
   else if (page === 'recommendations') await renderRecommendations(app);
   else if (page.startsWith('outing-')) await renderOutingDetail(app, parseInt(page.split('-')[1]));
   else if (page.startsWith('chat-')) await renderChat(app, parseInt(page.split('-')[1]));
+  // Footer pages
+  else if (page === 'about') renderAbout(app);
+  else if (page === 'how-it-works') renderHowItWorks(app);
+  else if (page === 'careers') renderCareers(app);
+  else if (page === 'contact-support') renderContactSupport(app);
+  else if (page === 'cancellation-policy') renderCancellationPolicy(app);
+  else if (page === 'safety-center') renderSafetyCenter(app);
+  else if (page === 'manage-trips') { if(currentUser) await renderUserDashboard(app); else showLogin(); }
+  else if (page === 'partners') renderPartners(app);
+  else if (page === 'affiliate') renderAffiliate(app);
+  else if (page === 'privacy-policy') renderLegalPage(app, 'privacy');
+  else if (page === 'terms-of-service') renderLegalPage(app, 'terms');
+  else if (page === 'refund-policy') renderLegalPage(app, 'refund');
+  else if (page === 'community-guidelines') renderLegalPage(app, 'community');
+  else if (page === 'wishlist') await renderWishlist(app);
+  else if (page === 'wallet') await renderWallet(app);
+  else if (page === 'notifications') await renderNotificationsPage(app);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -902,9 +1072,100 @@ async function renderHome(app) {
         </div>
       </div>
     </section>
-    <footer class="footer"><p>© 2026 VIBES@Outing. Made with ❤️ by GenZ, for GenZ. No boring trips, only vibes. ✨</p><p style="margin-top:.5rem;opacity:.4;font-size:.75rem">Less planning, more feeling — enjoy the moment.</p></footer>
+    ${renderFooterHTML()}
   `;
   initHeroEffects();
+}
+
+// ─── REUSABLE FOOTER ────────────────────────────────────────────
+function renderFooterHTML() {
+  return `
+  <footer class="footer">
+    <div class="footer-main">
+      <div class="footer-brand">
+        <div class="logo"><i class="fas fa-compass"></i> VIBES@Outing</div>
+        <p class="tagline">Less planning, more feeling — enjoy the moment. Premium group outings for your squad. ✨</p>
+        <div class="footer-socials">
+          <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+          <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+          <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+          <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <a href="#" onclick="navigate('manage-trips');return false">Manage Your Trips</a>
+        <a href="#" onclick="navigate('contact-support');return false">Contact Support</a>
+        <a href="#" onclick="navigate('cancellation-policy');return false">Cancellation Policy</a>
+        <a href="#" onclick="navigate('safety-center');return false">Safety Center</a>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="#" onclick="navigate('about');return false">About Us</a>
+        <a href="#" onclick="navigate('how-it-works');return false">How VibesOuting Works</a>
+        <a href="#" onclick="navigate('careers');return false">Careers</a>
+        <a href="#" onclick="navigate('partners');return false">Become a Partner</a>
+        <a href="#" onclick="navigate('affiliate');return false">Affiliate Program</a>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <a href="#" onclick="navigate('privacy-policy');return false">Privacy Policy</a>
+        <a href="#" onclick="navigate('terms-of-service');return false">Terms of Service</a>
+        <a href="#" onclick="navigate('refund-policy');return false">Refund Policy</a>
+        <a href="#" onclick="navigate('community-guidelines');return false">Community Guidelines</a>
+      </div>
+    </div>
+    <!-- Mobile accordion footer -->
+    <div class="footer-accordion" style="display:none;padding:0 1.5rem">
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion(this)">Support <i class="fas fa-chevron-down"></i></div>
+        <div class="accordion-body">
+          <a href="#" onclick="navigate('manage-trips');return false">Manage Your Trips</a>
+          <a href="#" onclick="navigate('contact-support');return false">Contact Support</a>
+          <a href="#" onclick="navigate('cancellation-policy');return false">Cancellation Policy</a>
+          <a href="#" onclick="navigate('safety-center');return false">Safety Center</a>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion(this)">Company <i class="fas fa-chevron-down"></i></div>
+        <div class="accordion-body">
+          <a href="#" onclick="navigate('about');return false">About Us</a>
+          <a href="#" onclick="navigate('how-it-works');return false">How VibesOuting Works</a>
+          <a href="#" onclick="navigate('careers');return false">Careers</a>
+          <a href="#" onclick="navigate('partners');return false">Become a Partner</a>
+          <a href="#" onclick="navigate('affiliate');return false">Affiliate Program</a>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAccordion(this)">Legal <i class="fas fa-chevron-down"></i></div>
+        <div class="accordion-body">
+          <a href="#" onclick="navigate('privacy-policy');return false">Privacy Policy</a>
+          <a href="#" onclick="navigate('terms-of-service');return false">Terms of Service</a>
+          <a href="#" onclick="navigate('refund-policy');return false">Refund Policy</a>
+          <a href="#" onclick="navigate('community-guidelines');return false">Community Guidelines</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 VIBES@Outing. Made with ❤️ in India</p>
+      <div class="footer-bottom-links">
+        <a href="#" onclick="navigate('privacy-policy');return false">Privacy</a>
+        <a href="#" onclick="navigate('terms-of-service');return false">Terms</a>
+        <a href="#" onclick="navigate('contact-support');return false">Support</a>
+      </div>
+    </div>
+  </footer>`;
+}
+
+function toggleAccordion(header) {
+  const body = header.nextElementSibling;
+  const icon = header.querySelector('i');
+  const isOpen = body.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.accordion-body').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('.accordion-header i').forEach(i => i.style.transform = '');
+  if (!isOpen) { body.classList.add('open'); icon.style.transform = 'rotate(180deg)'; }
 }
 
 // ─── OUTING CARD ────────────────────────────────────────────────
@@ -1839,6 +2100,709 @@ function cleanupHeroSlider() {
     if (hero) hero.removeEventListener('mousemove', heroParallaxHandler);
     heroParallaxHandler = null;
   }
+}
+
+// ─── ABOUT US PAGE ──────────────────────────────────────────────
+function renderAbout(app) {
+  app.innerHTML = `
+    <div class="content-page">
+      <div class="page-hero">
+        <div class="hero-icon" style="background:linear-gradient(135deg,rgba(108,60,225,.1),rgba(108,60,225,.2));color:var(--primary)"><i class="fas fa-heart"></i></div>
+        <h1>About VIBES@Outing</h1>
+        <p>We believe the best memories are made when you stop planning and start living.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-book-open" style="color:var(--primary)"></i> Our Story</h2>
+        <p>VIBES@Outing was born from a simple frustration — planning group outings is exhausting. Coordinating 10 people, finding the right resort, booking cabs, splitting payments... We said enough. What if you could just pick an experience, pay, and show up?</p>
+        <p style="margin-top:.75rem">Founded in 2024 in Bangalore, we started with just 3 outings. Today, we're the go-to platform for GenZ group experiences across India. From Goa beach parties to Himalayan treks, we handle every detail so you can focus on making memories.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-bullseye" style="color:var(--secondary)"></i> Mission & Vision</h2>
+        <p><strong>Mission:</strong> To make unforgettable group experiences accessible to everyone — zero planning, all vibes.</p>
+        <p style="margin-top:.5rem"><strong>Vision:</strong> To become India's largest community-driven travel experience platform, connecting a million explorers by 2027.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-chart-line" style="color:var(--accent)"></i> By the Numbers</h2>
+        <div class="counter-grid">
+          <div class="counter-item"><div class="num">500+</div><div class="label">Outings Organized</div></div>
+          <div class="counter-item"><div class="num">12,000+</div><div class="label">Happy Explorers</div></div>
+          <div class="counter-item"><div class="num">50+</div><div class="label">Destinations</div></div>
+          <div class="counter-item"><div class="num">4.8★</div><div class="label">Average Rating</div></div>
+        </div>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-users" style="color:var(--primary)"></i> Meet the Team</h2>
+        <div class="team-grid">
+          <div class="team-member"><div class="avatar">AK</div><h4>Arjun Kumar</h4><p>Founder & CEO</p></div>
+          <div class="team-member"><div class="avatar" style="background:linear-gradient(135deg,var(--secondary),#FB923C)">PS</div><h4>Priya Sharma</h4><p>Head of Operations</p></div>
+          <div class="team-member"><div class="avatar" style="background:linear-gradient(135deg,var(--accent),#34D399)">RJ</div><h4>Rohan Joshi</h4><p>Tech Lead</p></div>
+          <div class="team-member"><div class="avatar" style="background:linear-gradient(135deg,var(--warning),#FBBF24)">NM</div><h4>Neha Menon</h4><p>Community Manager</p></div>
+        </div>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-lightbulb" style="color:var(--warning)"></i> Our Philosophy</h2>
+        <ul>
+          <li><strong>Zero Planning:</strong> We handle resorts, cabs, food, and itinerary — you just show up.</li>
+          <li><strong>Squad First:</strong> Every outing is designed for groups. Meet new people or bring your own crew.</li>
+          <li><strong>Premium Always:</strong> No budget hostels or cramped buses. We keep it high-end.</li>
+          <li><strong>Safety Verified:</strong> Every destination, organizer, and participant is vetted.</li>
+        </ul>
+      </div>
+    </div>
+    ${renderFooterHTML()}
+  `;
+}
+
+// ─── HOW IT WORKS PAGE ─────────────────────────────────────────
+function renderHowItWorks(app) {
+  app.innerHTML = `
+    <div class="content-page">
+      <div class="page-hero">
+        <div class="hero-icon" style="background:linear-gradient(135deg,rgba(249,115,22,.1),rgba(249,115,22,.2));color:var(--secondary)"><i class="fas fa-map-signs"></i></div>
+        <h1>How VIBES@Outing Works</h1>
+        <p>Three simple steps to your next unforgettable adventure.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-search" style="color:var(--primary)"></i> Step 1: Browse & Pick</h2>
+        <p>Explore our curated list of premium outings. Filter by destination, budget, or vibe. Each outing includes a luxury resort stay, private cab, meals, and activities — all in one price.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-credit-card" style="color:var(--secondary)"></i> Step 2: Book with 20% Token</h2>
+        <p>Lock your spot by paying just 20% upfront via Razorpay (UPI, cards, net banking). The remaining 80% is due 24 hours before the trip. This way, you stay flexible while we confirm arrangements.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-users" style="color:var(--accent)"></i> Step 3: Show Up & Enjoy</h2>
+        <p>On the day of the outing, just arrive at the pickup point. Your cab, resort, and itinerary are all pre-arranged. Meet your squad, explore together, and create memories that last forever.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-shield-alt" style="color:var(--success)"></i> What's Included</h2>
+        <ul>
+          <li>High-end resort / homestay accommodation</li>
+          <li>Private cab pickup and drop</li>
+          <li>Breakfast and select meals</li>
+          <li>Activities and experiences</li>
+          <li>Trip coordinator / guide</li>
+          <li>24/7 on-trip support</li>
+          <li>Group WhatsApp coordination</li>
+        </ul>
+      </div>
+      <div style="text-align:center;margin-top:2rem">
+        <button class="btn btn-primary" onclick="navigate('outings')"><i class="fas fa-compass"></i> Explore Outings Now</button>
+      </div>
+    </div>
+    ${renderFooterHTML()}
+  `;
+}
+
+// ─── CAREERS PAGE ───────────────────────────────────────────────
+function renderCareers(app) {
+  const jobs = [
+    { title: 'Full Stack Developer', dept: 'Engineering', type: 'Full-time', location: 'Bangalore', desc: 'Build and maintain our platform using Node.js, PostgreSQL, and modern frontend tech.' },
+    { title: 'Community Manager', dept: 'Marketing', type: 'Full-time', location: 'Remote', desc: 'Grow our GenZ community across social media and organize meetups.' },
+    { title: 'Travel Experience Curator', dept: 'Operations', type: 'Full-time', location: 'Bangalore', desc: 'Scout destinations, negotiate with resorts, and design outing itineraries.' },
+    { title: 'Graphic Designer', dept: 'Design', type: 'Contract', location: 'Remote', desc: 'Create stunning visuals for our platform, social media, and marketing.' },
+    { title: 'Campus Ambassador', dept: 'Marketing', type: 'Internship', location: 'Pan India', desc: 'Represent VibesOuting on your campus and earn rewards per signup.' },
+  ];
+  app.innerHTML = `
+    <div class="content-page">
+      <div class="page-hero">
+        <div class="hero-icon" style="background:linear-gradient(135deg,rgba(6,214,160,.1),rgba(6,214,160,.2));color:var(--accent)"><i class="fas fa-briefcase"></i></div>
+        <h1>Careers at VIBES@Outing</h1>
+        <p>Join us in building India's most-loved group experience platform.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-star" style="color:var(--warning)"></i> Why Work With Us?</h2>
+        <div class="counter-grid">
+          <div class="counter-item"><div class="num">🏠</div><div class="label">Remote-first Culture</div></div>
+          <div class="counter-item"><div class="num">✈️</div><div class="label">Free Outings</div></div>
+          <div class="counter-item"><div class="num">📈</div><div class="label">ESOPs for Early Joiners</div></div>
+          <div class="counter-item"><div class="num">🎯</div><div class="label">Impact-driven Work</div></div>
+        </div>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-laptop-code" style="color:var(--primary)"></i> Open Positions</h2>
+        <div style="display:grid;gap:1rem;margin-top:1rem">
+          ${jobs.map(j => `
+            <div class="job-card" onclick="showJobApplication('${escapeHtml(j.title)}')">
+              <h3>${escapeHtml(j.title)}</h3>
+              <div class="job-meta">
+                <span><i class="fas fa-building"></i> ${escapeHtml(j.dept)}</span>
+                <span><i class="fas fa-clock"></i> ${escapeHtml(j.type)}</span>
+                <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(j.location)}</span>
+              </div>
+              <p>${escapeHtml(j.desc)}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+    ${renderFooterHTML()}
+  `;
+}
+function showJobApplication(title) {
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-paper-plane" style="color:var(--primary)"></i> Apply: ${title}</h2>
+    <form onsubmit="event.preventDefault();toast('Application submitted! We\\'ll be in touch.','success');closeModal()">
+      <div class="form-group"><label>Full Name</label><input type="text" required placeholder="Your name"></div>
+      <div class="form-group"><label>Email</label><input type="email" required placeholder="you@email.com"></div>
+      <div class="form-group"><label>Phone</label><input type="tel" placeholder="9876543210"></div>
+      <div class="form-group"><label>LinkedIn / Portfolio URL</label><input type="url" placeholder="https://..."></div>
+      <div class="form-group"><label>Why VIBES@Outing?</label><textarea placeholder="Tell us why you'd be a great fit..." rows="3"></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-paper-plane"></i> Submit Application</button>
+    </form>
+  `);
+}
+
+// ─── CONTACT SUPPORT PAGE ──────────────────────────────────────
+function renderContactSupport(app) {
+  app.innerHTML = `
+    <div class="content-page">
+      <div class="page-hero">
+        <div class="hero-icon" style="background:linear-gradient(135deg,rgba(108,60,225,.1),rgba(108,60,225,.2));color:var(--primary)"><i class="fas fa-headset"></i></div>
+        <h1>Customer Support Center</h1>
+        <p>We're here to help. Choose how you'd like to reach us.</p>
+      </div>
+      <div class="support-grid" style="margin-bottom:1.5rem">
+        <div class="support-category" onclick="showSupportTicket('Booking Issue')">
+          <i class="fas fa-ticket-alt"></i>
+          <h4>Booking Issues</h4>
+          <p>Payment, cancellation, or booking changes</p>
+        </div>
+        <div class="support-category" onclick="showSupportTicket('Trip Issue')">
+          <i class="fas fa-route"></i>
+          <h4>Trip Support</h4>
+          <p>On-trip emergencies or concerns</p>
+        </div>
+        <div class="support-category" onclick="showSupportTicket('Account Issue')">
+          <i class="fas fa-user-cog"></i>
+          <h4>Account Help</h4>
+          <p>Login, password, or profile issues</p>
+        </div>
+        <div class="support-category" onclick="showSupportTicket('General Query')">
+          <i class="fas fa-question-circle"></i>
+          <h4>General Inquiry</h4>
+          <p>Questions about outings or the platform</p>
+        </div>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-comments" style="color:var(--accent)"></i> Quick Contact</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-top:1rem">
+          <div style="text-align:center;padding:1rem;background:#F8FAFC;border-radius:12px">
+            <i class="fas fa-envelope" style="font-size:1.5rem;color:var(--primary);margin-bottom:.5rem;display:block"></i>
+            <strong style="font-size:.85rem">Email</strong>
+            <p style="font-size:.82rem;color:var(--text-light)">support@vibesouting.in</p>
+          </div>
+          <div style="text-align:center;padding:1rem;background:#F8FAFC;border-radius:12px">
+            <i class="fab fa-whatsapp" style="font-size:1.5rem;color:#25D366;margin-bottom:.5rem;display:block"></i>
+            <strong style="font-size:.85rem">WhatsApp</strong>
+            <p style="font-size:.82rem;color:var(--text-light)">+91 98765 43210</p>
+          </div>
+          <div style="text-align:center;padding:1rem;background:#F8FAFC;border-radius:12px">
+            <i class="fas fa-clock" style="font-size:1.5rem;color:var(--warning);margin-bottom:.5rem;display:block"></i>
+            <strong style="font-size:.85rem">Hours</strong>
+            <p style="font-size:.82rem;color:var(--text-light)">9 AM – 10 PM IST</p>
+          </div>
+        </div>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-question-circle" style="color:var(--warning)"></i> Frequently Asked Questions</h2>
+        <div style="margin-top:1rem">
+          <h3 style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">▸ How do I cancel a booking?</h3>
+          <p style="display:none;padding:.5rem 0 .5rem 1rem">Go to your Dashboard → My Bookings → click Cancel on the booking. Refund is processed as per our cancellation policy within 5-7 business days.</p>
+          <h3 style="cursor:pointer;margin-top:.5rem" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">▸ Can I change the date of my outing?</h3>
+          <p style="display:none;padding:.5rem 0 .5rem 1rem">Date changes depend on availability. Contact us at least 48 hours before the trip and we'll try to accommodate.</p>
+          <h3 style="cursor:pointer;margin-top:.5rem" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">▸ What happens if the outing is cancelled?</h3>
+          <p style="display:none;padding:.5rem 0 .5rem 1rem">Full refund is processed within 3-5 business days. We'll notify you via email and WhatsApp immediately.</p>
+          <h3 style="cursor:pointer;margin-top:.5rem" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">▸ Is my payment secure?</h3>
+          <p style="display:none;padding:.5rem 0 .5rem 1rem">Absolutely! We use Razorpay, India's most trusted payment gateway. All transactions are PCI DSS compliant and encrypted.</p>
+        </div>
+      </div>
+    </div>
+    ${renderFooterHTML()}
+  `;
+}
+function showSupportTicket(category) {
+  if (!currentUser) { showLogin(); return; }
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-life-ring" style="color:var(--primary)"></i> ${category}</h2>
+    <form onsubmit="event.preventDefault();toast('Support ticket submitted! We\\'ll respond within 24 hours.','success');closeModal()">
+      <div class="form-group"><label>Subject</label><input type="text" required placeholder="Brief description of your issue"></div>
+      <div class="form-group"><label>Priority</label><select><option>Low</option><option>Medium</option><option selected>High</option><option>Urgent</option></select></div>
+      <div class="form-group"><label>Describe Your Issue</label><textarea required placeholder="Tell us what happened..." rows="4"></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-paper-plane"></i> Submit Ticket</button>
+    </form>
+  `);
+}
+
+// ─── CANCELLATION POLICY PAGE ──────────────────────────────────
+function renderCancellationPolicy(app) {
+  app.innerHTML = `
+    <div class="content-page">
+      <div class="page-hero">
+        <div class="hero-icon" style="background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.2));color:var(--danger)"><i class="fas fa-calendar-times"></i></div>
+        <h1>Cancellation Policy</h1>
+        <p>We keep it fair and transparent.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-info-circle" style="color:var(--primary)"></i> Token Payment (20%)</h2>
+        <ul>
+          <li><strong>More than 7 days before trip:</strong> Full token refund (100% of 20%)</li>
+          <li><strong>3–7 days before trip:</strong> 50% of token amount refunded</li>
+          <li><strong>Less than 3 days:</strong> Token is non-refundable</li>
+        </ul>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-money-bill-wave" style="color:var(--success)"></i> Full Payment (80% Remaining)</h2>
+        <ul>
+          <li><strong>More than 48 hours before trip:</strong> Full remaining amount refunded</li>
+          <li><strong>24–48 hours before trip:</strong> 75% of remaining refunded</li>
+          <li><strong>Less than 24 hours:</strong> Non-refundable</li>
+        </ul>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-shield-alt" style="color:var(--warning)"></i> Organizer Cancellation</h2>
+        <p>If VIBES@Outing cancels an outing (bad weather, low participation, etc.), you get a <strong>full 100% refund</strong> regardless of timing, plus a 10% credit toward your next booking.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-clock" style="color:var(--secondary)"></i> Refund Timeline</h2>
+        <p>All approved refunds are processed within <strong>5–7 business days</strong> to the original payment method.</p>
+      </div>
+      <div style="text-align:center;margin-top:1.5rem">
+        <button class="btn btn-primary btn-sm" onclick="navigate('contact-support')"><i class="fas fa-headset"></i> Contact Support for Cancellation</button>
+      </div>
+    </div>
+    ${renderFooterHTML()}
+  `;
+}
+
+// ─── SAFETY CENTER PAGE ────────────────────────────────────────
+function renderSafetyCenter(app) {
+  app.innerHTML = `
+    <div class="content-page">
+      <div class="page-hero">
+        <div class="hero-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(16,185,129,.2));color:var(--success)"><i class="fas fa-shield-alt"></i></div>
+        <h1>Safety Center</h1>
+        <p>Your safety is our top priority — every step of the way.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-id-card" style="color:var(--primary)"></i> Verified Participants</h2>
+        <p>Every participant is encouraged to complete ID verification before joining an outing. This ensures everyone in your group is who they say they are.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-map-marked-alt" style="color:var(--secondary)"></i> Vetted Destinations</h2>
+        <p>Our operations team personally visits and reviews every resort, homestay, and activity location before listing. We check hygiene, safety equipment, staff training, and emergency access.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-phone-alt" style="color:var(--success)"></i> 24/7 On-Trip Support</h2>
+        <p>A dedicated trip coordinator accompanies every outing. Emergency helpline is available 24/7 during the trip.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-first-aid" style="color:var(--danger)"></i> Emergency Protocols</h2>
+        <ul>
+          <li>First-aid kit available on every trip</li>
+          <li>Nearest hospital details shared in pre-trip WhatsApp group</li>
+          <li>Emergency contact numbers for local police & ambulance</li>
+          <li>Travel insurance recommendations provided</li>
+        </ul>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-exclamation-triangle" style="color:var(--warning)"></i> Reporting</h2>
+        <p>If you experience or witness any safety concern during an outing, report it immediately through our <a href="#" onclick="navigate('contact-support');return false" style="color:var(--primary);font-weight:600">support center</a> or call our emergency line. We take all reports seriously and investigate within 24 hours.</p>
+      </div>
+    </div>
+    ${renderFooterHTML()}
+  `;
+}
+
+// ─── PARTNERS PAGE ─────────────────────────────────────────────
+function renderPartners(app) {
+  app.innerHTML = `
+    <div class="content-page">
+      <div class="page-hero">
+        <div class="hero-icon" style="background:linear-gradient(135deg,rgba(249,115,22,.1),rgba(249,115,22,.2));color:var(--secondary)"><i class="fas fa-handshake"></i></div>
+        <h1>Become a Partner</h1>
+        <p>List your property or experience on VIBES@Outing and reach thousands of eager travelers.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-chart-line" style="color:var(--success)"></i> Why Partner With Us?</h2>
+        <div class="counter-grid">
+          <div class="counter-item"><div class="num">12K+</div><div class="label">Active Users</div></div>
+          <div class="counter-item"><div class="num">95%</div><div class="label">Occupancy Rate</div></div>
+          <div class="counter-item"><div class="num">₹0</div><div class="label">Listing Fee</div></div>
+          <div class="counter-item"><div class="num">24hrs</div><div class="label">Fast Payout</div></div>
+        </div>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-list-ol" style="color:var(--primary)"></i> How It Works</h2>
+        <div class="partner-steps">
+          <div class="partner-step"><div class="step-num">1</div><h4>Apply</h4><p>Fill out the partner form with property details</p></div>
+          <div class="partner-step"><div class="step-num">2</div><h4>Verify</h4><p>Our team reviews and visits your property</p></div>
+          <div class="partner-step"><div class="step-num">3</div><h4>Go Live</h4><p>Get listed and start receiving bookings</p></div>
+          <div class="partner-step"><div class="step-num">4</div><h4>Earn</h4><p>Get paid after every successful outing</p></div>
+        </div>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-pen" style="color:var(--secondary)"></i> Partner Application</h2>
+        <form onsubmit="event.preventDefault();toast('Partner application submitted! We\\'ll contact you within 48 hours.','success')">
+          <div class="form-row">
+            <div class="form-group"><label>Business Name</label><input type="text" required placeholder="Resort / Experience name"></div>
+            <div class="form-group"><label>Contact Name</label><input type="text" required placeholder="Your full name"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Email</label><input type="email" required placeholder="business@email.com"></div>
+            <div class="form-group"><label>Phone</label><input type="tel" required placeholder="9876543210"></div>
+          </div>
+          <div class="form-group"><label>Property Type</label><select><option>Resort / Hotel</option><option>Homestay</option><option>Adventure Activity</option><option>Restaurant</option><option>Transport Service</option><option>Other</option></select></div>
+          <div class="form-group"><label>Location</label><input type="text" required placeholder="City, State"></div>
+          <div class="form-group"><label>Description</label><textarea placeholder="Tell us about your property/service..." rows="3"></textarea></div>
+          <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-paper-plane"></i> Submit Application</button>
+        </form>
+      </div>
+    </div>
+    ${renderFooterHTML()}
+  `;
+}
+
+// ─── AFFILIATE PAGE ────────────────────────────────────────────
+function renderAffiliate(app) {
+  app.innerHTML = `
+    <div class="content-page">
+      <div class="page-hero">
+        <div class="hero-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(245,158,11,.2));color:var(--warning)"><i class="fas fa-share-alt"></i></div>
+        <h1>Affiliate Program</h1>
+        <p>Earn money by sharing VIBES@Outing with your audience.</p>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-gift" style="color:var(--secondary)"></i> How It Works</h2>
+        <div class="partner-steps">
+          <div class="partner-step"><div class="step-num">1</div><h4>Sign Up</h4><p>Create your free affiliate account</p></div>
+          <div class="partner-step"><div class="step-num">2</div><h4>Share</h4><p>Get your unique referral link</p></div>
+          <div class="partner-step"><div class="step-num">3</div><h4>Earn</h4><p>10% commission on every booking</p></div>
+        </div>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-trophy" style="color:var(--warning)"></i> Commission Tiers</h2>
+        <div class="counter-grid">
+          <div class="counter-item"><div class="num">10%</div><div class="label">Standard (0-10 bookings)</div></div>
+          <div class="counter-item"><div class="num">12%</div><div class="label">Silver (11-50 bookings)</div></div>
+          <div class="counter-item"><div class="num">15%</div><div class="label">Gold (51-100 bookings)</div></div>
+          <div class="counter-item"><div class="num">20%</div><div class="label">Platinum (100+ bookings)</div></div>
+        </div>
+      </div>
+      <div class="content-card">
+        <h2><i class="fas fa-user-plus" style="color:var(--primary)"></i> Join Now</h2>
+        <form onsubmit="event.preventDefault();toast('Affiliate application submitted! Check your email for your referral link.','success')">
+          <div class="form-row">
+            <div class="form-group"><label>Full Name</label><input type="text" required placeholder="Your name"></div>
+            <div class="form-group"><label>Email</label><input type="email" required placeholder="you@email.com"></div>
+          </div>
+          <div class="form-group"><label>Platform / Channel</label><select><option>Instagram</option><option>YouTube</option><option>Blog / Website</option><option>Twitter / X</option><option>WhatsApp Groups</option><option>College Network</option><option>Other</option></select></div>
+          <div class="form-group"><label>Audience Size (approx)</label><input type="text" placeholder="e.g. 5,000 followers"></div>
+          <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-rocket"></i> Apply for Affiliate</button>
+        </form>
+      </div>
+    </div>
+    ${renderFooterHTML()}
+  `;
+}
+
+// ─── LEGAL PAGES ────────────────────────────────────────────────
+function renderLegalPage(app, type) {
+  const pages = {
+    privacy: {
+      title: 'Privacy Policy', icon: 'fas fa-lock', updated: 'January 15, 2026',
+      sections: [
+        { t: 'Information We Collect', c: '<p>We collect information you provide directly: name, email, phone number, and payment details when you create an account or make a booking. We also collect usage data such as pages visited, features used, and device information to improve our services.</p>' },
+        { t: 'How We Use Your Data', c: '<ul><li>Process bookings and payments</li><li>Send booking confirmations and trip updates</li><li>Provide customer support</li><li>Improve our platform and personalize your experience</li><li>Send promotional communications (with your consent)</li></ul>' },
+        { t: 'Data Sharing', c: '<p>We share your information only with: trip organizers (name and contact for coordination), payment processors (Razorpay), and as required by law. We <strong>never sell</strong> your personal data to third parties.</p>' },
+        { t: 'Data Security', c: '<p>We use industry-standard encryption (TLS/SSL), secure password hashing (bcrypt), and JWT-based authentication. Payment data is handled exclusively by PCI DSS compliant Razorpay — we never store your card details.</p>' },
+        { t: 'Your Rights', c: '<ul><li>Access your personal data</li><li>Request data correction or deletion</li><li>Opt out of marketing communications</li><li>Download your data</li></ul><p>Contact <strong>privacy@vibesouting.in</strong> for any requests.</p>' },
+        { t: 'Cookies', c: '<p>We use essential cookies for authentication and session management. Analytics cookies help us understand usage patterns. You can control cookie preferences in your browser settings.</p>' },
+      ]
+    },
+    terms: {
+      title: 'Terms of Service', icon: 'fas fa-file-contract', updated: 'January 15, 2026',
+      sections: [
+        { t: 'Acceptance of Terms', c: '<p>By using VIBES@Outing, you agree to these terms. If you disagree, please do not use our platform.</p>' },
+        { t: 'Account Responsibilities', c: '<ul><li>You must be 18+ to create an account</li><li>Provide accurate information</li><li>Keep your password secure</li><li>You are responsible for all activity under your account</li></ul>' },
+        { t: 'Booking & Payments', c: '<ul><li>20% token payment secures your spot</li><li>Remaining 80% is due 24 hours before the trip</li><li>Prices are in INR and include applicable taxes</li><li>Payment processing is handled by Razorpay</li></ul>' },
+        { t: 'Cancellation & Refunds', c: '<p>Cancellations are governed by our <a href="#" onclick="navigate(\'cancellation-policy\');return false" style="color:var(--primary);font-weight:600">Cancellation Policy</a>. Refunds are processed within 5-7 business days.</p>' },
+        { t: 'User Conduct', c: '<ul><li>Respect other participants and organizers</li><li>No illegal activities during outings</li><li>Follow safety guidelines and organizer instructions</li><li>No harassment, discrimination, or disruptive behavior</li></ul>' },
+        { t: 'Limitation of Liability', c: '<p>VIBES@Outing acts as a platform connecting travelers with experiences. While we vet all destinations and organizers, we are not liable for third-party actions, weather disruptions, or personal injuries. We strongly recommend travel insurance.</p>' },
+      ]
+    },
+    refund: {
+      title: 'Refund Policy', icon: 'fas fa-undo-alt', updated: 'January 15, 2026',
+      sections: [
+        { t: 'Eligible Refunds', c: '<ul><li>Outing cancelled by VIBES@Outing — 100% refund + 10% credit</li><li>Cancellation per our policy timeline</li><li>Duplicate payment — full duplicate amount refunded</li><li>Service not delivered as described — case-by-case review</li></ul>' },
+        { t: 'Refund Process', c: '<p>Refunds are automatically processed to the original payment method. Timeline: 5-7 business days for bank accounts, 3-5 days for UPI, 7-10 days for credit cards.</p>' },
+        { t: 'Non-Refundable Items', c: '<ul><li>Token payment after the no-refund window</li><li>No-show (not arriving for the outing)</li><li>Voluntary early departure from an ongoing outing</li><li>Convenience fees or processing charges</li></ul>' },
+        { t: 'Disputes', c: '<p>If you believe a refund was incorrectly denied, contact our <a href="#" onclick="navigate(\'contact-support\');return false" style="color:var(--primary);font-weight:600">support team</a> within 30 days. We review all disputes within 48 hours.</p>' },
+      ]
+    },
+    community: {
+      title: 'Community Guidelines', icon: 'fas fa-users', updated: 'January 15, 2026',
+      sections: [
+        { t: 'Be Respectful', c: '<p>Treat every participant, organizer, and staff member with respect. We celebrate diversity — discrimination based on gender, race, religion, orientation, or background is strictly prohibited.</p>' },
+        { t: 'Safety First', c: '<ul><li>Follow organizer safety instructions at all times</li><li>Report any unsafe conditions immediately</li><li>Moderate alcohol consumption — do not endanger yourself or others</li><li>Wear appropriate gear for adventure activities</li></ul>' },
+        { t: 'Environmental Responsibility', c: '<p>Leave no trace. Don\'t litter at destinations. Respect local wildlife and ecosystems. Use eco-friendly products when possible. We aim to make travel sustainable.</p>' },
+        { t: 'Content Policy', c: '<ul><li>Reviews must be honest and based on real experience</li><li>No spam, fake reviews, or misleading content</li><li>Respect others\' privacy — get consent before sharing photos</li><li>No offensive, violent, or explicit content</li></ul>' },
+        { t: 'Violations', c: '<p>Violating these guidelines may result in: warning, temporary suspension, permanent ban, or legal action depending on severity. Repeated minor violations will escalate.</p>' },
+      ]
+    }
+  };
+  const pg = pages[type];
+  const sidebarLinks = pages[type].sections.map((s, i) => `<a href="#legal-${i}" class="${i===0?'active':''}" onclick="document.getElementById('legal-${i}').scrollIntoView({behavior:'smooth',block:'start'});document.querySelectorAll('.legal-sidebar a').forEach(a=>a.classList.remove('active'));this.classList.add('active');return false">${s.t}</a>`).join('');
+
+  app.innerHTML = `
+    <div class="legal-layout">
+      <div class="legal-sidebar">
+        <h4 style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-light);margin-bottom:.75rem">${pg.title}</h4>
+        ${sidebarLinks}
+        <hr style="border:none;border-top:1px solid var(--border);margin:.75rem 0">
+        <a href="#" onclick="navigate('privacy-policy');return false" style="${type==='privacy'?'font-weight:700;color:var(--primary)':''}">Privacy Policy</a>
+        <a href="#" onclick="navigate('terms-of-service');return false" style="${type==='terms'?'font-weight:700;color:var(--primary)':''}">Terms of Service</a>
+        <a href="#" onclick="navigate('refund-policy');return false" style="${type==='refund'?'font-weight:700;color:var(--primary)':''}">Refund Policy</a>
+        <a href="#" onclick="navigate('community-guidelines');return false" style="${type==='community'?'font-weight:700;color:var(--primary)':''}">Community Guidelines</a>
+      </div>
+      <div>
+        <div style="margin-bottom:2rem">
+          <h1 style="font-size:1.8rem;font-weight:800;margin-bottom:.25rem"><i class="${pg.icon}" style="color:var(--primary);margin-right:.5rem"></i> ${pg.title}</h1>
+          <p style="font-size:.85rem;color:var(--text-light)">Last updated: ${pg.updated}</p>
+        </div>
+        ${pg.sections.map((s, i) => `
+          <div class="content-card" id="legal-${i}">
+            <h2>${s.t}</h2>
+            ${s.c}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ${renderFooterHTML()}
+  `;
+}
+
+// ─── WISHLIST ───────────────────────────────────────────────────
+let wishlistItems = JSON.parse(sessionStorage.getItem('vibes_wishlist') || '[]');
+
+function toggleWishlist(outingId) {
+  if (!currentUser) { showLogin(); return; }
+  const idx = wishlistItems.indexOf(outingId);
+  if (idx > -1) { wishlistItems.splice(idx, 1); toast('Removed from wishlist'); }
+  else { wishlistItems.push(outingId); toast('Added to wishlist! ❤️', 'success'); }
+  sessionStorage.setItem('vibes_wishlist', JSON.stringify(wishlistItems));
+  // Update heart icons on current page
+  document.querySelectorAll('.wishlist-heart').forEach(btn => {
+    const id = parseInt(btn.dataset.outingId);
+    btn.classList.toggle('active', wishlistItems.includes(id));
+    btn.innerHTML = wishlistItems.includes(id) ? '<i class="fas fa-heart" style="color:var(--danger)"></i>' : '<i class="far fa-heart"></i>';
+  });
+}
+
+async function renderWishlist(app) {
+  if (!currentUser) { showLogin(); return; }
+  const data = await api('/outings');
+  const allOutings = Array.isArray(data) ? data : [];
+  const saved = allOutings.filter(o => wishlistItems.includes(o.id));
+  app.innerHTML = `
+    <section class="section">
+      <h2 class="section-title">❤️ My Wishlist</h2>
+      <p class="section-subtitle">Your saved outings — ready when you are</p>
+      ${saved.length ? `<div class="wishlist-grid">${saved.map(o => `
+        <div class="card wishlist-card">
+          <button class="wishlist-heart active" data-outing-id="${o.id}" onclick="toggleWishlist(${o.id});if(!wishlistItems.includes(${o.id}))this.closest('.wishlist-card').remove()"><i class="fas fa-heart" style="color:var(--danger)"></i></button>
+          <div class="card-img" style="background-image:url('${safeImageUrl(o.image_url)}');cursor:pointer" onclick="navigate('outing-${o.id}')">
+            <span class="badge">${escapeHtml(o.location)}</span>
+          </div>
+          <div class="card-body">
+            <h3 onclick="navigate('outing-${o.id}')" style="cursor:pointer">${escapeHtml(o.title)}</h3>
+            <div class="card-meta"><span><i class="far fa-calendar"></i> ${new Date(o.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span><span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(o.location)}</span></div>
+            <div class="card-footer" style="margin-top:.75rem">
+              <div class="price">₹${Math.ceil(o.cost * 0.20)} <small>/person token</small></div>
+              <button class="btn btn-primary btn-sm" onclick="bookOuting(${o.id})"><i class="fas fa-bolt"></i> Book</button>
+            </div>
+          </div>
+        </div>
+      `).join('')}</div>` : `
+        <div style="text-align:center;padding:3rem">
+          <i class="far fa-heart" style="font-size:3rem;color:var(--border);margin-bottom:1rem;display:block"></i>
+          <h3 style="color:var(--text-light);margin-bottom:.5rem">No saved outings yet</h3>
+          <p style="color:var(--text-light);font-size:.9rem;margin-bottom:1.5rem">Browse outings and tap ❤️ to save your favorites</p>
+          <button class="btn btn-primary" onclick="navigate('outings')"><i class="fas fa-compass"></i> Explore Outings</button>
+        </div>
+      `}
+    </section>
+    ${renderFooterHTML()}
+  `;
+}
+
+// ─── NOTIFICATIONS ──────────────────────────────────────────────
+let notifications = [];
+let notifPanelOpen = false;
+
+async function fetchNotifications() {
+  if (!currentUser) return;
+  const data = await api('/notifications/' + currentUser.id);
+  notifications = Array.isArray(data) ? data : [];
+  updateNotifBadge();
+}
+
+function updateNotifBadge() {
+  const badge = document.getElementById('notifBadge');
+  if (!badge) return;
+  const unread = notifications.filter(n => !n.read).length;
+  badge.textContent = unread;
+  badge.style.display = unread > 0 ? 'flex' : 'none';
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notifPanel');
+  if (!panel) return;
+  notifPanelOpen = !notifPanelOpen;
+  panel.classList.toggle('show', notifPanelOpen);
+  if (notifPanelOpen) renderNotifPanel();
+}
+
+function renderNotifPanel() {
+  const panel = document.getElementById('notifPanel');
+  if (!panel) return;
+  const list = notifications.length ? notifications.slice(0, 8).map(n => `
+    <div class="notif-item ${n.read ? '' : 'unread'}" onclick="markNotifRead(${n.id})">
+      <div class="notif-icon" style="background:${n.type==='booking'?'rgba(108,60,225,.1)':n.type==='payment'?'rgba(16,185,129,.1)':'rgba(249,115,22,.1)'};color:${n.type==='booking'?'var(--primary)':n.type==='payment'?'var(--success)':'var(--secondary)'}">
+        <i class="fas fa-${n.type==='booking'?'ticket-alt':n.type==='payment'?'rupee-sign':'bell'}"></i>
+      </div>
+      <div class="notif-body">
+        <h5>${escapeHtml(n.title)}</h5>
+        <p>${escapeHtml(n.message)}</p>
+        <span class="notif-time">${timeAgo(n.created_at)}</span>
+      </div>
+    </div>
+  `).join('') : '<div style="padding:2rem;text-align:center;color:var(--text-light)"><i class="fas fa-bell-slash" style="font-size:1.5rem;margin-bottom:.5rem;display:block"></i>No notifications yet</div>';
+
+  panel.querySelector('.notif-list').innerHTML = list;
+}
+
+async function markNotifRead(id) {
+  await api('/notifications/' + id + '/read', { method: 'PUT' });
+  const n = notifications.find(n => n.id === id);
+  if (n) n.read = true;
+  updateNotifBadge();
+  renderNotifPanel();
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
+
+async function renderNotificationsPage(app) {
+  if (!currentUser) { showLogin(); return; }
+  await fetchNotifications();
+  app.innerHTML = `
+    <section class="section" style="max-width:700px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+        <div><h2 class="section-title" style="margin-bottom:0">🔔 Notifications</h2></div>
+        ${notifications.length ? '<button class="btn btn-sm" style="background:#F1F5F9" onclick="markAllRead()">Mark all read</button>' : ''}
+      </div>
+      ${notifications.length ? notifications.map(n => `
+        <div class="content-card" style="padding:1rem 1.25rem;margin-bottom:.75rem;${n.read?'opacity:.7':'border-left:3px solid var(--primary)'}">
+          <div style="display:flex;gap:.75rem;align-items:flex-start">
+            <div class="notif-icon" style="background:${n.type==='booking'?'rgba(108,60,225,.1)':n.type==='payment'?'rgba(16,185,129,.1)':'rgba(249,115,22,.1)'};color:${n.type==='booking'?'var(--primary)':n.type==='payment'?'var(--success)':'var(--secondary)'}">
+              <i class="fas fa-${n.type==='booking'?'ticket-alt':n.type==='payment'?'rupee-sign':'bell'}"></i>
+            </div>
+            <div style="flex:1">
+              <h4 style="font-size:.9rem;font-weight:600">${escapeHtml(n.title)}</h4>
+              <p style="font-size:.85rem;color:var(--text-light);margin-top:.15rem">${escapeHtml(n.message)}</p>
+              <span style="font-size:.75rem;color:var(--text-light)">${timeAgo(n.created_at)}</span>
+            </div>
+          </div>
+        </div>
+      `).join('') : `
+        <div style="text-align:center;padding:3rem">
+          <i class="fas fa-bell-slash" style="font-size:3rem;color:var(--border);margin-bottom:1rem;display:block"></i>
+          <h3 style="color:var(--text-light)">All caught up!</h3>
+          <p style="color:var(--text-light);font-size:.9rem">No notifications at the moment</p>
+        </div>
+      `}
+    </section>
+    ${renderFooterHTML()}
+  `;
+}
+
+async function markAllRead() {
+  await api('/notifications/read-all', { method: 'PUT' });
+  notifications.forEach(n => n.read = true);
+  updateNotifBadge();
+  renderNotificationsPage(document.getElementById('app'));
+  toast('All notifications marked as read', 'success');
+}
+
+// ─── WALLET & PAYMENTS ─────────────────────────────────────────
+async function renderWallet(app) {
+  if (!currentUser) { showLogin(); return; }
+  const walletData = await api('/wallet/' + currentUser.id);
+  const balance = walletData.balance || 0;
+  const transactions = walletData.transactions || [];
+  app.innerHTML = `
+    <section class="section" style="max-width:800px">
+      <h2 class="section-title">💳 Wallet & Payments</h2>
+      <div class="wallet-card">
+        <h4>Available Balance</h4>
+        <div class="balance">₹${balance.toLocaleString()}</div>
+        <div class="wallet-actions">
+          <button onclick="showAddMoney()"><i class="fas fa-plus"></i> Add Money</button>
+          <button onclick="navigate('dashboard')"><i class="fas fa-receipt"></i> My Bookings</button>
+        </div>
+      </div>
+      <div class="content-card">
+        <h2 style="margin-bottom:1rem"><i class="fas fa-history" style="color:var(--primary)"></i> Transaction History</h2>
+        ${transactions.length ? `<div class="txn-list">${transactions.map(t => `
+          <div class="txn-item">
+            <div class="txn-info">
+              <div class="txn-icon" style="background:${t.type==='credit'?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)'};color:${t.type==='credit'?'var(--success)':'var(--danger)'}">
+                <i class="fas fa-${t.type==='credit'?'arrow-down':'arrow-up'}"></i>
+              </div>
+              <div>
+                <h5>${escapeHtml(t.description)}</h5>
+                <p>${new Date(t.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</p>
+              </div>
+            </div>
+            <div class="txn-amount ${t.type}">${t.type==='credit'?'+':'-'}₹${t.amount}</div>
+          </div>
+        `).join('')}</div>` : `
+          <div style="text-align:center;padding:2rem;color:var(--text-light)">
+            <i class="fas fa-receipt" style="font-size:2rem;margin-bottom:.75rem;display:block;opacity:.3"></i>
+            <p>No transactions yet</p>
+          </div>
+        `}
+      </div>
+    </section>
+    ${renderFooterHTML()}
+  `;
+}
+
+function showAddMoney() {
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-wallet" style="color:var(--primary)"></i> Add Money to Wallet</h2>
+    <form onsubmit="event.preventDefault();toast('Wallet top-up coming soon!','success');closeModal()">
+      <div class="form-group"><label>Amount (₹)</label><input type="number" min="100" max="50000" placeholder="Enter amount" required></div>
+      <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+        <button type="button" class="btn btn-sm" style="background:#F1F5F9" onclick="this.closest('form').querySelector('input').value=500">₹500</button>
+        <button type="button" class="btn btn-sm" style="background:#F1F5F9" onclick="this.closest('form').querySelector('input').value=1000">₹1,000</button>
+        <button type="button" class="btn btn-sm" style="background:#F1F5F9" onclick="this.closest('form').querySelector('input').value=2000">₹2,000</button>
+        <button type="button" class="btn btn-sm" style="background:#F1F5F9" onclick="this.closest('form').querySelector('input').value=5000">₹5,000</button>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-plus"></i> Add Money</button>
+    </form>
+  `);
 }
 
 // ─── INIT ───────────────────────────────────────────────────────

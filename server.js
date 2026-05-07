@@ -660,6 +660,29 @@ async function initDatabase() {
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_reviews_outing_id ON reviews(outing_id)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_chat_outing_id ON chat_messages(outing_id)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_security_logs_created ON security_logs(created_at)').catch(() => {});
+
+    // Notifications table
+    await dbQuery(`CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        type TEXT DEFAULT 'general',
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        read INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)').catch(() => {});
+
+    // Wallet transactions table
+    await dbQuery(`CREATE TABLE IF NOT EXISTS wallet_transactions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        type TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        description TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_wallet_txn_user_id ON wallet_transactions(user_id)').catch(() => {});
   } else {
     // SQLite: tables one at a time (exec doesn't support multi-statement in all versions)
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password TEXT NOT NULL, interests TEXT DEFAULT '', role TEXT DEFAULT 'user', must_change_password INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
@@ -676,6 +699,14 @@ async function initDatabase() {
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_reviews_outing_id ON reviews(outing_id)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_chat_outing_id ON chat_messages(outing_id)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_security_logs_created ON security_logs(created_at)`); } catch(e) {}
+
+    // Notifications table
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT DEFAULT 'general', title TEXT NOT NULL, message TEXT NOT NULL, read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)`); } catch(e) {}
+
+    // Wallet transactions table
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS wallet_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, description TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_user_id ON wallet_transactions(user_id)`); } catch(e) {}
   }
 
   // ─── Seed admin + sample data (same for both backends) ─────────
@@ -939,6 +970,11 @@ app.post('/api/bookings/verify-payment', authMiddleware, [
       sendBookingEmail(user.email, user.name, outing.title, outing.date, outing.location, booking.token_amount, razorpay_payment_id);
     }
     securityLog('PAYMENT_SUCCESS', { userId: req.user.id, bookingId: booking_id, paymentId: razorpay_payment_id, ip: req.ip });
+    // Create booking notification
+    if (user && outing) {
+      await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+        [booking.user_id, 'booking', 'Booking Confirmed! 🎉', `Your spot for "${outing.title}" on ${new Date(outing.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})} is confirmed. Token ₹${booking.token_amount} paid.`]);
+    }
     const whatsappLink = (user && outing) ? getWhatsAppLink(user.phone, outing.title, outing.date, outing.location, booking.token_amount) : '';
     res.json({ success: true, payment_id: razorpay_payment_id, whatsapp_link: whatsappLink, token_amount: booking.token_amount, remaining_amount: booking.remaining_amount, outing_date: outing ? outing.date : '' });
   } else {
@@ -1002,6 +1038,12 @@ app.post('/api/bookings/verify-remaining', authMiddleware, [
     .update(body_str).digest('hex');
   if (crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature))) {
     await dbQuery('UPDATE bookings SET remaining_payment_status = $1, remaining_payment_id = $2 WHERE id = $3', ['paid', razorpay_payment_id, booking_id]);
+    // Create remaining payment notification
+    const outing2 = (await dbQuery('SELECT title FROM outings WHERE id = $1', [booking.outing_id])).rows[0];
+    if (outing2) {
+      await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+        [booking.user_id, 'payment', 'Full Payment Complete! ✅', `Remaining ₹${booking.remaining_amount} paid for "${outing2.title}". You're all set!`]);
+    }
     res.json({ success: true, payment_id: razorpay_payment_id });
   } else {
     res.status(400).json({ success: false, message: 'Payment verification failed' });
@@ -1448,6 +1490,41 @@ app.post('/api/auth/reset-password', [
   await dbQuery('UPDATE password_resets SET used = 1 WHERE user_id = $1 AND used = 0', [reset.user_id]);
   securityLog('PASSWORD_RESET_COMPLETED', { userId: reset.user_id });
   res.json({ success: true });
+});
+
+// ─── NOTIFICATIONS API ──────────────────────────────────────────
+app.get('/api/notifications/:userId', authMiddleware, [
+  param('userId').isInt().toInt(),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  if (req.user.id !== req.params.userId && req.user.role !== 'admin') return res.status(403).json([]);
+  const result = await dbQuery('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [req.params.userId]);
+  res.json(result.rows);
+});
+
+app.put('/api/notifications/:id/read', authMiddleware, [
+  param('id').isInt().toInt(),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  await dbQuery('UPDATE notifications SET read = 1 WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+  res.json({ success: true });
+});
+
+app.put('/api/notifications/read-all', authMiddleware, async (req, res) => {
+  await dbQuery('UPDATE notifications SET read = 1 WHERE user_id = $1', [req.user.id]);
+  res.json({ success: true });
+});
+
+// ─── WALLET API ─────────────────────────────────────────────────
+app.get('/api/wallet/:userId', authMiddleware, [
+  param('userId').isInt().toInt(),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  if (req.user.id !== req.params.userId && req.user.role !== 'admin') return res.status(403).json({ balance: 0, transactions: [] });
+  const txns = await dbQuery('SELECT * FROM wallet_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [req.params.userId]);
+  const credits = txns.rows.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0);
+  const debits = txns.rows.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0);
+  res.json({ balance: credits - debits, transactions: txns.rows });
 });
 
 // ─── SECURITY: Global error handler — never leak stack traces ───

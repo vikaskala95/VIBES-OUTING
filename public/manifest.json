@@ -2,7 +2,7 @@
   "name": "VIBES@Outing",
   "short_name": "VIBES",
   "description": "Team outing platform — discover, book & vibe!",
-  "start_url": "https://www.vibesouting.in/",
+  "start_url": "https://vibesouting.in/",
   "display": "standalone",
   "background_color": "#1E1B2E",
   "theme_color": "#6C3CE1",
