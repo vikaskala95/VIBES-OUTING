@@ -1287,6 +1287,29 @@ app.post('/api/whatsapp-link', authMiddleware, (req, res) => {
   res.json({ link });
 });
 
+// ─── EMAIL HEALTH CHECK (admin only) ────────────────────────────
+app.post('/api/admin/test-email', authMiddleware, adminMiddleware, [
+  body('to').isEmail().withMessage('Valid email required').normalizeEmail(),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { to } = req.body;
+  const result = await sendEmailWithLogging({
+    to,
+    subject: 'VIBES@Outing — Email Test',
+    context: 'admin_test',
+    html: `<div style="font-family:Arial,sans-serif;padding:20px"><h2>Email is working!</h2><p>This is a test email from VIBES@Outing.</p><p>Time: ${new Date().toISOString()}</p></div>`,
+  });
+  res.json({
+    success: result.ok,
+    message: result.ok ? `Test email sent to ${to}` : `Email failed: ${result.reason}`,
+    emailEnabled,
+    provider: MAIL_PROVIDER,
+    host: smtpHost,
+    port: smtpPort,
+    transportHealthy: emailTransportHealthy,
+  });
+});
+
 // ─── FORGOT PASSWORD ────────────────────────────────────────────
 app.post('/api/auth/forgot-password', [
   body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
