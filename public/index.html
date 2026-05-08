@@ -1464,6 +1464,11 @@ async function confirmBooking(e, outingId, cost) {
                 <p style="margin:.25rem 0"><strong>⏰ Remaining:</strong> <span style="color:var(--secondary);font-weight:700">₹${orderRes.remaining_amount}</span></p>
                 <p style="margin:.25rem 0;font-size:.85rem;color:var(--text-light)">💡 Complete remaining payment 24 hours before the trip date</p>
               </div>
+              <div style="background:linear-gradient(135deg,#EEF2FF,#F0F9FF);padding:1rem;border-radius:10px;margin:1rem 0;border:1px solid #C7D2FE">
+                <p style="font-weight:600;margin-bottom:.5rem;color:var(--primary)">✨ Share Your Trip Expectations!</p>
+                <p style="font-size:.85rem;color:var(--text-light);margin-bottom:.75rem">Tell us what you're looking forward to — activities, food, comfort, photography & more.</p>
+                <button class="btn btn-block" style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff" onclick="closeModal();showExpectationsForm(${orderRes.booking_id})"><i class="fas fa-magic"></i> Share My Expectations</button>
+              </div>
               ${verifyRes.whatsapp_link ? `<a href="${verifyRes.whatsapp_link}" target="_blank" class="btn btn-success btn-block" style="background:#25D366;margin-bottom:.75rem"><i class="fab fa-whatsapp"></i> Share on WhatsApp</a>` : ''}
               <button class="btn btn-primary btn-block" onclick="closeModal();navigate('dashboard')"><i class="fas fa-ticket-alt"></i> View My Bookings</button>
             </div>
@@ -1524,12 +1529,13 @@ async function submitSuggestion(e) {
 // ─── USER DASHBOARD ─────────────────────────────────────────────
 async function renderUserDashboard(app) {
   if (!currentUser) { showLogin(); return; }
-  const [bookings, verification, myReviews, myBlogs, myGalleries] = await Promise.all([
+  const [bookings, verification, myReviews, myBlogs, myGalleries, myExpectations] = await Promise.all([
     api('/bookings/' + currentUser.id),
     api('/verify-id/' + currentUser.id),
     api('/my-reviews'),
     api('/my-blogs'),
-    api('/user/galleries')
+    api('/user/galleries'),
+    api('/expectations/my')
   ]);
   const verStatus = verification.status || 'none';
   const reviewsList = Array.isArray(myReviews) ? myReviews : [];
@@ -1640,6 +1646,60 @@ async function renderUserDashboard(app) {
           `).join('')}
         </div>
       ` : '<p style="color:var(--text-light);font-size:.9rem">No blogs yet. Complete a trip to write your travel story!</p>'}
+
+      <!-- MY TRIP EXPECTATIONS SECTION -->
+      <h3 style="margin-top:2.5rem;margin-bottom:1rem">✨ My Trip Expectations</h3>
+      ${(() => {
+        const expectationsList = Array.isArray(myExpectations) ? myExpectations : [];
+        const paidBookings = bookings.filter(b => b.payment_status === 'paid');
+        const bookingsWithExpectations = paidBookings.map(b => {
+          const exp = expectationsList.find(e => e.booking_id === b.id);
+          return { ...b, expectation: exp };
+        });
+        const upcomingBookings = bookingsWithExpectations.filter(b => new Date(b.date) > new Date());
+
+        if (!upcomingBookings.length && !expectationsList.length) {
+          return '<p style="color:var(--text-light);font-size:.9rem">Book a trip to share what you\'re looking forward to! 🌟</p>';
+        }
+
+        let html = '';
+        // Progress indicator
+        const totalUpcoming = upcomingBookings.length;
+        const submittedCount = upcomingBookings.filter(b => b.expectation).length;
+        if (totalUpcoming > 0) {
+          html += '<div style="background:linear-gradient(135deg,#EEF2FF,#F0F9FF);padding:1rem 1.25rem;border-radius:12px;margin-bottom:1rem;border:1px solid #C7D2FE">';
+          html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem"><span style="font-size:.85rem;font-weight:600;color:var(--primary)"><i class="fas fa-tasks"></i> Progress</span><span style="font-size:.8rem;color:var(--text-light)">' + submittedCount + '/' + totalUpcoming + ' submitted</span></div>';
+          html += '<div style="background:#E2E8F0;border-radius:999px;height:8px;overflow:hidden"><div style="background:linear-gradient(135deg,var(--primary),var(--accent));height:100%;width:' + (totalUpcoming > 0 ? (submittedCount/totalUpcoming*100) : 0) + '%;border-radius:999px;transition:width .5s ease"></div></div>';
+          html += '</div>';
+        }
+
+        // List expectations and action buttons for upcoming bookings
+        html += '<div style="display:grid;gap:1rem">';
+        upcomingBookings.forEach(b => {
+          const tags = b.expectation && b.expectation.tags ? b.expectation.tags.split(',').filter(t=>t.trim()) : [];
+          html += '<div style="background:#fff;padding:1.25rem;border-radius:12px;box-shadow:var(--shadow);border-left:4px solid ' + (b.expectation ? 'var(--success)' : 'var(--warning)') + '">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap">';
+          html += '<div><div style="font-weight:600">' + escapeHtml(b.title) + '</div><div style="font-size:.8rem;color:var(--text-light)">' + escapeHtml(b.location) + ' • ' + new Date(b.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) + '</div></div>';
+          if (b.expectation) {
+            html += '<span style="background:rgba(16,185,129,.1);color:var(--success);padding:.25rem .75rem;border-radius:999px;font-size:.75rem;font-weight:600"><i class="fas fa-check-circle"></i> Submitted</span>';
+          } else {
+            html += '<button class="btn btn-sm" style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff" onclick="showExpectationsForm(' + b.id + ')"><i class="fas fa-magic"></i> Add</button>';
+          }
+          html += '</div>';
+          if (b.expectation) {
+            html += '<div style="margin-top:.75rem;padding:.75rem;background:#F8FAFC;border-radius:8px;font-size:.9rem;color:var(--text)">' + escapeHtml(b.expectation.expectations).substring(0, 200) + (b.expectation.expectations.length > 200 ? '...' : '') + '</div>';
+            if (tags.length) {
+              html += '<div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.4rem">';
+              tags.forEach(t => { html += '<span style="background:rgba(108,60,225,.08);color:var(--primary);padding:.2rem .6rem;border-radius:999px;font-size:.7rem;font-weight:500">' + escapeHtml(t.trim()) + '</span>'; });
+              html += '</div>';
+            }
+            html += '<div style="margin-top:.75rem;display:flex;gap:.5rem"><button class="btn btn-sm" style="background:#F1F5F9" onclick="showExpectationsForm(' + b.id + ')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-sm" style="background:#FEE2E2;color:var(--danger)" onclick="deleteExpectation(' + b.expectation.id + ')"><i class="fas fa-trash"></i></button></div>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+        return html;
+      })()}
     </section>
   `;
 }
@@ -1723,6 +1783,102 @@ async function submitVerification(e) {
   }});
   if (data.success) { closeModal(); toast('✅ ID submitted for verification!', 'success'); navigate('dashboard'); }
   else toast(data.message, 'error');
+}
+
+// ─── TRIP EXPECTATIONS FORM & FUNCTIONS ─────────────────────────
+const EXPECTATION_TAGS = ['Adventure', 'Food', 'Relaxation', 'Photography', 'Team Activities', 'Comfort', 'Music', 'Nightlife'];
+
+async function showExpectationsForm(bookingId) {
+  // Fetch existing expectation for this booking
+  const existing = await api('/expectations/booking/' + bookingId);
+  const existingText = existing ? existing.expectations : '';
+  const existingTags = existing && existing.tags ? existing.tags.split(',').filter(t=>t.trim()) : [];
+
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:.5rem">✨</div>
+      <h2 style="color:var(--primary);margin-bottom:.25rem">Your Expectations From This Trip</h2>
+      <p style="color:var(--text-light);font-size:.9rem">Tell us what you're looking forward to — we'll make it happen!</p>
+    </div>
+    <form onsubmit="submitExpectations(event, ${bookingId})">
+      <div class="form-group">
+        <label style="font-weight:600">What are you expecting? <span style="font-weight:400;color:var(--text-light);font-size:.8rem">(required)</span></label>
+        <textarea id="expText" required maxlength="2000" rows="5" placeholder="I expect good music and fun group activities.\nWould love more photography spots during the trip.\nExpecting comfortable travel and timely food arrangements." style="resize:vertical;min-height:120px">${escapeHtml(existingText)}</textarea>
+        <div style="display:flex;justify-content:space-between;margin-top:.3rem">
+          <span style="font-size:.75rem;color:var(--text-light)">Activities, food, comfort, entertainment, special requests...</span>
+          <span id="expCharCount" style="font-size:.75rem;color:var(--text-light)">${existingText.length}/2000</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="font-weight:600">Tags <span style="font-weight:400;color:var(--text-light);font-size:.8rem">(select what matters to you)</span></label>
+        <div id="expTagsContainer" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem">
+          ${EXPECTATION_TAGS.map(tag => `<button type="button" class="exp-tag-btn ${existingTags.includes(tag) ? 'active' : ''}" onclick="toggleExpTag(this, '${tag}')" style="padding:.4rem .9rem;border-radius:999px;border:1.5px solid ${existingTags.includes(tag) ? 'var(--primary)' : '#E2E8F0'};background:${existingTags.includes(tag) ? 'rgba(108,60,225,.1)' : '#fff'};color:${existingTags.includes(tag) ? 'var(--primary)' : 'var(--text-light)'};font-size:.8rem;font-weight:500;cursor:pointer;transition:all .2s">${tag}</button>`).join('')}
+        </div>
+        <input type="hidden" id="expTagsInput" value="${escapeHtml(existingTags.join(','))}">
+      </div>
+      <button class="btn btn-primary btn-block" type="submit" style="margin-top:1rem;background:linear-gradient(135deg,var(--primary),var(--primary-light))">
+        <i class="fas fa-paper-plane"></i> ${existing ? 'Update Expectations' : 'Submit Expectations'}
+      </button>
+    </form>
+  `);
+
+  // Character count listener
+  setTimeout(() => {
+    const textarea = document.getElementById('expText');
+    if (textarea) {
+      textarea.addEventListener('input', () => {
+        document.getElementById('expCharCount').textContent = textarea.value.length + '/2000';
+      });
+    }
+  }, 100);
+}
+
+function toggleExpTag(btn, tag) {
+  const input = document.getElementById('expTagsInput');
+  let tags = input.value ? input.value.split(',').filter(t=>t.trim()) : [];
+  if (tags.includes(tag)) {
+    tags = tags.filter(t => t !== tag);
+    btn.style.border = '1.5px solid #E2E8F0';
+    btn.style.background = '#fff';
+    btn.style.color = 'var(--text-light)';
+    btn.classList.remove('active');
+  } else {
+    tags.push(tag);
+    btn.style.border = '1.5px solid var(--primary)';
+    btn.style.background = 'rgba(108,60,225,.1)';
+    btn.style.color = 'var(--primary)';
+    btn.classList.add('active');
+  }
+  input.value = tags.join(',');
+}
+
+async function submitExpectations(e, bookingId) {
+  e.preventDefault();
+  const expectations = document.getElementById('expText').value.trim();
+  const tags = document.getElementById('expTagsInput').value;
+
+  if (!expectations) { toast('Please write your expectations', 'error'); return; }
+
+  const data = await api('/expectations', { method: 'POST', body: { booking_id: bookingId, expectations, tags } });
+  if (data.success) {
+    closeModal();
+    toast(data.updated ? '✅ Expectations updated!' : '🎉 Expectations submitted! Have a great trip!', 'success');
+    navigate('dashboard');
+  } else {
+    toast(data.message || 'Something went wrong', 'error');
+  }
+}
+
+async function deleteExpectation(expId) {
+  if (!confirm('Remove your expectations for this trip?')) return;
+  const data = await api('/expectations/' + expId, { method: 'DELETE' });
+  if (data.success) {
+    toast('Expectations removed', 'success');
+    navigate('dashboard');
+  } else {
+    toast(data.message || 'Failed to remove', 'error');
+  }
 }
 
 // ─── OUTING DETAIL PAGE (Reviews + Chat access) ────────────────
@@ -2155,6 +2311,7 @@ async function renderAdmin(app) {
         <a href="#" class="${adminTab==='verifications'?'active':''}" onclick="adminTab='verifications';renderAdmin(document.getElementById('app'))"><i class="fas fa-id-card"></i> ID Verify <span style="background:var(--warning);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.pendingVerifications || 0}</span></a>
         <a href="#" class="${adminTab==='tickets'?'active':''}" onclick="adminTab='tickets';renderAdmin(document.getElementById('app'))"><i class="fas fa-headset"></i> Tickets <span style="background:var(--danger);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.openTickets || 0}</span></a>
         <a href="#" class="${adminTab==='galleries'?'active':''}" onclick="adminTab='galleries';renderAdmin(document.getElementById('app'))"><i class="fas fa-images"></i> Galleries <span style="background:var(--accent);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.totalGalleries || 0}</span></a>
+        <a href="#" class="${adminTab==='expectations'?'active':''}" onclick="adminTab='expectations';renderAdmin(document.getElementById('app'))"><i class="fas fa-magic"></i> Expectations <span style="background:var(--primary-light);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.totalExpectations || 0}</span></a>
       </div>
       <div class="dash-content">
         <div class="mobile-admin-nav" role="navigation" aria-label="Admin navigation">
@@ -2168,6 +2325,7 @@ async function renderAdmin(app) {
           <a href="#" class="${adminTab==='verifications'?'active':''}" onclick="adminTab='verifications';renderAdmin(document.getElementById('app'))">🛡️ Verify</a>
           <a href="#" class="${adminTab==='tickets'?'active':''}" onclick="adminTab='tickets';renderAdmin(document.getElementById('app'))">🎫 Tickets</a>
           <a href="#" class="${adminTab==='galleries'?'active':''}" onclick="adminTab='galleries';renderAdmin(document.getElementById('app'))">📸 Galleries</a>
+          <a href="#" class="${adminTab==='expectations'?'active':''}" onclick="adminTab='expectations';renderAdmin(document.getElementById('app'))">✨ Expectations</a>
         </div>
         <div id="adminContent"></div>
       </div>
@@ -2183,6 +2341,151 @@ async function renderAdmin(app) {
   else if (adminTab === 'verifications') renderAdminVerifications();
   else if (adminTab === 'tickets') renderAdminTickets();
   else if (adminTab === 'galleries') renderAdminGalleries();
+  else if (adminTab === 'expectations') renderAdminExpectations();
+}
+
+async function renderAdminExpectations() {
+  const container = document.getElementById('adminContent');
+  container.innerHTML = '<div class="loading-spinner"></div>';
+
+  const [expectations, summary] = await Promise.all([
+    api('/admin/expectations'),
+    api('/admin/expectations/summary')
+  ]);
+
+  const expectationsList = Array.isArray(expectations) ? expectations : [];
+  const summaryList = Array.isArray(summary) ? summary : [];
+
+  // Extract all tags for analysis
+  const tagCounts = {};
+  expectationsList.forEach(e => {
+    if (e.tags) {
+      e.tags.split(',').filter(t=>t.trim()).forEach(tag => {
+        tagCounts[tag.trim()] = (tagCounts[tag.trim()] || 0) + 1;
+      });
+    }
+  });
+  const sortedTags = Object.entries(tagCounts).sort((a,b) => b[1] - a[1]);
+
+  container.innerHTML = `
+    <h2 style="margin-bottom:1.5rem">✨ Customer Trip Expectations</h2>
+    <p style="color:var(--text-light);margin-bottom:1.5rem">View what customers are expecting from upcoming trips for better planning and satisfaction.</p>
+
+    <!-- Stats Cards -->
+    <div class="dash-stats" style="margin-bottom:2rem">
+      <div class="dash-stat"><div class="icon" style="background:rgba(108,60,225,.1);color:var(--primary)"><i class="fas fa-magic"></i></div><h4>Total Submissions</h4><div class="value">${expectationsList.length}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(6,214,160,.1);color:var(--accent)"><i class="fas fa-calendar-alt"></i></div><h4>Outings Covered</h4><div class="value">${summaryList.filter(s => parseInt(s.expectation_count) > 0).length}</div></div>
+    </div>
+
+    <!-- Popular Tags -->
+    ${sortedTags.length ? `
+      <div style="background:#fff;padding:1.25rem;border-radius:12px;box-shadow:var(--shadow);margin-bottom:1.5rem">
+        <h4 style="margin-bottom:.75rem;font-size:.95rem"><i class="fas fa-tags" style="color:var(--primary)"></i> Popular Expectations Categories</h4>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+          ${sortedTags.map(([tag, count]) => `<span style="background:rgba(108,60,225,.08);color:var(--primary);padding:.35rem .9rem;border-radius:999px;font-size:.8rem;font-weight:500">${escapeHtml(tag)} <strong>(${count})</strong></span>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- Outing Summary -->
+    ${summaryList.length ? `
+      <div style="background:#fff;padding:1.25rem;border-radius:12px;box-shadow:var(--shadow);margin-bottom:1.5rem">
+        <h4 style="margin-bottom:.75rem;font-size:.95rem"><i class="fas fa-chart-bar" style="color:var(--secondary)"></i> Expectations by Outing</h4>
+        <div style="display:grid;gap:.5rem">
+          ${summaryList.map(s => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;background:#F8FAFC;border-radius:8px;cursor:pointer" onclick="filterAdminExpectations(${s.outing_id})">
+              <div>
+                <span style="font-weight:500;font-size:.9rem">${escapeHtml(s.title)}</span>
+                <span style="font-size:.75rem;color:var(--text-light);margin-left:.5rem">${escapeHtml(s.location)} • ${new Date(s.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>
+              </div>
+              <span style="background:${parseInt(s.expectation_count) > 0 ? 'rgba(108,60,225,.1)' : '#F1F5F9'};color:${parseInt(s.expectation_count) > 0 ? 'var(--primary)' : 'var(--text-light)'};padding:.2rem .6rem;border-radius:999px;font-size:.75rem;font-weight:600">${s.expectation_count} submission${parseInt(s.expectation_count) !== 1 ? 's' : ''}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- Filter -->
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;flex-wrap:wrap">
+      <h4 style="font-size:.95rem"><i class="fas fa-list" style="color:var(--primary)"></i> All Submissions</h4>
+      <button class="btn btn-sm" style="background:#F1F5F9" onclick="renderAdminExpectations()"><i class="fas fa-sync-alt"></i> Refresh</button>
+    </div>
+
+    <!-- Expectations List -->
+    ${expectationsList.length ? `
+      <div style="display:grid;gap:1rem">
+        ${expectationsList.map(e => {
+          const tags = e.tags ? e.tags.split(',').filter(t=>t.trim()) : [];
+          return `
+            <div style="background:#fff;padding:1.25rem;border-radius:12px;box-shadow:var(--shadow);border-left:4px solid var(--primary)">
+              <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem">
+                <div>
+                  <div style="font-weight:600;font-size:.9rem">${escapeHtml(e.user_name)} <span style="font-weight:400;color:var(--text-light);font-size:.8rem">(${escapeHtml(e.user_email)})</span></div>
+                  <div style="font-size:.8rem;color:var(--text-light);margin-top:.15rem"><i class="fas fa-calendar-alt"></i> ${escapeHtml(e.outing_title)} • ${escapeHtml(e.outing_location)} • ${new Date(e.outing_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div>
+                </div>
+                <span style="font-size:.7rem;color:var(--text-light)">${new Date(e.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</span>
+              </div>
+              <div style="padding:.75rem;background:#F8FAFC;border-radius:8px;font-size:.9rem;line-height:1.6;color:var(--text);white-space:pre-wrap">${escapeHtml(e.expectations)}</div>
+              ${tags.length ? `<div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.4rem">${tags.map(t => `<span style="background:rgba(108,60,225,.08);color:var(--primary);padding:.2rem .6rem;border-radius:999px;font-size:.7rem;font-weight:500">${escapeHtml(t.trim())}</span>`).join('')}</div>` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    ` : '<p style="color:var(--text-light)">No expectations submitted yet.</p>'}
+  `;
+}
+
+async function filterAdminExpectations(outingId) {
+  const container = document.getElementById('adminContent');
+  container.innerHTML = '<div class="loading-spinner"></div>';
+  const expectations = await api('/admin/expectations?outing_id=' + outingId);
+  const expectationsList = Array.isArray(expectations) ? expectations : [];
+
+  const tagCounts = {};
+  expectationsList.forEach(e => {
+    if (e.tags) {
+      e.tags.split(',').filter(t=>t.trim()).forEach(tag => {
+        tagCounts[tag.trim()] = (tagCounts[tag.trim()] || 0) + 1;
+      });
+    }
+  });
+  const sortedTags = Object.entries(tagCounts).sort((a,b) => b[1] - a[1]);
+  const outingTitle = expectationsList.length ? expectationsList[0].outing_title : 'Outing';
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+      <button class="btn btn-sm" style="background:#F1F5F9" onclick="renderAdminExpectations()"><i class="fas fa-arrow-left"></i> Back</button>
+      <h2 style="margin:0">✨ Expectations — ${escapeHtml(outingTitle)}</h2>
+      <span style="background:rgba(108,60,225,.1);color:var(--primary);padding:.3rem .8rem;border-radius:999px;font-size:.85rem;font-weight:600">${expectationsList.length} submission${expectationsList.length !== 1 ? 's' : ''}</span>
+    </div>
+
+    ${sortedTags.length ? `
+      <div style="background:linear-gradient(135deg,#EEF2FF,#F0F9FF);padding:1rem 1.25rem;border-radius:12px;margin-bottom:1.5rem;border:1px solid #C7D2FE">
+        <h4 style="margin-bottom:.5rem;font-size:.9rem;color:var(--primary)"><i class="fas fa-lightbulb"></i> Key Themes for This Trip</h4>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+          ${sortedTags.map(([tag, count]) => `<span style="background:rgba(108,60,225,.12);color:var(--primary);padding:.35rem .9rem;border-radius:999px;font-size:.8rem;font-weight:600">${escapeHtml(tag)} (${count})</span>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    ${expectationsList.length ? `
+      <div style="display:grid;gap:1rem">
+        ${expectationsList.map(e => {
+          const tags = e.tags ? e.tags.split(',').filter(t=>t.trim()) : [];
+          return `
+            <div style="background:#fff;padding:1.25rem;border-radius:12px;box-shadow:var(--shadow);border-left:4px solid var(--accent)">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+                <div style="font-weight:600;font-size:.9rem"><i class="fas fa-user-circle" style="color:var(--primary)"></i> ${escapeHtml(e.user_name)}</div>
+                <span style="font-size:.75rem;color:var(--text-light)">${new Date(e.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</span>
+              </div>
+              <div style="padding:.75rem;background:#F8FAFC;border-radius:8px;font-size:.9rem;line-height:1.6;white-space:pre-wrap">${escapeHtml(e.expectations)}</div>
+              ${tags.length ? `<div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.4rem">${tags.map(t => `<span style="background:rgba(6,214,160,.1);color:var(--accent);padding:.2rem .6rem;border-radius:999px;font-size:.7rem;font-weight:500">${escapeHtml(t.trim())}</span>`).join('')}</div>` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    ` : '<p style="color:var(--text-light)">No expectations submitted for this outing yet.</p>'}
+  `;
 }
 
 function renderAdminOverview(stats) {

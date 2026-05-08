@@ -761,6 +761,21 @@ async function initDatabase() {
         UNIQUE(media_id, user_id)
       )`);
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_gallery_likes_media_id ON gallery_likes(media_id)').catch(() => {});
+
+    // Trip expectations table
+    await dbQuery(`CREATE TABLE IF NOT EXISTS trip_expectations (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        booking_id INTEGER NOT NULL REFERENCES bookings(id),
+        outing_id INTEGER NOT NULL REFERENCES outings(id),
+        expectations TEXT NOT NULL,
+        tags TEXT DEFAULT '',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_trip_expectations_user_id ON trip_expectations(user_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_trip_expectations_booking_id ON trip_expectations(booking_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_trip_expectations_outing_id ON trip_expectations(outing_id)').catch(() => {});
   } else {
     // SQLite: tables one at a time (exec doesn't support multi-statement in all versions)
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password TEXT NOT NULL, interests TEXT DEFAULT '', role TEXT DEFAULT 'user', must_change_password INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
@@ -808,6 +823,12 @@ async function initDatabase() {
     // Gallery likes table
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS gallery_likes (id INTEGER PRIMARY KEY AUTOINCREMENT, media_id INTEGER NOT NULL, user_id INTEGER NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(media_id, user_id), FOREIGN KEY (media_id) REFERENCES gallery_media(id) ON DELETE CASCADE, FOREIGN KEY (user_id) REFERENCES users(id))`);
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_gallery_likes_media_id ON gallery_likes(media_id)`); } catch(e) {}
+
+    // Trip expectations table
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS trip_expectations (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, booking_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, expectations TEXT NOT NULL, tags TEXT DEFAULT '', updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (booking_id) REFERENCES bookings(id), FOREIGN KEY (outing_id) REFERENCES outings(id))`);
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_trip_expectations_user_id ON trip_expectations(user_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_trip_expectations_booking_id ON trip_expectations(booking_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_trip_expectations_outing_id ON trip_expectations(outing_id)`); } catch(e) {}
   }
 
   // ─── Seed admin + sample data (same for both backends) ─────────
@@ -1278,6 +1299,7 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) =>
       ? "SELECT COUNT(*) as count FROM security_logs WHERE created_at > NOW() - INTERVAL '24 hours'"
       : "SELECT COUNT(*) as count FROM security_logs WHERE created_at > datetime('now', '-24 hours')"
   )).rows[0];
+  const totalExpectations = (await dbQuery('SELECT COUNT(*) as count FROM trip_expectations')).rows[0];
   res.json({
     users: parseInt(users.count),
     outings: parseInt(outings.count),
@@ -1291,7 +1313,8 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) =>
     totalBlogs: parseInt(totalBlogs.count),
     totalGalleries: parseInt(totalGalleries.count),
     publishedGalleries: parseInt(publishedGalleries.count),
-    securityEvents24h: parseInt(recentSecurityEvents.count)
+    securityEvents24h: parseInt(recentSecurityEvents.count),
+    totalExpectations: parseInt(totalExpectations.count)
   });
 });
 
@@ -2137,6 +2160,133 @@ app.post('/api/gallery/media/:id/like', authMiddleware, [
     await dbQuery('INSERT INTO gallery_likes (media_id, user_id) VALUES ($1, $2)', [req.params.id, req.user.id]);
     res.json({ success: true, liked: true });
   }
+});
+
+// ─── TRIP EXPECTATIONS ROUTES ───────────────────────────────────
+// Get user's expectation for a specific booking
+app.get('/api/expectations/booking/:bookingId', authMiddleware, [
+  param('bookingId').isInt({ min: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const result = await dbQuery(
+    'SELECT * FROM trip_expectations WHERE booking_id = $1 AND user_id = $2',
+    [req.params.bookingId, req.user.id]
+  );
+  res.json(result.rows[0] || null);
+});
+
+// Get all expectations for the current user
+app.get('/api/expectations/my', authMiddleware, async (req, res) => {
+  const result = await dbQuery(
+    `SELECT te.*, o.title as outing_title, o.location as outing_location, o.date as outing_date
+     FROM trip_expectations te
+     JOIN outings o ON te.outing_id = o.id
+     WHERE te.user_id = $1
+     ORDER BY te.created_at DESC`,
+    [req.user.id]
+  );
+  res.json(result.rows);
+});
+
+// Submit or update expectations
+app.post('/api/expectations', authMiddleware, [
+  body('booking_id').isInt({ min: 1 }).withMessage('Valid booking ID required'),
+  body('expectations').trim().notEmpty().withMessage('Expectations text is required').isLength({ max: 2000 }).withMessage('Maximum 2000 characters allowed'),
+  body('tags').optional().trim().isLength({ max: 500 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { booking_id, expectations, tags } = req.body;
+
+  // Verify the booking belongs to this user and is paid
+  const booking = (await dbQuery(
+    'SELECT b.*, o.date as outing_date FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.id = $1 AND b.user_id = $2 AND b.payment_status = $3',
+    [booking_id, req.user.id, 'paid']
+  )).rows[0];
+
+  if (!booking) {
+    return res.status(403).json({ success: false, message: 'No confirmed booking found' });
+  }
+
+  // Check if outing date hasn't passed (allow editing until 24hrs before)
+  const outingDate = new Date(booking.outing_date);
+  const cutoff = new Date(outingDate.getTime() - 24 * 60 * 60 * 1000);
+  if (new Date() > cutoff) {
+    return res.status(400).json({ success: false, message: 'Cannot submit expectations within 24 hours of the outing' });
+  }
+
+  const sanitizedExpectations = sanitize(expectations);
+  const sanitizedTags = sanitize(tags || '');
+
+  // Check if already exists — update if so
+  const existing = (await dbQuery(
+    'SELECT id FROM trip_expectations WHERE booking_id = $1 AND user_id = $2',
+    [booking_id, req.user.id]
+  )).rows[0];
+
+  if (existing) {
+    await dbQuery(
+      'UPDATE trip_expectations SET expectations = $1, tags = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+      [sanitizedExpectations, sanitizedTags, existing.id]
+    );
+    res.json({ success: true, message: 'Expectations updated successfully', updated: true });
+  } else {
+    await dbQuery(
+      'INSERT INTO trip_expectations (user_id, booking_id, outing_id, expectations, tags) VALUES ($1, $2, $3, $4, $5)',
+      [req.user.id, booking_id, booking.outing_id, sanitizedExpectations, sanitizedTags]
+    );
+    res.json({ success: true, message: 'Expectations submitted successfully', updated: false });
+  }
+});
+
+// Delete expectations
+app.delete('/api/expectations/:id', authMiddleware, [
+  param('id').isInt({ min: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const existing = (await dbQuery(
+    'SELECT te.*, o.date as outing_date FROM trip_expectations te JOIN outings o ON te.outing_id = o.id WHERE te.id = $1 AND te.user_id = $2',
+    [req.params.id, req.user.id]
+  )).rows[0];
+  if (!existing) return res.status(404).json({ success: false, message: 'Not found' });
+
+  const outingDate = new Date(existing.outing_date);
+  const cutoff = new Date(outingDate.getTime() - 24 * 60 * 60 * 1000);
+  if (new Date() > cutoff) {
+    return res.status(400).json({ success: false, message: 'Cannot modify expectations within 24 hours of the outing' });
+  }
+
+  await dbQuery('DELETE FROM trip_expectations WHERE id = $1', [req.params.id]);
+  res.json({ success: true, message: 'Expectations removed' });
+});
+
+// Admin: View all expectations (with filters)
+app.get('/api/admin/expectations', authMiddleware, adminMiddleware, async (req, res) => {
+  const { outing_id } = req.query;
+  let sql = `SELECT te.*, u.name as user_name, u.email as user_email, o.title as outing_title, o.location as outing_location, o.date as outing_date
+     FROM trip_expectations te
+     JOIN users u ON te.user_id = u.id
+     JOIN outings o ON te.outing_id = o.id`;
+  const params = [];
+  if (outing_id) {
+    sql += ' WHERE te.outing_id = $1';
+    params.push(parseInt(outing_id));
+  }
+  sql += ' ORDER BY te.created_at DESC';
+  const result = await dbQuery(sql, params);
+  res.json(result.rows);
+});
+
+// Admin: Get expectations summary per outing
+app.get('/api/admin/expectations/summary', authMiddleware, adminMiddleware, async (req, res) => {
+  const result = await dbQuery(
+    `SELECT o.id as outing_id, o.title, o.date, o.location, COUNT(te.id) as expectation_count
+     FROM outings o
+     LEFT JOIN trip_expectations te ON te.outing_id = o.id
+     WHERE o.status = 'active'
+     GROUP BY o.id, o.title, o.date, o.location
+     ORDER BY o.date ASC`
+  );
+  res.json(result.rows);
 });
 
 // ─── SECURITY: Global error handler — never leak stack traces ───
