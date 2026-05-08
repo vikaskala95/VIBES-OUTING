@@ -258,14 +258,58 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 .toast.success{background:linear-gradient(135deg,var(--success),#34D399)}
 .toast.error{background:linear-gradient(135deg,var(--danger),#F87171)}
 
-/* REVIEWS */
-.review-card{background:#F8FAFC;padding:1rem;border-radius:10px;margin-bottom:.75rem}
-.review-card .stars{color:#F59E0B;margin-bottom:.25rem}
-.review-card .reviewer{font-weight:600;font-size:.85rem}
-.review-card .review-text{font-size:.85rem;color:var(--text-light);margin-top:.25rem}
+/* REVIEWS — Enhanced */
+.review-card{background:#F8FAFC;padding:1.25rem;border-radius:12px;margin-bottom:1rem;border:1px solid var(--border);transition:box-shadow .3s}
+.review-card:hover{box-shadow:var(--shadow)}
+.review-card .stars{color:#F59E0B;margin-bottom:.25rem;font-size:.9rem}
+.review-card .reviewer{font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.review-card .review-text{font-size:.88rem;color:var(--text-light);margin-top:.5rem;line-height:1.7}
+.review-card .review-title{font-weight:600;font-size:.95rem;margin-bottom:.25rem}
+.review-card .verified-badge{background:linear-gradient(135deg,#10B981,#059669);color:#fff;padding:.15rem .5rem;border-radius:999px;font-size:.7rem;font-weight:600}
+.review-card .review-meta{display:flex;align-items:center;gap:.75rem;margin-top:.5rem;font-size:.8rem;color:var(--text-light)}
+.review-card .review-actions{display:flex;gap:.5rem;margin-top:.5rem}
+.review-card .admin-reply{background:rgba(108,60,225,.05);border-left:3px solid var(--primary);padding:.75rem 1rem;margin-top:.75rem;border-radius:0 8px 8px 0;font-size:.85rem}
+.review-card .admin-reply strong{color:var(--primary)}
 .star-input{display:flex;gap:.25rem;margin-bottom:.5rem}
 .star-input i{font-size:1.5rem;color:var(--border);cursor:pointer;transition:.2s}
 .star-input i.active,.star-input i:hover{color:#F59E0B}
+.rating-breakdown{display:flex;flex-direction:column;gap:.35rem;margin-bottom:1rem}
+.rating-bar{display:flex;align-items:center;gap:.5rem;font-size:.8rem}
+.rating-bar .bar{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.rating-bar .bar-fill{height:100%;background:linear-gradient(90deg,#F59E0B,#FBBF24);border-radius:4px;transition:width .5s ease}
+.recommend-badge{display:inline-flex;align-items:center;gap:.25rem;padding:.15rem .5rem;border-radius:999px;font-size:.75rem;font-weight:600}
+.recommend-badge.yes{background:rgba(16,185,129,.1);color:var(--success)}
+.recommend-badge.no{background:rgba(239,68,68,.1);color:var(--danger)}
+
+/* BLOG CARDS & PAGES */
+.blog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.5rem}
+.blog-card{background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:transform .3s,box-shadow .3s;cursor:pointer}
+.blog-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.blog-card .blog-cover{height:200px;background-size:cover;background-position:center;position:relative}
+.blog-card .blog-cover .blog-category{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.6);color:#fff;padding:.25rem .75rem;border-radius:999px;font-size:.75rem;font-weight:600;backdrop-filter:blur(4px)}
+.blog-card .blog-cover .blog-featured{position:absolute;top:12px;right:12px;background:linear-gradient(135deg,#F59E0B,#F97316);color:#fff;padding:.25rem .75rem;border-radius:999px;font-size:.7rem;font-weight:700}
+.blog-card .blog-body{padding:1.25rem}
+.blog-card .blog-body h3{font-size:1.1rem;margin-bottom:.5rem;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.blog-card .blog-body .blog-excerpt{color:var(--text-light);font-size:.85rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:.75rem}
+.blog-card .blog-body .blog-footer{display:flex;justify-content:space-between;align-items:center;font-size:.8rem;color:var(--text-light)}
+.blog-card .blog-body .blog-footer .author{display:flex;align-items:center;gap:.4rem;font-weight:500}
+.blog-card .blog-body .blog-tags{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.75rem}
+.blog-card .blog-body .blog-tags span{background:rgba(108,60,225,.08);color:var(--primary);padding:.15rem .5rem;border-radius:999px;font-size:.7rem;font-weight:500}
+.blog-detail{max-width:800px;margin:0 auto}
+.blog-detail .blog-hero{height:350px;border-radius:var(--radius);background-size:cover;background-position:center;margin-bottom:2rem;position:relative}
+.blog-detail .blog-hero .overlay{position:absolute;bottom:0;left:0;right:0;padding:2rem;background:linear-gradient(transparent,rgba(0,0,0,.7));border-radius:0 0 var(--radius) var(--radius);color:#fff}
+.blog-detail .blog-content{background:#fff;padding:2rem;border-radius:var(--radius);box-shadow:var(--shadow);line-height:1.9;font-size:.95rem}
+.blog-detail .blog-content h2,.blog-detail .blog-content h3{margin:1.5rem 0 .75rem}
+.blog-detail .blog-content p{margin-bottom:1rem}
+.blog-detail .blog-content img{max-width:100%;border-radius:8px;margin:1rem 0}
+.blog-status{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .6rem;border-radius:999px;font-size:.75rem;font-weight:600}
+.blog-status.approved{background:rgba(16,185,129,.1);color:var(--success)}
+.blog-status.pending{background:rgba(245,158,11,.1);color:var(--warning)}
+.blog-status.rejected{background:rgba(239,68,68,.1);color:var(--danger)}
+.blog-editor textarea{min-height:300px;font-size:.95rem;line-height:1.8}
+.blog-categories-filter{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.5rem}
+.blog-categories-filter button{padding:.4rem 1rem;border:1px solid var(--border);border-radius:999px;background:#fff;font-size:.8rem;font-weight:500;transition:all .2s}
+.blog-categories-filter button:hover,.blog-categories-filter button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 
 /* CHAT */
 .chat-box{background:#fff;border-radius:20px;box-shadow:var(--shadow-lg);overflow:hidden;max-width:700px;width:100%;margin:0 auto}
@@ -557,6 +601,64 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 @keyframes spin{to{transform:rotate(360deg)}}
 /* Focus visible for accessibility */
 :focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:4px}
+
+/* TRIP GALLERY STYLES */
+.gallery-grid{columns:3;column-gap:12px;padding:0}
+.gallery-item{break-inside:avoid;margin-bottom:12px;border-radius:12px;overflow:hidden;position:relative;cursor:pointer;transition:transform .3s,box-shadow .3s}
+.gallery-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.gallery-item img,.gallery-item video{width:100%;display:block;border-radius:12px}
+.gallery-item .gallery-overlay{position:absolute;bottom:0;left:0;right:0;padding:10px 14px;background:linear-gradient(transparent,rgba(0,0,0,.7));color:#fff;opacity:0;transition:opacity .3s;border-radius:0 0 12px 12px;display:flex;align-items:flex-end;justify-content:space-between}
+.gallery-item:hover .gallery-overlay{opacity:1}
+.gallery-overlay .caption{font-size:.8rem;font-weight:500;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gallery-overlay .actions{display:flex;gap:8px;align-items:center}
+.gallery-overlay .actions button{background:none;border:none;color:#fff;font-size:1rem;cursor:pointer;padding:4px;transition:transform .2s}
+.gallery-overlay .actions button:hover{transform:scale(1.2)}
+.gallery-overlay .actions .liked{color:#EF4444}
+
+/* Gallery lightbox */
+.gallery-lightbox{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.95);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+.gallery-lightbox.active{opacity:1;pointer-events:all}
+.gallery-lightbox img,.gallery-lightbox video{max-width:90vw;max-height:85vh;object-fit:contain;border-radius:8px}
+.gallery-lightbox .lb-close{position:absolute;top:20px;right:24px;background:none;border:none;color:#fff;font-size:2rem;cursor:pointer;z-index:10}
+.gallery-lightbox .lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:1.5rem;padding:12px 16px;cursor:pointer;border-radius:50%;backdrop-filter:blur(4px);transition:background .3s}
+.gallery-lightbox .lb-nav:hover{background:rgba(255,255,255,.3)}
+.gallery-lightbox .lb-prev{left:20px}
+.gallery-lightbox .lb-next{right:20px}
+.gallery-lightbox .lb-info{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:#fff;text-align:center;max-width:600px}
+.gallery-lightbox .lb-info .caption{font-size:1rem;margin-bottom:4px}
+.gallery-lightbox .lb-info .counter{font-size:.8rem;opacity:.7}
+.gallery-lightbox .lb-actions{position:absolute;bottom:20px;right:24px;display:flex;gap:12px}
+.gallery-lightbox .lb-actions button{background:rgba(255,255,255,.15);border:none;color:#fff;padding:8px 14px;border-radius:999px;cursor:pointer;font-size:.85rem;backdrop-filter:blur(4px);transition:background .3s}
+.gallery-lightbox .lb-actions button:hover{background:rgba(255,255,255,.3)}
+
+/* Gallery cards */
+.gallery-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:var(--shadow);transition:transform .3s,box-shadow .3s;cursor:pointer}
+.gallery-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg)}
+.gallery-card .cover{height:200px;background-size:cover;background-position:center;position:relative}
+.gallery-card .cover .photo-count{position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.6);color:#fff;padding:4px 12px;border-radius:999px;font-size:.8rem;font-weight:600;backdrop-filter:blur(4px)}
+.gallery-card .cover .locked-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;backdrop-filter:blur(4px)}
+.gallery-card .cover .locked-overlay i{font-size:2rem;margin-bottom:8px}
+.gallery-card .info{padding:1rem 1.25rem}
+.gallery-card .info h4{font-weight:700;margin-bottom:4px}
+.gallery-card .info .meta{font-size:.8rem;color:var(--text-light);display:flex;gap:12px;flex-wrap:wrap}
+
+/* Admin gallery upload area */
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:2rem;text-align:center;cursor:pointer;transition:border-color .3s,background .3s}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--primary);background:rgba(108,60,225,.03)}
+.upload-zone i{font-size:2rem;color:var(--primary);margin-bottom:.75rem}
+.media-preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:1rem}
+.media-preview-item{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1}
+.media-preview-item img{width:100%;height:100%;object-fit:cover}
+.media-preview-item .remove-btn{position:absolute;top:4px;right:4px;background:var(--danger);color:#fff;border:none;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center}
+
+@media(max-width:768px){
+  .gallery-grid{columns:2;column-gap:8px}
+  .gallery-item{margin-bottom:8px}
+  .gallery-card .cover{height:160px}
+}
+@media(max-width:480px){
+  .gallery-grid{columns:1}
+}
 </style>
 </head>
 <body>
@@ -648,9 +750,11 @@ function renderNav() {
     const isAdmin = currentUser.role === 'admin';
     n.innerHTML = `
       <a href="#" onclick="navigate('outings')">Outings</a>
+      <a href="#" onclick="navigate('blogs')" class="hide-mobile">✍️ Blogs</a>
       <a href="#" onclick="navigate('suggest')" class="hide-mobile">Suggest</a>
       ${isAdmin ? `<a href="#" onclick="navigate('admin')">Admin</a>` : `
         <a href="#" onclick="navigate('recommendations')" class="hide-mobile">🤖 For You</a>
+        <a href="#" onclick="navigate('galleries')" class="hide-mobile" title="My Galleries"><i class="fas fa-images"></i></a>
         <a href="#" onclick="navigate('wishlist')" class="hide-mobile" title="Wishlist"><i class="fas fa-heart"></i></a>
         <a href="#" onclick="navigate('wallet')" class="hide-mobile" title="Wallet"><i class="fas fa-wallet"></i></a>
         <a href="#" onclick="navigate('dashboard')">Dashboard</a>
@@ -665,6 +769,7 @@ function renderNav() {
   } else {
     n.innerHTML = `
       <a href="#" onclick="navigate('outings')">Outings</a>
+      <a href="#" onclick="navigate('blogs')" class="hide-mobile">✍️ Blogs</a>
       <button onclick="showLogin()" class="btn btn-sm btn-primary">Login</button>
       <button onclick="showSignup()" class="btn btn-sm btn-outline-white" style="border-color:var(--primary);color:var(--primary)">Sign Up</button>
     `;
@@ -904,8 +1009,12 @@ async function navigate(page, skipHistory) {
   else if (page === 'outings') await renderOutings(app);
   else if (page === 'suggest') renderSuggest(app);
   else if (page === 'dashboard') await renderUserDashboard(app);
+  else if (page === 'galleries') await renderUserGalleries(app);
+  else if (page.startsWith('gallery-')) await openUserGallery(parseInt(page.split('-')[1]));
   else if (page === 'admin') await renderAdmin(app);
   else if (page === 'recommendations') await renderRecommendations(app);
+  else if (page === 'blogs') await renderBlogList(app);
+  else if (page.startsWith('blog-')) await renderBlogDetail(app, page.substring(5));
   else if (page.startsWith('outing-')) await renderOutingDetail(app, parseInt(page.split('-')[1]));
   else if (page.startsWith('chat-')) await renderChat(app, parseInt(page.split('-')[1]));
   // Footer pages
@@ -930,9 +1039,10 @@ async function navigate(page, skipHistory) {
 
 // ─── HOME PAGE ──────────────────────────────────────────────────
 async function renderHome(app) {
-  const [outingsData, statsData] = await Promise.all([api('/outings'), api('/public-stats')]);
+  const [outingsData, statsData, blogsData] = await Promise.all([api('/outings'), api('/public-stats'), api('/blogs?featured=1')]);
   outings = Array.isArray(outingsData) ? outingsData : [];
   const featured = outings.slice(0, 3);
+  const featuredBlogs = Array.isArray(blogsData) ? blogsData.slice(0, 3) : [];
   const stats = statsData || { outings: outings.length, users: 0, destinations: 0, avgRating: 4.8 };
   app.innerHTML = `
     <section class="hero" id="heroSection" data-parallax>
@@ -1061,6 +1171,14 @@ async function renderHome(app) {
       <div class="cards-grid">${featured.map(o => outingCard(o)).join('')}</div>
       <div style="text-align:center;margin-top:2rem"><button class="btn btn-primary" onclick="navigate('outings')">View All Outings <i class="fas fa-arrow-right"></i></button></div>
     </section>
+    ${featuredBlogs.length ? `
+    <section class="section">
+      <h2 class="section-title">✍️ Traveler Stories</h2>
+      <p class="section-subtitle">Real experiences from verified travelers who've been there</p>
+      <div class="blog-grid">${featuredBlogs.map(b => renderBlogCard(b)).join('')}</div>
+      <div style="text-align:center;margin-top:2rem"><button class="btn" style="background:linear-gradient(135deg,#06D6A0,#059669);color:#fff" onclick="navigate('blogs')">Read All Stories <i class="fas fa-arrow-right"></i></button></div>
+    </section>
+    ` : ''}
     <section class="section" style="background:#fff;max-width:100%;padding:4rem 2rem">
       <div style="max-width:1200px;margin:0 auto">
         <h2 class="section-title" style="text-align:center">How It Works</h2>
@@ -1406,17 +1524,29 @@ async function submitSuggestion(e) {
 // ─── USER DASHBOARD ─────────────────────────────────────────────
 async function renderUserDashboard(app) {
   if (!currentUser) { showLogin(); return; }
-  const bookings = await api('/bookings/' + currentUser.id);
-  const verification = await api('/verify-id/' + currentUser.id);
+  const [bookings, verification, myReviews, myBlogs, myGalleries] = await Promise.all([
+    api('/bookings/' + currentUser.id),
+    api('/verify-id/' + currentUser.id),
+    api('/my-reviews'),
+    api('/my-blogs'),
+    api('/user/galleries')
+  ]);
   const verStatus = verification.status || 'none';
+  const reviewsList = Array.isArray(myReviews) ? myReviews : [];
+  const blogsList = Array.isArray(myBlogs) ? myBlogs : [];
+  const galleriesList = Array.isArray(myGalleries) ? myGalleries : [];
+  const pendingBlogs = blogsList.filter(b => b.status === 'pending');
+  const publishedBlogs = blogsList.filter(b => b.status === 'approved');
 
   app.innerHTML = `
     <section class="section">
       <h2 class="section-title">👋 Hi, ${currentUser.name}!</h2>
-      <p class="section-subtitle">Your bookings and upcoming adventures</p>
+      <p class="section-subtitle">Your bookings, reviews, and travel stories</p>
       <div class="dash-stats">
         <div class="dash-stat"><div class="icon" style="background:rgba(108,60,225,.1);color:var(--primary)"><i class="fas fa-ticket-alt"></i></div><h4>Total Bookings</h4><div class="value">${bookings.length}</div></div>
         <div class="dash-stat"><div class="icon" style="background:rgba(16,185,129,.1);color:var(--success)"><i class="fas fa-rupee-sign"></i></div><h4>Total Spent</h4><div class="value">₹${bookings.reduce((s,b) => s + b.total_amount, 0)}</div></div>
+        <div class="dash-stat"><div class="icon" style="background:rgba(245,158,11,.1);color:#F59E0B"><i class="fas fa-star"></i></div><h4>My Reviews</h4><div class="value">${reviewsList.length}</div></div>
+        <div class="dash-stat"><div class="icon" style="background:rgba(6,214,160,.1);color:var(--accent)"><i class="fas fa-pen-fancy"></i></div><h4>My Blogs</h4><div class="value">${blogsList.length}</div></div>
         <div class="dash-stat">
           <div class="icon" style="background:${verStatus==='verified'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)'};color:${verStatus==='verified'?'var(--success)':'var(--warning)'}">
             <i class="fas fa-${verStatus==='verified'?'check-shield':'id-card'}"></i>
@@ -1455,6 +1585,61 @@ async function renderUserDashboard(app) {
           </td>
         </tr>`}).join('')}</tbody>
       </table></div>` : '<p style="color:var(--text-light)">No bookings yet. <a href="#" onclick="navigate(\'outings\')" style="color:var(--primary)">Explore outings!</a></p>'}
+
+      <!-- MY REVIEWS SECTION -->
+      <h3 style="margin-top:2.5rem;margin-bottom:1rem">⭐ My Reviews</h3>
+      ${reviewsList.length ? `<div style="display:grid;gap:1rem">${reviewsList.map(r => `
+        <div class="review-card" style="cursor:pointer" onclick="navigate('outing-${r.outing_id}')">
+          <div style="display:flex;gap:1rem;align-items:start">
+            ${r.image_url ? `<div style="width:80px;height:60px;border-radius:8px;background:url('${escapeHtml(r.image_url)}') center/cover;flex-shrink:0"></div>` : ''}
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:.9rem">${escapeHtml(r.outing_title)}</div>
+              <div style="font-size:.8rem;color:var(--text-light)">${escapeHtml(r.outing_location)} • ${new Date(r.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div>
+              <div class="stars" style="margin-top:.25rem">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+              ${r.title ? `<div style="font-weight:500;margin-top:.25rem">${escapeHtml(r.title)}</div>` : ''}
+              ${r.comment ? `<div class="review-text">${escapeHtml(r.comment).substring(0, 150)}${r.comment.length > 150 ? '...' : ''}</div>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('')}</div>` : '<p style="color:var(--text-light);font-size:.9rem">No reviews yet. Complete a trip to share your experience!</p>'}
+
+      <!-- MY GALLERIES SECTION -->
+      <h3 style="margin-top:2.5rem;margin-bottom:1rem">📸 My Trip Galleries</h3>
+      ${galleriesList.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;margin-bottom:1.5rem">
+        ${galleriesList.slice(0, 4).map(g => {
+          const coverImg = g.cover_image || g.outing_image || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600';
+          return `<div class="gallery-card" onclick="navigate('gallery-${g.id}')">
+            <div class="cover" style="background-image:url('${escapeHtml(coverImg)}');height:140px">
+              <span class="photo-count"><i class="fas fa-image"></i> ${g.media_count || 0}</span>
+            </div>
+            <div class="info" style="padding:.75rem 1rem">
+              <h4 style="font-size:.9rem">${escapeHtml(g.outing_title)}</h4>
+              <div class="meta"><span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(g.outing_location)}</span></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>${galleriesList.length > 4 ? `<p style="text-align:center"><a href="#" onclick="navigate('galleries')" style="color:var(--primary);font-weight:600">View all ${galleriesList.length} galleries →</a></p>` : ''}` :
+        '<p style="color:var(--text-light);font-size:.9rem">Your trip memories will appear here after your outing is completed. <a href="#" onclick="navigate(\'galleries\')" style="color:var(--primary)">View galleries</a></p>'}
+
+      <!-- MY BLOGS SECTION -->
+      <h3 style="margin-top:2.5rem;margin-bottom:1rem">✍️ My Blogs</h3>
+      ${blogsList.length ? `
+        ${pendingBlogs.length ? `<h4 style="color:var(--warning);font-size:.9rem;margin-bottom:.75rem"><i class="fas fa-clock"></i> Pending Approval (${pendingBlogs.length})</h4>` : ''}
+        <div style="display:grid;gap:1rem;margin-bottom:1.5rem">
+          ${blogsList.map(b => `
+            <div style="background:#fff;padding:1rem 1.25rem;border-radius:12px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;border-left:4px solid ${b.status === 'approved' ? 'var(--success)' : b.status === 'rejected' ? 'var(--danger)' : 'var(--warning)'}">
+              <div>
+                <div style="font-weight:600">${escapeHtml(b.title)}</div>
+                <div style="font-size:.8rem;color:var(--text-light)">${escapeHtml(b.outing_title)} • ${escapeHtml(b.outing_location)} • ${new Date(b.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.75rem">
+                <span class="blog-status ${b.status}">${b.status === 'approved' ? '✅ Published' : b.status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}</span>
+                ${b.status === 'approved' ? `<button class="btn btn-sm btn-primary" onclick="navigate('blog-${b.slug}')"><i class="fas fa-eye"></i> View</button>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : '<p style="color:var(--text-light);font-size:.9rem">No blogs yet. Complete a trip to write your travel story!</p>'}
     </section>
   `;
 }
@@ -1547,6 +1732,18 @@ async function renderOutingDetail(app, outingId) {
   const spotsLeft = o.max_participants - o.current_participants;
   const dateStr = new Date(o.date).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
   const hasBooked = currentUser ? (await api('/bookings/' + currentUser.id)).some(b => b.outing_id === outingId && b.payment_status === 'paid') : false;
+  const tripPassed = new Date(o.date) < new Date();
+  const canReviewBlog = hasBooked && tripPassed;
+
+  // Check eligibility
+  let eligibility = { eligible: false, alreadyReviewed: false };
+  let blogEligibility = { eligible: false };
+  if (currentUser && hasBooked) {
+    [eligibility, blogEligibility] = await Promise.all([
+      api('/reviews/eligibility/' + outingId),
+      api('/blogs/eligibility/' + outingId)
+    ]);
+  }
 
   app.innerHTML = `
     <section class="section" style="max-width:800px">
@@ -1573,21 +1770,61 @@ async function renderOutingDetail(app, outingId) {
         <h3 style="margin-bottom:.75rem">About this Outing</h3>
         <p style="color:var(--text-light);line-height:1.8">${escapeHtml(o.description || 'No description available.')}</p>
       </div>
-      ${hasBooked ? `<div style="margin-bottom:2rem"><button class="btn btn-primary" onclick="navigate('chat-${outingId}')" style="margin-right:.5rem"><i class="fas fa-comments"></i> Group Chat</button></div>` : ''}
+
+      <!-- ACTION BUTTONS -->
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:2rem">
+        ${hasBooked ? `<button class="btn btn-primary" onclick="navigate('chat-${outingId}')" style="margin-right:.5rem"><i class="fas fa-comments"></i> Group Chat</button>` : ''}
+        ${canReviewBlog ? `
+          ${eligibility.eligible ? `<button class="btn btn-primary" onclick="showReviewForm(${outingId})"><i class="fas fa-star"></i> Write Review</button>` : ''}
+          ${blogEligibility.eligible ? `<button class="btn" style="background:linear-gradient(135deg,#06D6A0,#059669);color:#fff" onclick="showBlogEditor(${outingId})"><i class="fas fa-pen-fancy"></i> Share Experience Blog</button>` : ''}
+        ` : hasBooked && !tripPassed ? `
+          <div style="background:rgba(245,158,11,.08);padding:.75rem 1rem;border-radius:10px;font-size:.85rem;color:var(--warning);display:flex;align-items:center;gap:.5rem">
+            <i class="fas fa-lock"></i> Complete this trip to unlock reviews & blogs
+          </div>
+        ` : !hasBooked ? `
+          <div style="background:rgba(108,60,225,.05);padding:.75rem 1rem;border-radius:10px;font-size:.85rem;color:var(--text-light);display:flex;align-items:center;gap:.5rem">
+            <i class="fas fa-lock"></i> Book & complete this trip to write reviews & blogs
+          </div>
+        ` : ''}
+        ${eligibility.alreadyReviewed ? `<span style="color:var(--success);font-size:.85rem;display:flex;align-items:center;gap:.35rem"><i class="fas fa-check-circle"></i> You reviewed this outing</span>` : ''}
+      </div>
       
       <!-- REVIEWS SECTION -->
       <div style="background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:2rem">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-          <h3>⭐ Reviews ${reviewData.count ? `(${reviewData.average}/5 — ${reviewData.count} reviews)` : ''}</h3>
-          ${hasBooked ? `<button class="btn btn-primary btn-sm" onclick="showReviewForm(${outingId})"><i class="fas fa-pen"></i> Write Review</button>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+          <h3>⭐ Reviews ${reviewData.count ? `(${reviewData.average}/5 — ${reviewData.count} review${reviewData.count > 1 ? 's' : ''})` : ''}</h3>
         </div>
+        ${reviewData.count > 0 ? `
+          <div class="rating-breakdown">
+            ${[5,4,3,2,1].map(star => {
+              const cnt = reviewData.ratingBreakdown ? (reviewData.ratingBreakdown[star] || 0) : 0;
+              const pct = reviewData.count > 0 ? Math.round((cnt / reviewData.count) * 100) : 0;
+              return `<div class="rating-bar"><span>${star}★</span><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span>${cnt}</span></div>`;
+            }).join('')}
+          </div>
+        ` : ''}
         ${reviewData.reviews.length ? reviewData.reviews.map(r => `
           <div class="review-card">
-            <div class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
-            <div class="reviewer">${escapeHtml(r.user_name)} <span style="color:var(--text-light);font-weight:400">• ${new Date(r.created_at).toLocaleDateString('en-IN')}</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:.5rem">
+              <div>
+                <div class="reviewer">
+                  <i class="fas fa-user-circle" style="color:var(--primary);font-size:1.2rem"></i>
+                  ${escapeHtml(r.user_name)}
+                  <span class="verified-badge"><i class="fas fa-check"></i> Verified Traveler</span>
+                  <span style="color:var(--text-light);font-weight:400;font-size:.8rem">• ${new Date(r.created_at).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'})}</span>
+                </div>
+                <div class="stars" style="margin-top:.35rem">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+              </div>
+              ${r.recommend !== undefined ? `<span class="recommend-badge ${r.recommend ? 'yes' : 'no'}"><i class="fas fa-${r.recommend ? 'thumbs-up' : 'thumbs-down'}"></i> ${r.recommend ? 'Recommends' : 'Not recommended'}</span>` : ''}
+            </div>
+            ${r.title ? `<div class="review-title">${escapeHtml(r.title)}</div>` : ''}
             ${r.comment ? `<div class="review-text">${escapeHtml(r.comment)}</div>` : ''}
+            <div class="review-meta">
+              <button onclick="markHelpful(${r.id})" style="background:none;border:1px solid var(--border);padding:.2rem .6rem;border-radius:999px;font-size:.75rem;cursor:pointer;display:flex;align-items:center;gap:.25rem;color:var(--text-light);transition:all .2s" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-light)'"><i class="fas fa-thumbs-up"></i> Helpful ${r.helpful_count > 0 ? `(${r.helpful_count})` : ''}</button>
+            </div>
+            ${r.admin_reply ? `<div class="admin-reply"><strong><i class="fas fa-reply"></i> Team VIBES replied:</strong> ${escapeHtml(r.admin_reply)}</div>` : ''}
           </div>
-        `).join('') : `<p style="color:var(--text-light);font-size:.9rem">No reviews yet.${hasBooked ? ' Be the first to review!' : ' Book this outing to leave a review.'}</p>`}
+        `).join('') : `<p style="color:var(--text-light);font-size:.9rem">No reviews yet.${canReviewBlog ? ' Be the first to review!' : ' Book and complete this outing to leave a review.'}</p>`}
       </div>
     </section>
   `;
@@ -1598,13 +1835,22 @@ function showReviewForm(outingId) {
   openModal(`
     <button class="close" onclick="closeModal()">&times;</button>
     <h2><i class="fas fa-star" style="color:#F59E0B"></i> Write a Review</h2>
+    <p style="color:var(--text-light);font-size:.85rem;margin-bottom:1rem">Share your experience to help fellow travelers!</p>
     <div class="form-group">
-      <label>Rating</label>
+      <label>Rating *</label>
       <div class="star-input" id="starInput">
         ${[1,2,3,4,5].map(i => `<i class="fas fa-star" data-rating="${i}" onclick="selectStar(${i})" onmouseover="hoverStar(${i})" onmouseout="resetStars()"></i>`).join('')}
       </div>
     </div>
-    <div class="form-group"><label>Comment (optional)</label><textarea id="reviewComment" placeholder="Share your experience..."></textarea></div>
+    <div class="form-group"><label>Review Title (optional)</label><input type="text" id="reviewTitle" placeholder="Sum up your experience in a few words" maxlength="200"></div>
+    <div class="form-group"><label>Detailed Experience</label><textarea id="reviewComment" placeholder="Tell us about your trip, the highlights, what you loved..." rows="5" maxlength="2000"></textarea></div>
+    <div class="form-group">
+      <label>Would you recommend this outing?</label>
+      <div style="display:flex;gap:1rem;margin-top:.25rem">
+        <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.9rem"><input type="radio" name="recommend" value="yes" checked> <i class="fas fa-thumbs-up" style="color:var(--success)"></i> Yes</label>
+        <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.9rem"><input type="radio" name="recommend" value="no"> <i class="fas fa-thumbs-down" style="color:var(--danger)"></i> No</label>
+      </div>
+    </div>
     <button class="btn btn-primary btn-block" onclick="submitReview(${outingId})"><i class="fas fa-paper-plane"></i> Submit Review</button>
   `);
   window._selectedRating = 0;
@@ -1619,9 +1865,187 @@ function resetStars() { const n = window._selectedRating; document.querySelector
 
 async function submitReview(outingId) {
   if (!window._selectedRating) return toast('Please select a rating', 'error');
-  const data = await api('/reviews', { method: 'POST', body: { outing_id: outingId, rating: window._selectedRating, comment: document.getElementById('reviewComment').value } });
+  const recommend = document.querySelector('input[name="recommend"]:checked');
+  const data = await api('/reviews', { method: 'POST', body: {
+    outing_id: outingId,
+    rating: window._selectedRating,
+    title: document.getElementById('reviewTitle').value,
+    comment: document.getElementById('reviewComment').value,
+    recommend: recommend ? recommend.value === 'yes' : true
+  }});
   if (data.success) { closeModal(); toast('⭐ Review submitted!', 'success'); navigate('outing-' + outingId); }
   else toast(data.message, 'error');
+}
+
+async function markHelpful(reviewId) {
+  const data = await api('/reviews/' + reviewId + '/helpful', { method: 'POST' });
+  if (data.success) toast('👍 Marked as helpful!', 'success');
+  else toast(data.message || 'Please login to vote', 'error');
+}
+
+// ─── BLOG EDITOR ────────────────────────────────────────────────
+function showBlogEditor(outingId) {
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-pen-fancy" style="color:var(--accent)"></i> Share Your Experience</h2>
+    <p style="color:var(--text-light);font-size:.85rem;margin-bottom:1.25rem">Write a travel blog about your trip. It'll be published after admin approval.</p>
+    <div class="form-group"><label>Blog Title *</label><input type="text" id="blogTitle" placeholder="My Amazing Adventure at..." maxlength="300" required></div>
+    <div class="form-group">
+      <label>Cover Image URL (optional)</label>
+      <input type="text" id="blogCover" placeholder="https://example.com/photo.jpg">
+      <small style="color:var(--text-light)">Paste a URL to a photo from your trip</small>
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="blogCategory">
+        <option value="Adventure">🏔️ Adventure</option>
+        <option value="Family Trip">👨‍👩‍👧‍👦 Family Trip</option>
+        <option value="Solo Travel">🎒 Solo Travel</option>
+        <option value="Budget Travel">💰 Budget Travel</option>
+        <option value="Luxury Experience">✨ Luxury Experience</option>
+        <option value="Food Journey">🍜 Food Journey</option>
+        <option value="Weekend Getaway">🌴 Weekend Getaway</option>
+        <option value="Cultural">🎭 Cultural</option>
+        <option value="Nature">🌿 Nature</option>
+        <option value="Other">📝 Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Your Story *</label>
+      <textarea id="blogContent" class="blog-editor" placeholder="Share the details of your trip... What did you see? What was the best part? Any tips for future travelers?
+
+You can use simple formatting:
+**bold text**, *italic text*, ## headings" rows="12" maxlength="50000" required></textarea>
+    </div>
+    <div class="form-group"><label>Tags (comma separated)</label><input type="text" id="blogTags" placeholder="beach, sunset, food, adventure" maxlength="500"></div>
+    <button class="btn btn-primary btn-block" onclick="submitBlog(${outingId})"><i class="fas fa-paper-plane"></i> Submit Blog for Review</button>
+  `);
+}
+
+async function submitBlog(outingId) {
+  const title = document.getElementById('blogTitle').value.trim();
+  const content = document.getElementById('blogContent').value.trim();
+  if (!title) return toast('Blog title is required', 'error');
+  if (!content || content.length < 50) return toast('Please write at least 50 characters', 'error');
+
+  const data = await api('/blogs', { method: 'POST', body: {
+    outing_id: outingId,
+    title,
+    content,
+    cover_image: document.getElementById('blogCover').value.trim(),
+    category: document.getElementById('blogCategory').value,
+    tags: document.getElementById('blogTags').value.trim()
+  }});
+  if (data.success) { closeModal(); toast('✍️ Blog submitted for review!', 'success'); navigate('outing-' + outingId); }
+  else toast(data.message, 'error');
+}
+
+// ─── BLOG LIST PAGE ─────────────────────────────────────────────
+async function renderBlogList(app) {
+  const blogs = await api('/blogs');
+  const categories = ['All', 'Adventure', 'Family Trip', 'Solo Travel', 'Budget Travel', 'Luxury Experience', 'Food Journey', 'Weekend Getaway', 'Cultural', 'Nature'];
+  
+  app.innerHTML = `
+    <section class="section">
+      <h2 class="section-title">✍️ Travel Stories & Blogs</h2>
+      <p class="section-subtitle">Real experiences from verified travelers</p>
+      <div class="blog-categories-filter" id="blogFilter">
+        ${categories.map(c => `<button class="${c === 'All' ? 'active' : ''}" onclick="filterBlogs('${c}')">${c}</button>`).join('')}
+      </div>
+      <div class="blog-grid" id="blogGrid">
+        ${Array.isArray(blogs) && blogs.length ? blogs.map(b => renderBlogCard(b)).join('') : `
+          <div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-light)">
+            <i class="fas fa-pen-fancy" style="font-size:3rem;margin-bottom:1rem;opacity:.3"></i>
+            <p>No travel stories yet. Complete a trip to share yours!</p>
+          </div>
+        `}
+      </div>
+    </section>
+  `;
+  window._allBlogs = blogs;
+}
+
+function renderBlogCard(b) {
+  const coverImg = b.cover_image || b.outing_image || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80';
+  const excerpt = (b.content || '').replace(/<[^>]*>/g, '').substring(0, 150);
+  const tags = (b.tags || '').split(',').filter(t => t.trim());
+  return `
+    <div class="blog-card" onclick="navigate('blog-${b.slug}')">
+      <div class="blog-cover" style="background-image:url('${escapeHtml(coverImg)}')">
+        <span class="blog-category">${escapeHtml(b.category || 'Adventure')}</span>
+        ${b.featured ? '<span class="blog-featured"><i class="fas fa-star"></i> Featured</span>' : ''}
+      </div>
+      <div class="blog-body">
+        <h3>${escapeHtml(b.title)}</h3>
+        ${tags.length ? `<div class="blog-tags">${tags.slice(0, 4).map(t => `<span>#${escapeHtml(t.trim())}</span>`).join('')}</div>` : ''}
+        <div class="blog-excerpt">${escapeHtml(excerpt)}...</div>
+        <div class="blog-footer">
+          <div class="author"><i class="fas fa-user-circle" style="color:var(--primary)"></i> ${escapeHtml(b.author_name)}</div>
+          <span>${new Date(b.created_at).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'})}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function filterBlogs(category) {
+  document.querySelectorAll('.blog-categories-filter button').forEach(btn => btn.classList.toggle('active', btn.textContent === category));
+  const filtered = category === 'All' ? window._allBlogs : (window._allBlogs || []).filter(b => b.category === category);
+  const grid = document.getElementById('blogGrid');
+  if (grid) {
+    grid.innerHTML = filtered.length ? filtered.map(b => renderBlogCard(b)).join('') : `
+      <div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-light)">
+        <p>No stories in this category yet.</p>
+      </div>`;
+  }
+}
+
+// ─── BLOG DETAIL PAGE ───────────────────────────────────────────
+async function renderBlogDetail(app, slug) {
+  const blog = await api('/blogs/by-slug/' + encodeURIComponent(slug));
+  if (!blog || blog.success === false) {
+    app.innerHTML = `<section class="section" style="text-align:center;padding:4rem"><h2>Blog Not Found</h2><p style="color:var(--text-light)">This blog may have been removed or is pending approval.</p><button class="btn btn-primary" onclick="navigate('blogs')" style="margin-top:1rem">Browse All Blogs</button></section>`;
+    return;
+  }
+  const coverImg = blog.cover_image || blog.outing_image || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80';
+  const tags = (blog.tags || '').split(',').filter(t => t.trim());
+  // Simple markdown-like formatting
+  const formattedContent = (blog.content || '')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+
+  app.innerHTML = `
+    <section class="section blog-detail">
+      <div style="margin-bottom:1rem"><a href="#" onclick="navigate('blogs')" style="color:var(--primary);font-size:.9rem"><i class="fas fa-arrow-left"></i> Back to Blogs</a></div>
+      <div class="blog-hero" style="background-image:url('${escapeHtml(coverImg)}')">
+        <div class="overlay">
+          <span style="background:rgba(255,255,255,.2);padding:.25rem .75rem;border-radius:999px;font-size:.8rem;backdrop-filter:blur(4px)">${escapeHtml(blog.category || 'Adventure')}</span>
+          <h1 style="font-size:1.8rem;margin-top:.5rem;line-height:1.3">${escapeHtml(blog.title)}</h1>
+          <div style="display:flex;align-items:center;gap:1rem;margin-top:.75rem;font-size:.85rem;opacity:.9">
+            <span><i class="fas fa-user"></i> ${escapeHtml(blog.author_name)}</span>
+            <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(blog.outing_location)}</span>
+            <span><i class="fas fa-calendar"></i> ${new Date(blog.created_at).toLocaleDateString('en-IN', {day:'numeric',month:'long',year:'numeric'})}</span>
+          </div>
+        </div>
+      </div>
+      ${tags.length ? `<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.5rem">${tags.map(t => `<span style="background:rgba(108,60,225,.08);color:var(--primary);padding:.3rem .75rem;border-radius:999px;font-size:.8rem">#${escapeHtml(t.trim())}</span>`).join('')}</div>` : ''}
+      <div class="blog-content">
+        <p>${formattedContent}</p>
+      </div>
+      <div style="margin-top:2rem;padding:1.5rem;background:rgba(108,60,225,.03);border-radius:var(--radius);display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <i class="fas fa-route" style="font-size:2rem;color:var(--primary)"></i>
+        <div>
+          <strong>This story is from: ${escapeHtml(blog.outing_title)}</strong>
+          <p style="color:var(--text-light);font-size:.85rem;margin-top:.25rem">${escapeHtml(blog.outing_location)} • ${new Date(blog.outing_date).toLocaleDateString('en-IN', {day:'numeric',month:'long',year:'numeric'})}</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="navigate('outing-${blog.outing_id}')" style="margin-left:auto"><i class="fas fa-eye"></i> View Outing</button>
+      </div>
+    </section>
+  `;
 }
 
 // ─── GROUP CHAT PAGE ────────────────────────────────────────────
@@ -1725,9 +2149,12 @@ async function renderAdmin(app) {
         <a href="#" class="${adminTab==='outings'?'active':''}" onclick="adminTab='outings';renderAdmin(document.getElementById('app'))"><i class="fas fa-calendar-alt"></i> Outings</a>
         <a href="#" class="${adminTab==='bookings'?'active':''}" onclick="adminTab='bookings';renderAdmin(document.getElementById('app'))"><i class="fas fa-receipt"></i> Bookings</a>
         <a href="#" class="${adminTab==='users'?'active':''}" onclick="adminTab='users';renderAdmin(document.getElementById('app'))"><i class="fas fa-users"></i> Users</a>
+        <a href="#" class="${adminTab==='reviews'?'active':''}" onclick="adminTab='reviews';renderAdmin(document.getElementById('app'))"><i class="fas fa-star"></i> Reviews</a>
+        <a href="#" class="${adminTab==='blogs'?'active':''}" onclick="adminTab='blogs';renderAdmin(document.getElementById('app'))"><i class="fas fa-pen-fancy"></i> Blogs <span style="background:var(--warning);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.pendingBlogs || 0}</span></a>
         <a href="#" class="${adminTab==='suggestions'?'active':''}" onclick="adminTab='suggestions';renderAdmin(document.getElementById('app'))"><i class="fas fa-lightbulb"></i> Suggestions <span style="background:var(--warning);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.pendingSuggestions}</span></a>
         <a href="#" class="${adminTab==='verifications'?'active':''}" onclick="adminTab='verifications';renderAdmin(document.getElementById('app'))"><i class="fas fa-id-card"></i> ID Verify <span style="background:var(--warning);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.pendingVerifications || 0}</span></a>
         <a href="#" class="${adminTab==='tickets'?'active':''}" onclick="adminTab='tickets';renderAdmin(document.getElementById('app'))"><i class="fas fa-headset"></i> Tickets <span style="background:var(--danger);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.openTickets || 0}</span></a>
+        <a href="#" class="${adminTab==='galleries'?'active':''}" onclick="adminTab='galleries';renderAdmin(document.getElementById('app'))"><i class="fas fa-images"></i> Galleries <span style="background:var(--accent);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.totalGalleries || 0}</span></a>
       </div>
       <div class="dash-content">
         <div class="mobile-admin-nav" role="navigation" aria-label="Admin navigation">
@@ -1735,9 +2162,12 @@ async function renderAdmin(app) {
           <a href="#" class="${adminTab==='outings'?'active':''}" onclick="adminTab='outings';renderAdmin(document.getElementById('app'))">📅 Outings</a>
           <a href="#" class="${adminTab==='bookings'?'active':''}" onclick="adminTab='bookings';renderAdmin(document.getElementById('app'))">🧾 Bookings</a>
           <a href="#" class="${adminTab==='users'?'active':''}" onclick="adminTab='users';renderAdmin(document.getElementById('app'))">👥 Users</a>
+          <a href="#" class="${adminTab==='reviews'?'active':''}" onclick="adminTab='reviews';renderAdmin(document.getElementById('app'))">⭐ Reviews</a>
+          <a href="#" class="${adminTab==='blogs'?'active':''}" onclick="adminTab='blogs';renderAdmin(document.getElementById('app'))">✍️ Blogs</a>
           <a href="#" class="${adminTab==='suggestions'?'active':''}" onclick="adminTab='suggestions';renderAdmin(document.getElementById('app'))">💡 Suggestions</a>
           <a href="#" class="${adminTab==='verifications'?'active':''}" onclick="adminTab='verifications';renderAdmin(document.getElementById('app'))">🛡️ Verify</a>
           <a href="#" class="${adminTab==='tickets'?'active':''}" onclick="adminTab='tickets';renderAdmin(document.getElementById('app'))">🎫 Tickets</a>
+          <a href="#" class="${adminTab==='galleries'?'active':''}" onclick="adminTab='galleries';renderAdmin(document.getElementById('app'))">📸 Galleries</a>
         </div>
         <div id="adminContent"></div>
       </div>
@@ -1747,9 +2177,12 @@ async function renderAdmin(app) {
   else if (adminTab === 'outings') renderAdminOutings();
   else if (adminTab === 'bookings') renderAdminBookings();
   else if (adminTab === 'users') renderAdminUsers();
+  else if (adminTab === 'reviews') renderAdminReviews();
+  else if (adminTab === 'blogs') renderAdminBlogs();
   else if (adminTab === 'suggestions') renderAdminSuggestions();
   else if (adminTab === 'verifications') renderAdminVerifications();
   else if (adminTab === 'tickets') renderAdminTickets();
+  else if (adminTab === 'galleries') renderAdminGalleries();
 }
 
 function renderAdminOverview(stats) {
@@ -1764,6 +2197,9 @@ function renderAdminOverview(stats) {
     <div class="dash-stats">
       <div class="dash-stat"><div class="icon" style="background:rgba(245,158,11,.1);color:var(--warning)"><i class="fas fa-id-card"></i></div><h4>Pending Verifications</h4><div class="value">${stats.pendingVerifications || 0}</div></div>
       <div class="dash-stat"><div class="icon" style="background:rgba(249,115,22,.1);color:var(--secondary)"><i class="fas fa-star"></i></div><h4>Total Reviews</h4><div class="value">${stats.totalReviews || 0}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(6,214,160,.1);color:var(--accent)"><i class="fas fa-pen-fancy"></i></div><h4>Total Blogs</h4><div class="value">${stats.totalBlogs || 0}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(245,158,11,.1);color:var(--warning)"><i class="fas fa-clock"></i></div><h4>Pending Blogs</h4><div class="value">${stats.pendingBlogs || 0}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(108,60,225,.1);color:var(--primary)"><i class="fas fa-images"></i></div><h4>Trip Galleries</h4><div class="value">${stats.totalGalleries || 0}</div></div>
     </div>
   `;
 }
@@ -1928,6 +2364,98 @@ async function verifyUser(id, status) {
   await api('/admin/verifications/' + id, { method: 'PUT', body: { status } });
   toast('User ' + status, 'success');
   renderAdmin(document.getElementById('app'));
+}
+
+// ─── ADMIN: Review Management ───────────────────────────────────
+async function renderAdminReviews() {
+  const reviews = await api('/admin/reviews');
+  const reviewList = Array.isArray(reviews) ? reviews : [];
+  document.getElementById('adminContent').innerHTML = `
+    <h2 style="margin-bottom:1.5rem">⭐ Review Management</h2>
+    <p style="color:var(--text-light);margin-bottom:1.5rem">Manage user reviews — approve, hide, or reply to reviews.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>User</th><th>Outing</th><th>Rating</th><th>Review</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${reviewList.length ? reviewList.map(r => `<tr>
+        <td><strong>${escapeHtml(r.user_name)}</strong><br><small>${escapeHtml(r.user_email)}</small></td>
+        <td>${escapeHtml(r.outing_title)}</td>
+        <td><span style="color:#F59E0B;font-weight:600">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span></td>
+        <td style="max-width:250px">
+          ${r.title ? `<strong>${escapeHtml(r.title)}</strong><br>` : ''}
+          <span style="font-size:.85rem;color:var(--text-light)">${escapeHtml((r.comment || '').substring(0, 100))}${(r.comment || '').length > 100 ? '...' : ''}</span>
+          ${r.admin_reply ? `<br><small style="color:var(--primary)"><i class="fas fa-reply"></i> ${escapeHtml(r.admin_reply).substring(0, 50)}...</small>` : ''}
+        </td>
+        <td>${new Date(r.created_at).toLocaleDateString('en-IN', {day:'numeric',month:'short'})}</td>
+        <td><span class="status ${r.approved ? 'status-approved' : 'status-rejected'}">${r.approved ? 'Visible' : 'Hidden'}</span></td>
+        <td style="white-space:nowrap">
+          ${r.approved ? `<button class="btn btn-danger btn-sm" onclick="toggleReview(${r.id}, 0)" title="Hide"><i class="fas fa-eye-slash"></i></button>` : `<button class="btn btn-success btn-sm" onclick="toggleReview(${r.id}, 1)" title="Show"><i class="fas fa-eye"></i></button>`}
+          <button class="btn btn-sm" style="background:#F1F5F9" onclick="replyToReview(${r.id})" title="Reply"><i class="fas fa-reply"></i></button>
+        </td>
+      </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--text-light)">No reviews yet</td></tr>'}</tbody>
+    </table></div>
+  `;
+}
+
+async function toggleReview(id, approved) {
+  await api('/admin/reviews/' + id, { method: 'PUT', body: { approved } });
+  toast(approved ? 'Review visible' : 'Review hidden', 'success');
+  renderAdminReviews();
+}
+
+function replyToReview(id) {
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-reply" style="color:var(--primary)"></i> Reply to Review</h2>
+    <div class="form-group"><label>Admin Reply</label><textarea id="adminReplyText" placeholder="Thank you for your feedback..." rows="4" maxlength="1000"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="submitAdminReply(${id})"><i class="fas fa-paper-plane"></i> Send Reply</button>
+  `);
+}
+
+async function submitAdminReply(id) {
+  const reply = document.getElementById('adminReplyText').value.trim();
+  if (!reply) return toast('Please write a reply', 'error');
+  await api('/admin/reviews/' + id, { method: 'PUT', body: { admin_reply: reply } });
+  closeModal();
+  toast('Reply sent!', 'success');
+  renderAdminReviews();
+}
+
+// ─── ADMIN: Blog Management ────────────────────────────────────
+async function renderAdminBlogs() {
+  const blogs = await api('/admin/blogs');
+  const blogList = Array.isArray(blogs) ? blogs : [];
+  document.getElementById('adminContent').innerHTML = `
+    <h2 style="margin-bottom:1.5rem">✍️ Blog Management</h2>
+    <p style="color:var(--text-light);margin-bottom:1.5rem">Approve, reject, or feature travel blogs from verified travelers.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Author</th><th>Title</th><th>Outing</th><th>Category</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${blogList.length ? blogList.map(b => `<tr>
+        <td><strong>${escapeHtml(b.author_name)}</strong><br><small>${escapeHtml(b.author_email)}</small></td>
+        <td style="max-width:200px"><strong>${escapeHtml(b.title)}</strong></td>
+        <td>${escapeHtml(b.outing_title)}</td>
+        <td><span style="font-size:.8rem">${escapeHtml(b.category || 'Other')}</span></td>
+        <td>${new Date(b.created_at).toLocaleDateString('en-IN', {day:'numeric',month:'short'})}</td>
+        <td><span class="blog-status ${b.status}">${b.status === 'approved' ? '✅ Published' : b.status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}</span></td>
+        <td style="white-space:nowrap">
+          ${b.status !== 'approved' ? `<button class="btn btn-success btn-sm" onclick="updateBlogStatus(${b.id},'approved')" title="Approve"><i class="fas fa-check"></i></button>` : ''}
+          ${b.status !== 'rejected' ? `<button class="btn btn-danger btn-sm" onclick="updateBlogStatus(${b.id},'rejected')" title="Reject"><i class="fas fa-times"></i></button>` : ''}
+          ${b.status === 'approved' ? `<button class="btn btn-sm ${b.featured ? 'btn-warning' : ''}" style="background:${b.featured ? 'var(--warning)' : '#F1F5F9'};color:${b.featured ? '#fff' : 'var(--text)'}" onclick="toggleFeaturedBlog(${b.id}, ${b.featured ? 0 : 1})" title="${b.featured ? 'Unfeature' : 'Feature'}"><i class="fas fa-star"></i></button>` : ''}
+          ${b.status === 'approved' ? `<button class="btn btn-sm" style="background:#F1F5F9" onclick="navigate('blog-${b.slug}')" title="View"><i class="fas fa-eye"></i></button>` : ''}
+        </td>
+      </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--text-light)">No blogs submitted yet</td></tr>'}</tbody>
+    </table></div>
+  `;
+}
+
+async function updateBlogStatus(id, status) {
+  await api('/admin/blogs/' + id, { method: 'PUT', body: { status } });
+  toast('Blog ' + (status === 'approved' ? 'published!' : 'rejected'), status === 'approved' ? 'success' : 'error');
+  renderAdminBlogs();
+}
+
+async function toggleFeaturedBlog(id, featured) {
+  await api('/admin/blogs/' + id, { method: 'PUT', body: { featured } });
+  toast(featured ? 'Blog featured on homepage!' : 'Blog unfeatured', 'success');
+  renderAdminBlogs();
 }
 
 // ─── HERO SLIDER + IMMERSIVE EFFECTS ────────────────────────────
@@ -2136,10 +2664,10 @@ function renderAbout(app) {
       <div class="content-card">
         <h2><i class="fas fa-users" style="color:var(--primary)"></i> Meet the Team</h2>
         <div class="team-grid">
-          <div class="team-member"><div class="avatar">AK</div><h4>Arjun Kumar</h4><p>Founder & CEO</p></div>
-          <div class="team-member"><div class="avatar" style="background:linear-gradient(135deg,var(--secondary),#FB923C)">PS</div><h4>Priya Sharma</h4><p>Head of Operations</p></div>
-          <div class="team-member"><div class="avatar" style="background:linear-gradient(135deg,var(--accent),#34D399)">RJ</div><h4>Rohan Joshi</h4><p>Tech Lead</p></div>
-          <div class="team-member"><div class="avatar" style="background:linear-gradient(135deg,var(--warning),#FBBF24)">NM</div><h4>Neha Menon</h4><p>Community Manager</p></div>
+          <div class="team-member"><div class="avatar">MC</div><h4>Meenakshi Choudhary</h4><p>Founder & CEO</p></div>
+          <div class="team-member"><div class="avatar" style="background:linear-gradient(135deg,var(--secondary),#FB923C)">HD</div><h4>Himanshu Dadhich</h4><p>Head of Operations | Ex-Accenture Netherlands</p></div>
+          <div class="team-member"><div class="avatar" style="background:linear-gradient(135deg,var(--accent),#34D399)">RAS</div><h4>Rahul Anand Singh</h4><p>Tech Lead & Business Development</p></div>
+          <div class="team-member"><div class="avatar" style="background:linear-gradient(135deg,var(--warning),#FBBF24)">AP</div><h4>Aruna Parmar</h4><p>Customer Relationship Manager</p></div>
         </div>
       </div>
       <div class="content-card">
@@ -2918,6 +3446,326 @@ async function showTicketDetail(ticketId) {
       btn.disabled = false; btn.innerHTML = '<i class="fas fa-reply"></i> Update Ticket';
     }
   };
+}
+
+// ─── ADMIN GALLERY MANAGEMENT ───────────────────────────────────
+async function renderAdminGalleries() {
+  const galleries = await api('/admin/galleries');
+  const outings = await api('/outings');
+  const allOutings = Array.isArray(outings) ? outings : [];
+  const galleryList = Array.isArray(galleries) ? galleries : [];
+  const c = document.getElementById('adminContent');
+  c.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
+      <h2>📸 Trip Gallery Management</h2>
+      <button class="btn btn-primary btn-sm" onclick="showCreateGallery()"><i class="fas fa-plus"></i> Create Gallery</button>
+    </div>
+    ${galleryList.length ? `<div class="table-wrap"><table>
+      <thead><tr><th>Outing</th><th>Title</th><th>Photos</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>${galleryList.map(g => `<tr>
+        <td><strong>${escapeHtml(g.outing_title)}</strong><br><small style="color:var(--text-light)">${escapeHtml(g.outing_location)}</small></td>
+        <td>${escapeHtml(g.title)}</td>
+        <td><span style="font-weight:600">${g.media_count || 0}</span> <i class="fas fa-image" style="color:var(--text-light)"></i></td>
+        <td>${g.published ? '<span class="status status-paid">Published</span>' : '<span class="status status-pending">Draft</span>'}</td>
+        <td><small>${new Date(g.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</small></td>
+        <td style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn btn-sm" style="background:#F1F5F9" onclick="openGalleryManager(${g.id})" title="Manage"><i class="fas fa-cog"></i></button>
+          <button class="btn btn-sm ${g.published ? 'btn-warning' : 'btn-success'}" onclick="toggleGalleryPublish(${g.id}, ${g.published ? 0 : 1})" title="${g.published ? 'Unpublish' : 'Publish'}">
+            <i class="fas fa-${g.published ? 'eye-slash' : 'eye'}"></i>
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="deleteGallery(${g.id})" title="Delete"><i class="fas fa-trash"></i></button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : '<div style="text-align:center;padding:3rem;color:var(--text-light)"><i class="fas fa-images" style="font-size:3rem;margin-bottom:1rem;display:block;opacity:.3"></i><p>No galleries yet. Create one for a completed outing!</p></div>'}
+  `;
+}
+
+function showCreateGallery() {
+  api('/outings').then(outings => {
+    const list = Array.isArray(outings) ? outings : [];
+    openModal(`
+      <button class="close" onclick="closeModal()">&times;</button>
+      <h2><i class="fas fa-images" style="color:var(--primary)"></i> Create Trip Gallery</h2>
+      <form id="createGalleryForm">
+        <div class="form-group"><label>Select Outing</label>
+          <select id="galleryOutingId" required>
+            <option value="">-- Select an outing --</option>
+            ${list.map(o => `<option value="${o.id}">${escapeHtml(o.title)} — ${escapeHtml(o.location)} (${new Date(o.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})})</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group"><label>Gallery Title</label><input type="text" id="galleryTitle" required placeholder="e.g. Goa Beach Vibes 🌊" maxlength="300"></div>
+        <div class="form-group"><label>Cover Image URL (optional)</label><input type="text" id="galleryCover" placeholder="https://..."></div>
+        <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-plus-circle"></i> Create Gallery</button>
+      </form>
+    `);
+    document.getElementById('createGalleryForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+      const res = await api('/gallery/create', { method: 'POST', body: {
+        outing_id: parseInt(document.getElementById('galleryOutingId').value),
+        title: document.getElementById('galleryTitle').value.trim(),
+        cover_image: document.getElementById('galleryCover').value.trim()
+      }});
+      if (res.success) { toast('Gallery created! Now add photos.', 'success'); closeModal(); openGalleryManager(res.galleryId); }
+      else { toast(res.message || 'Failed to create gallery', 'error'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus-circle"></i> Create Gallery'; }
+    };
+  });
+}
+
+async function openGalleryManager(galleryId) {
+  const gallery = await api('/admin/gallery/' + galleryId);
+  if (!gallery || !gallery.id) { toast('Gallery not found', 'error'); return; }
+  const media = gallery.media || [];
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-images" style="color:var(--primary)"></i> ${escapeHtml(gallery.title)}</h2>
+    <p style="color:var(--text-light);font-size:.85rem;margin-bottom:1rem">${escapeHtml(gallery.outing_title)} — ${escapeHtml(gallery.outing_location)} • ${gallery.published ? '✅ Published' : '📝 Draft'}</p>
+
+    <div style="margin-bottom:1.5rem">
+      <h4 style="margin-bottom:.75rem">Add Photos</h4>
+      <div id="galleryUploadUrls">
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center" class="url-row">
+          <input type="text" placeholder="Image URL (https://...)" style="flex:1" class="gallery-url-input">
+          <input type="text" placeholder="Caption (optional)" style="flex:.7" class="gallery-caption-input">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-sm" style="background:#F1F5F9" onclick="addUrlRow()"><i class="fas fa-plus"></i> Add Row</button>
+        <button class="btn btn-sm btn-primary" onclick="uploadGalleryMedia(${galleryId})"><i class="fas fa-upload"></i> Upload</button>
+      </div>
+    </div>
+
+    <h4 style="margin-bottom:.75rem">Media (${media.length})</h4>
+    ${media.length ? `<div class="media-preview-grid">${media.map(m => `
+      <div class="media-preview-item">
+        <img src="${escapeHtml(m.media_url)}" alt="${escapeHtml(m.caption || '')}" loading="lazy">
+        <button class="remove-btn" onclick="deleteGalleryMedia(${m.id}, ${galleryId})" title="Delete"><i class="fas fa-times"></i></button>
+      </div>
+    `).join('')}</div>` : '<p style="color:var(--text-light);font-size:.85rem">No media yet. Add photo URLs above.</p>'}
+  `);
+}
+
+function addUrlRow() {
+  const container = document.getElementById('galleryUploadUrls');
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;align-items:center';
+  row.className = 'url-row';
+  row.innerHTML = '<input type="text" placeholder="Image URL (https://...)" style="flex:1" class="gallery-url-input"><input type="text" placeholder="Caption (optional)" style="flex:.7" class="gallery-caption-input"><button class="btn btn-sm btn-danger" onclick="this.parentElement.remove()" style="padding:4px 8px"><i class="fas fa-times"></i></button>';
+  container.appendChild(row);
+}
+
+async function uploadGalleryMedia(galleryId) {
+  const rows = document.querySelectorAll('.url-row');
+  const media = [];
+  rows.forEach(row => {
+    const url = row.querySelector('.gallery-url-input').value.trim();
+    const caption = row.querySelector('.gallery-caption-input').value.trim();
+    if (url) media.push({ url, caption, media_type: /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url) ? 'video' : 'image' });
+  });
+  if (!media.length) { toast('Add at least one image URL', 'error'); return; }
+  const res = await api('/gallery/upload', { method: 'POST', body: { gallery_id: galleryId, media } });
+  if (res.success) { toast(`${res.uploaded} photo(s) uploaded!`, 'success'); openGalleryManager(galleryId); }
+  else toast(res.message || 'Upload failed', 'error');
+}
+
+async function deleteGalleryMedia(mediaId, galleryId) {
+  if (!confirm('Delete this photo?')) return;
+  const res = await api('/gallery/media/' + mediaId, { method: 'DELETE' });
+  if (res.success) { toast('Photo deleted', 'success'); openGalleryManager(galleryId); }
+  else toast('Delete failed', 'error');
+}
+
+async function toggleGalleryPublish(galleryId, published) {
+  const action = published ? 'publish' : 'unpublish';
+  if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} this gallery? ${published ? 'Users who completed this trip will be notified.' : ''}`)) return;
+  const res = await api('/gallery/publish', { method: 'PUT', body: { gallery_id: galleryId, published } });
+  if (res.success) { toast(`Gallery ${action}ed!`, 'success'); renderAdminGalleries(); }
+  else toast(res.message || 'Failed', 'error');
+}
+
+async function deleteGallery(galleryId) {
+  if (!confirm('Delete this gallery and all its photos? This cannot be undone.')) return;
+  const res = await api('/gallery/' + galleryId, { method: 'DELETE' });
+  if (res.success) { toast('Gallery deleted', 'success'); renderAdminGalleries(); }
+  else toast(res.message || 'Delete failed', 'error');
+}
+
+// ─── USER GALLERY (MY GALLERIES) ───────────────────────────────
+async function renderUserGalleries(app) {
+  if (!currentUser) { showLogin(); return; }
+  const galleries = await api('/user/galleries');
+  const list = Array.isArray(galleries) ? galleries : [];
+  app.innerHTML = `
+    <section class="section">
+      <h2 class="section-title">📸 My Trip Galleries</h2>
+      <p class="section-subtitle">Relive your best moments from completed outings</p>
+      ${list.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem">
+        ${list.map(g => {
+          const coverImg = g.cover_image || g.outing_image || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600';
+          return `<div class="gallery-card" onclick="openUserGallery(${g.id})">
+            <div class="cover" style="background-image:url('${escapeHtml(coverImg)}')">
+              <span class="photo-count"><i class="fas fa-image"></i> ${g.media_count || 0}</span>
+            </div>
+            <div class="info">
+              <h4>${escapeHtml(g.outing_title)}</h4>
+              <div class="meta">
+                <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(g.outing_location)}</span>
+                <span><i class="fas fa-calendar-alt"></i> ${new Date(g.outing_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</span>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : `<div style="text-align:center;padding:4rem 2rem">
+        <i class="fas fa-camera-retro" style="font-size:4rem;color:var(--primary);opacity:.3;margin-bottom:1.5rem;display:block"></i>
+        <h3 style="color:var(--text);margin-bottom:.75rem">No galleries yet</h3>
+        <p style="color:var(--text-light);max-width:400px;margin:0 auto">Your trip memories will appear here after your outing is completed and the gallery is published by the team.</p>
+      </div>`}
+    </section>
+  `;
+}
+
+// ─── GALLERY LIGHTBOX STATE ─────────────────────────────────────
+let galleryMedia = [];
+let galleryLightboxIdx = 0;
+
+async function openUserGallery(galleryId) {
+  const gallery = await api('/gallery/' + galleryId);
+  if (!gallery || !gallery.id) {
+    if (gallery && gallery.message) toast(gallery.message, 'error');
+    else toast('Gallery not available', 'error');
+    return;
+  }
+  galleryMedia = gallery.media || [];
+  const app = document.getElementById('app');
+  const coverImg = gallery.cover_image || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600';
+  app.innerHTML = `
+    <section class="section">
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.5rem;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:#F1F5F9" onclick="navigate('galleries')"><i class="fas fa-arrow-left"></i> Back</button>
+        <div>
+          <h2 class="section-title" style="margin-bottom:0">${escapeHtml(gallery.title)}</h2>
+          <p style="color:var(--text-light);font-size:.9rem">${escapeHtml(gallery.outing_title)} — ${escapeHtml(gallery.outing_location)} • ${new Date(gallery.outing_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</p>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:1.5rem 2rem;border-radius:16px;margin-bottom:2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <i class="fas fa-heart" style="font-size:1.5rem"></i>
+        <div><h3 style="margin:0;font-size:1.1rem">Memories from your trip</h3><p style="margin:0;opacity:.85;font-size:.85rem">${galleryMedia.length} photos</p></div>
+      </div>
+      ${galleryMedia.length ? `<div class="gallery-grid">${galleryMedia.map((m, idx) => `
+        <div class="gallery-item" onclick="openLightbox(${idx})">
+          ${m.media_type === 'video' ?
+            `<video src="${escapeHtml(m.media_url)}" preload="metadata" muted></video>` :
+            `<img src="${escapeHtml(m.media_url)}" alt="${escapeHtml(m.caption || 'Trip photo')}" loading="lazy">`}
+          <div class="gallery-overlay">
+            <span class="caption">${m.caption ? escapeHtml(m.caption) : ''}</span>
+            <span class="actions">
+              <button onclick="event.stopPropagation();toggleLike(${m.id}, this)" title="Like">
+                <i class="fas fa-heart ${m.liked_by_me ? 'liked' : ''}" style="${m.liked_by_me ? 'color:#EF4444' : ''}"></i>
+                <small>${m.like_count || 0}</small>
+              </button>
+              <button onclick="event.stopPropagation();downloadMedia('${escapeHtml(m.media_url)}')" title="Download"><i class="fas fa-download"></i></button>
+            </span>
+          </div>
+        </div>
+      `).join('')}</div>` : '<p style="color:var(--text-light);text-align:center;padding:2rem">No photos in this gallery yet.</p>'}
+    </section>
+    <div class="gallery-lightbox" id="galleryLightbox">
+      <button class="lb-close" onclick="closeLightbox()">&times;</button>
+      <button class="lb-nav lb-prev" onclick="lightboxNav(-1)"><i class="fas fa-chevron-left"></i></button>
+      <div id="lightboxContent"></div>
+      <button class="lb-nav lb-next" onclick="lightboxNav(1)"><i class="fas fa-chevron-right"></i></button>
+      <div class="lb-info"><div class="caption" id="lbCaption"></div><div class="counter" id="lbCounter"></div></div>
+      <div class="lb-actions">
+        <button onclick="toggleLikeLB()" id="lbLikeBtn"><i class="fas fa-heart"></i> Like</button>
+        <button onclick="downloadCurrentMedia()"><i class="fas fa-download"></i> Download</button>
+      </div>
+    </div>
+  `;
+}
+
+function openLightbox(idx) {
+  galleryLightboxIdx = idx;
+  document.getElementById('galleryLightbox').classList.add('active');
+  renderLightboxContent();
+  document.addEventListener('keydown', lightboxKeyHandler);
+}
+
+function closeLightbox() {
+  document.getElementById('galleryLightbox').classList.remove('active');
+  document.removeEventListener('keydown', lightboxKeyHandler);
+  // Pause any video
+  const video = document.querySelector('#lightboxContent video');
+  if (video) video.pause();
+}
+
+function lightboxKeyHandler(e) {
+  if (e.key === 'Escape') closeLightbox();
+  else if (e.key === 'ArrowLeft') lightboxNav(-1);
+  else if (e.key === 'ArrowRight') lightboxNav(1);
+}
+
+function lightboxNav(dir) {
+  galleryLightboxIdx = (galleryLightboxIdx + dir + galleryMedia.length) % galleryMedia.length;
+  renderLightboxContent();
+}
+
+function renderLightboxContent() {
+  const m = galleryMedia[galleryLightboxIdx];
+  if (!m) return;
+  const content = document.getElementById('lightboxContent');
+  if (m.media_type === 'video') {
+    content.innerHTML = `<video src="${escapeHtml(m.media_url)}" controls autoplay style="max-width:90vw;max-height:85vh;border-radius:8px"></video>`;
+  } else {
+    content.innerHTML = `<img src="${escapeHtml(m.media_url)}" alt="${escapeHtml(m.caption || '')}" style="max-width:90vw;max-height:85vh;object-fit:contain;border-radius:8px">`;
+  }
+  document.getElementById('lbCaption').textContent = m.caption || '';
+  document.getElementById('lbCounter').textContent = `${galleryLightboxIdx + 1} / ${galleryMedia.length}`;
+  const likeBtn = document.getElementById('lbLikeBtn');
+  likeBtn.innerHTML = `<i class="fas fa-heart" style="${m.liked_by_me ? 'color:#EF4444' : ''}"></i> ${m.liked_by_me ? 'Liked' : 'Like'}`;
+}
+
+async function toggleLike(mediaId, btnEl) {
+  const res = await api('/gallery/media/' + mediaId + '/like', { method: 'POST' });
+  if (res.success) {
+    const m = galleryMedia.find(x => x.id === mediaId);
+    if (m) {
+      m.liked_by_me = res.liked ? 1 : 0;
+      m.like_count = (m.like_count || 0) + (res.liked ? 1 : -1);
+    }
+    const icon = btnEl.querySelector('i');
+    const count = btnEl.querySelector('small');
+    if (res.liked) { icon.classList.add('liked'); icon.style.color = '#EF4444'; }
+    else { icon.classList.remove('liked'); icon.style.color = ''; }
+    if (count && m) count.textContent = m.like_count;
+  }
+}
+
+async function toggleLikeLB() {
+  const m = galleryMedia[galleryLightboxIdx];
+  if (!m) return;
+  const res = await api('/gallery/media/' + m.id + '/like', { method: 'POST' });
+  if (res.success) {
+    m.liked_by_me = res.liked ? 1 : 0;
+    m.like_count = (m.like_count || 0) + (res.liked ? 1 : -1);
+    renderLightboxContent();
+  }
+}
+
+function downloadMedia(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '';
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function downloadCurrentMedia() {
+  const m = galleryMedia[galleryLightboxIdx];
+  if (m) downloadMedia(m.media_url);
 }
 
 // ─── INIT ───────────────────────────────────────────────────────

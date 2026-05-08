@@ -617,8 +617,31 @@ async function initDatabase() {
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id),
         outing_id INTEGER NOT NULL REFERENCES outings(id),
+        booking_id INTEGER REFERENCES bookings(id),
         rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+        title TEXT DEFAULT '',
         comment TEXT DEFAULT '',
+        images TEXT DEFAULT '',
+        recommend INTEGER DEFAULT 1,
+        approved INTEGER DEFAULT 1,
+        helpful_count INTEGER DEFAULT 0,
+        admin_reply TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+    await dbQuery(`CREATE TABLE IF NOT EXISTS blogs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        outing_id INTEGER NOT NULL REFERENCES outings(id),
+        booking_id INTEGER REFERENCES bookings(id),
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        cover_image TEXT DEFAULT '',
+        gallery_images TEXT DEFAULT '',
+        tags TEXT DEFAULT '',
+        category TEXT DEFAULT 'Adventure',
+        status TEXT DEFAULT 'pending',
+        featured INTEGER DEFAULT 0,
+        slug TEXT DEFAULT '',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`);
     await dbQuery(`CREATE TABLE IF NOT EXISTS chat_messages (
@@ -658,6 +681,11 @@ async function initDatabase() {
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings(user_id)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_bookings_outing_id ON bookings(outing_id)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_reviews_outing_id ON reviews(outing_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON reviews(user_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_blogs_outing_id ON blogs(outing_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_blogs_user_id ON blogs(user_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_blogs_status ON blogs(status)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_chat_outing_id ON chat_messages(outing_id)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_security_logs_created ON security_logs(created_at)').catch(() => {});
 
@@ -699,13 +727,48 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`);
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_wallet_txn_user_id ON wallet_transactions(user_id)').catch(() => {});
+
+    // Galleries table
+    await dbQuery(`CREATE TABLE IF NOT EXISTS galleries (
+        id SERIAL PRIMARY KEY,
+        outing_id INTEGER NOT NULL REFERENCES outings(id),
+        title TEXT NOT NULL,
+        cover_image TEXT DEFAULT '',
+        created_by INTEGER NOT NULL REFERENCES users(id),
+        published INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_galleries_outing_id ON galleries(outing_id)').catch(() => {});
+
+    // Gallery media table
+    await dbQuery(`CREATE TABLE IF NOT EXISTS gallery_media (
+        id SERIAL PRIMARY KEY,
+        gallery_id INTEGER NOT NULL REFERENCES galleries(id) ON DELETE CASCADE,
+        media_url TEXT NOT NULL,
+        media_type TEXT DEFAULT 'image',
+        caption TEXT DEFAULT '',
+        sort_order INTEGER DEFAULT 0,
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_gallery_media_gallery_id ON gallery_media(gallery_id)').catch(() => {});
+
+    // Gallery likes table
+    await dbQuery(`CREATE TABLE IF NOT EXISTS gallery_likes (
+        id SERIAL PRIMARY KEY,
+        media_id INTEGER NOT NULL REFERENCES gallery_media(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(media_id, user_id)
+      )`);
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_gallery_likes_media_id ON gallery_likes(media_id)').catch(() => {});
   } else {
     // SQLite: tables one at a time (exec doesn't support multi-statement in all versions)
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password TEXT NOT NULL, interests TEXT DEFAULT '', role TEXT DEFAULT 'user', must_change_password INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS outings (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, location TEXT NOT NULL, description TEXT, image_url TEXT DEFAULT '', date TEXT NOT NULL, time TEXT DEFAULT '10:00 AM', cost INTEGER NOT NULL, max_participants INTEGER DEFAULT 20, current_participants INTEGER DEFAULT 0, status TEXT DEFAULT 'active', created_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, participants INTEGER DEFAULT 1, participant_names TEXT DEFAULT '', total_amount INTEGER NOT NULL, token_amount INTEGER DEFAULT 0, remaining_amount INTEGER DEFAULT 0, payment_status TEXT DEFAULT 'pending', remaining_payment_status TEXT DEFAULT 'pending', payment_id TEXT, remaining_payment_id TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (outing_id) REFERENCES outings(id))`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS suggestions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, location TEXT NOT NULL, description TEXT, budget TEXT, status TEXT DEFAULT 'pending', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
-    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5), comment TEXT DEFAULT '', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (outing_id) REFERENCES outings(id))`);
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, booking_id INTEGER, rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5), title TEXT DEFAULT '', comment TEXT DEFAULT '', images TEXT DEFAULT '', recommend INTEGER DEFAULT 1, approved INTEGER DEFAULT 1, helpful_count INTEGER DEFAULT 0, admin_reply TEXT DEFAULT '', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (outing_id) REFERENCES outings(id), FOREIGN KEY (booking_id) REFERENCES bookings(id))`);
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS blogs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, booking_id INTEGER, title TEXT NOT NULL, content TEXT NOT NULL, cover_image TEXT DEFAULT '', gallery_images TEXT DEFAULT '', tags TEXT DEFAULT '', category TEXT DEFAULT 'Adventure', status TEXT DEFAULT 'pending', featured INTEGER DEFAULT 0, slug TEXT DEFAULT '', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (outing_id) REFERENCES outings(id), FOREIGN KEY (booking_id) REFERENCES bookings(id))`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS chat_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, outing_id INTEGER NOT NULL, user_id INTEGER NOT NULL, message TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (outing_id) REFERENCES outings(id), FOREIGN KEY (user_id) REFERENCES users(id))`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS id_verifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER UNIQUE NOT NULL, id_type TEXT NOT NULL, id_number TEXT NOT NULL, full_name TEXT NOT NULL, emergency_contact TEXT DEFAULT '', emergency_name TEXT DEFAULT '', status TEXT DEFAULT 'pending', submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP, verified_at DATETIME, FOREIGN KEY (user_id) REFERENCES users(id))`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS password_resets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, token TEXT NOT NULL, expires_at DATETIME NOT NULL, used INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
@@ -713,6 +776,11 @@ async function initDatabase() {
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings(user_id)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_bookings_outing_id ON bookings(outing_id)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_reviews_outing_id ON reviews(outing_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON reviews(user_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_blogs_outing_id ON blogs(outing_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_blogs_user_id ON blogs(user_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_blogs_status ON blogs(status)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_chat_outing_id ON chat_messages(outing_id)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_security_logs_created ON security_logs(created_at)`); } catch(e) {}
 
@@ -728,6 +796,18 @@ async function initDatabase() {
     // Wallet transactions table
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS wallet_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, description TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_user_id ON wallet_transactions(user_id)`); } catch(e) {}
+
+    // Galleries table
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS galleries (id INTEGER PRIMARY KEY AUTOINCREMENT, outing_id INTEGER NOT NULL, title TEXT NOT NULL, cover_image TEXT DEFAULT '', created_by INTEGER NOT NULL, published INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (outing_id) REFERENCES outings(id), FOREIGN KEY (created_by) REFERENCES users(id))`);
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_galleries_outing_id ON galleries(outing_id)`); } catch(e) {}
+
+    // Gallery media table
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS gallery_media (id INTEGER PRIMARY KEY AUTOINCREMENT, gallery_id INTEGER NOT NULL, media_url TEXT NOT NULL, media_type TEXT DEFAULT 'image', caption TEXT DEFAULT '', sort_order INTEGER DEFAULT 0, uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (gallery_id) REFERENCES galleries(id) ON DELETE CASCADE)`);
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_gallery_media_gallery_id ON gallery_media(gallery_id)`); } catch(e) {}
+
+    // Gallery likes table
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS gallery_likes (id INTEGER PRIMARY KEY AUTOINCREMENT, media_id INTEGER NOT NULL, user_id INTEGER NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(media_id, user_id), FOREIGN KEY (media_id) REFERENCES gallery_media(id) ON DELETE CASCADE, FOREIGN KEY (user_id) REFERENCES users(id))`);
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_gallery_likes_media_id ON gallery_likes(media_id)`); } catch(e) {}
   }
 
   // ─── Seed admin + sample data (same for both backends) ─────────
@@ -755,6 +835,20 @@ async function initDatabase() {
         [o.title, o.location, o.description, o.date, o.time, o.cost, o.max, o.img]
       );
     }
+  }
+
+  // Migrations: add new columns to reviews if missing (for existing databases)
+  const reviewMigrations = [
+    { col: 'booking_id', sql: 'ALTER TABLE reviews ADD COLUMN booking_id INTEGER' },
+    { col: 'title', sql: 'ALTER TABLE reviews ADD COLUMN title TEXT DEFAULT \'\'' },
+    { col: 'images', sql: 'ALTER TABLE reviews ADD COLUMN images TEXT DEFAULT \'\'' },
+    { col: 'recommend', sql: 'ALTER TABLE reviews ADD COLUMN recommend INTEGER DEFAULT 1' },
+    { col: 'approved', sql: 'ALTER TABLE reviews ADD COLUMN approved INTEGER DEFAULT 1' },
+    { col: 'helpful_count', sql: 'ALTER TABLE reviews ADD COLUMN helpful_count INTEGER DEFAULT 0' },
+    { col: 'admin_reply', sql: 'ALTER TABLE reviews ADD COLUMN admin_reply TEXT DEFAULT \'\'' },
+  ];
+  for (const m of reviewMigrations) {
+    await dbQuery(m.sql).catch(() => {}); // ignore if column already exists
   }
 
   console.log(`✅ Database initialized (${USE_PG ? 'PostgreSQL' : 'SQLite'})`);
@@ -901,7 +995,7 @@ app.put('/api/outings/:id', authMiddleware, adminMiddleware, [
   body('description').optional().trim().isLength({ max: 2000 }).escape(),
   body('date').isISO8601(),
   body('cost').isInt({ min: 0, max: 1000000 }),
-  body('status').isIn(['active', 'inactive', 'cancelled']),
+  body('status').isIn(['active', 'inactive', 'cancelled', 'completed']),
 ], async (req, res) => {
   if (!validate(req, res)) return;
   const { title, location, description, date, time, cost, max_participants, image_url, status } = req.body;
@@ -1175,6 +1269,10 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) =>
   const pendingVerifications = (await dbQuery("SELECT COUNT(*) as count FROM id_verifications WHERE status = $1", ['pending'])).rows[0];
   const openTickets = (await dbQuery("SELECT COUNT(*) as count FROM support_tickets WHERE status IN ($1, $2)", ['open', 'in-progress'])).rows[0];
   const totalReviews = (await dbQuery('SELECT COUNT(*) as count FROM reviews')).rows[0];
+  const pendingBlogs = (await dbQuery("SELECT COUNT(*) as count FROM blogs WHERE status = $1", ['pending'])).rows[0];
+  const totalBlogs = (await dbQuery('SELECT COUNT(*) as count FROM blogs')).rows[0];
+  const totalGalleries = (await dbQuery('SELECT COUNT(*) as count FROM galleries')).rows[0];
+  const publishedGalleries = (await dbQuery("SELECT COUNT(*) as count FROM galleries WHERE published = 1")).rows[0];
   const recentSecurityEvents = (await dbQuery(
     USE_PG
       ? "SELECT COUNT(*) as count FROM security_logs WHERE created_at > NOW() - INTERVAL '24 hours'"
@@ -1189,6 +1287,10 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) =>
     pendingVerifications: parseInt(pendingVerifications.count),
     openTickets: parseInt(openTickets.count),
     totalReviews: parseInt(totalReviews.count),
+    pendingBlogs: parseInt(pendingBlogs.count),
+    totalBlogs: parseInt(totalBlogs.count),
+    totalGalleries: parseInt(totalGalleries.count),
+    publishedGalleries: parseInt(publishedGalleries.count),
     securityEvents24h: parseInt(recentSecurityEvents.count)
   });
 });
@@ -1230,30 +1332,239 @@ app.get('/api/admin/security-logs', authMiddleware, adminMiddleware, async (req,
   res.json(result.rows);
 });
 
-// ─── REVIEW ROUTES ──────────────────────────────────────────────
+// ─── HELPER: Check if trip is completed ─────────────────────────
+async function isTripCompleted(userId, outingId) {
+  const booking = (await dbQuery(
+    'SELECT b.id, b.payment_status, o.date as outing_date FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.user_id = $1 AND b.outing_id = $2 AND b.payment_status = $3',
+    [userId, outingId, 'paid']
+  )).rows[0];
+  if (!booking) return { eligible: false, booking: null, reason: 'No paid booking found for this outing' };
+  const tripDate = new Date(booking.outing_date);
+  const now = new Date();
+  if (now < tripDate) return { eligible: false, booking, reason: 'Trip has not been completed yet. You can review after the trip date.' };
+  return { eligible: true, booking };
+}
+
+// ─── HELPER: Generate SEO-friendly slug ─────────────────────────
+function generateSlug(title, userId) {
+  const base = title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').substring(0, 60);
+  return `${base}-${userId}-${Date.now().toString(36)}`;
+}
+
+// ─── REVIEW ROUTES (ENHANCED) ───────────────────────────────────
 app.post('/api/reviews', authMiddleware, [
   body('outing_id').isInt({ min: 1 }).withMessage('Valid outing ID required'),
   body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be 1-5'),
-  body('comment').optional().trim().isLength({ max: 1000 }).escape(),
+  body('title').optional().trim().isLength({ max: 200 }).escape(),
+  body('comment').optional().trim().isLength({ max: 2000 }).escape(),
+  body('recommend').optional().isBoolean(),
 ], async (req, res) => {
   if (!validate(req, res)) return;
-  const { outing_id, rating, comment } = req.body;
+  const { outing_id, rating, title, comment, recommend } = req.body;
   const user_id = req.user.id;
+
+  // Check duplicate
   const existing = (await dbQuery('SELECT id FROM reviews WHERE user_id = $1 AND outing_id = $2', [user_id, outing_id])).rows[0];
-  if (existing) return res.status(400).json({ message: 'You already reviewed this outing' });
-  const hasBooked = (await dbQuery('SELECT id FROM bookings WHERE user_id = $1 AND outing_id = $2 AND payment_status = $3', [user_id, outing_id, 'paid'])).rows[0];
-  if (!hasBooked) return res.status(403).json({ message: 'You must book this outing before reviewing' });
-  await dbQuery('INSERT INTO reviews (user_id, outing_id, rating, comment) VALUES ($1,$2,$3,$4)', [user_id, outing_id, rating, sanitize(comment || '')]);
-  res.json({ success: true });
+  if (existing) return res.status(400).json({ success: false, message: 'You already reviewed this outing' });
+
+  // Check trip completion
+  const eligibility = await isTripCompleted(user_id, outing_id);
+  if (!eligibility.eligible) return res.status(403).json({ success: false, message: eligibility.reason });
+
+  await dbQuery(
+    'INSERT INTO reviews (user_id, outing_id, booking_id, rating, title, comment, recommend) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+    [user_id, outing_id, eligibility.booking.id, rating, sanitize(title || ''), sanitize(comment || ''), recommend !== false ? 1 : 0]
+  );
+
+  // Notify admin
+  const outing = (await dbQuery('SELECT title FROM outings WHERE id = $1', [outing_id])).rows[0];
+  securityLog('REVIEW_SUBMITTED', { userId: user_id, outingId: outing_id, rating });
+  res.json({ success: true, message: 'Review submitted successfully!' });
 });
 
 app.get('/api/reviews/:outingId', [
   param('outingId').isInt({ min: 1 }),
 ], async (req, res) => {
   if (!validate(req, res)) return;
-  const reviews = (await dbQuery('SELECT r.*, u.name as user_name FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.outing_id = $1 ORDER BY r.created_at DESC', [req.params.outingId])).rows;
-  const avg = (await dbQuery('SELECT AVG(rating) as avg, COUNT(*) as count FROM reviews WHERE outing_id = $1', [req.params.outingId])).rows[0];
-  res.json({ reviews, average: Math.round((parseFloat(avg.avg) || 0) * 10) / 10, count: parseInt(avg.count) });
+  const reviews = (await dbQuery(
+    'SELECT r.*, u.name as user_name FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.outing_id = $1 AND r.approved = 1 ORDER BY r.helpful_count DESC, r.created_at DESC',
+    [req.params.outingId]
+  )).rows;
+  const avg = (await dbQuery('SELECT AVG(rating) as avg, COUNT(*) as count FROM reviews WHERE outing_id = $1 AND approved = 1', [req.params.outingId])).rows[0];
+  // Rating breakdown
+  const breakdown = (await dbQuery(
+    'SELECT rating, COUNT(*) as count FROM reviews WHERE outing_id = $1 AND approved = 1 GROUP BY rating ORDER BY rating DESC',
+    [req.params.outingId]
+  )).rows;
+  const ratingBreakdown = {};
+  for (let i = 1; i <= 5; i++) ratingBreakdown[i] = 0;
+  breakdown.forEach(r => { ratingBreakdown[r.rating] = parseInt(r.count); });
+
+  res.json({
+    reviews,
+    average: Math.round((parseFloat(avg.avg) || 0) * 10) / 10,
+    count: parseInt(avg.count),
+    ratingBreakdown
+  });
+});
+
+// Check review eligibility for a user
+app.get('/api/reviews/eligibility/:outingId', authMiddleware, [
+  param('outingId').isInt({ min: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const eligibility = await isTripCompleted(req.user.id, parseInt(req.params.outingId));
+  const existing = (await dbQuery('SELECT id FROM reviews WHERE user_id = $1 AND outing_id = $2', [req.user.id, req.params.outingId])).rows[0];
+  res.json({ eligible: eligibility.eligible && !existing, alreadyReviewed: !!existing, reason: existing ? 'Already reviewed' : eligibility.reason || '' });
+});
+
+// Helpful vote for a review
+app.post('/api/reviews/:id/helpful', authMiddleware, [
+  param('id').isInt({ min: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  await dbQuery('UPDATE reviews SET helpful_count = helpful_count + 1 WHERE id = $1', [req.params.id]);
+  res.json({ success: true });
+});
+
+// User's own reviews
+app.get('/api/my-reviews', authMiddleware, async (req, res) => {
+  const reviews = (await dbQuery(
+    'SELECT r.*, o.title as outing_title, o.location as outing_location, o.image_url FROM reviews r JOIN outings o ON r.outing_id = o.id WHERE r.user_id = $1 ORDER BY r.created_at DESC',
+    [req.user.id]
+  )).rows;
+  res.json(reviews);
+});
+
+// ─── BLOG ROUTES ────────────────────────────────────────────────
+const blogLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { success: false, message: 'Too many blog submissions. Try again later.' } });
+
+app.post('/api/blogs', authMiddleware, blogLimiter, [
+  body('outing_id').isInt({ min: 1 }).withMessage('Valid outing ID required'),
+  body('title').trim().notEmpty().isLength({ max: 300 }).withMessage('Blog title required (max 300 chars)').escape(),
+  body('content').trim().notEmpty().isLength({ max: 50000 }).withMessage('Blog content required'),
+  body('cover_image').optional().trim().isLength({ max: 500 }),
+  body('tags').optional().trim().isLength({ max: 500 }).escape(),
+  body('category').optional().trim().isIn(['Adventure', 'Family Trip', 'Solo Travel', 'Budget Travel', 'Luxury Experience', 'Food Journey', 'Weekend Getaway', 'Cultural', 'Nature', 'Other']),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { outing_id, title, content, cover_image, tags, category } = req.body;
+  const user_id = req.user.id;
+
+  // Check trip completion
+  const eligibility = await isTripCompleted(user_id, outing_id);
+  if (!eligibility.eligible) return res.status(403).json({ success: false, message: eligibility.reason || 'Complete this trip before publishing a blog' });
+
+  // Sanitize HTML content (allow safe tags)
+  const sanitizedContent = content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/javascript\s*:/gi, '');
+
+  const slug = generateSlug(title, user_id);
+
+  const result = await dbQuery(
+    'INSERT INTO blogs (user_id, outing_id, booking_id, title, content, cover_image, tags, category, slug, status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id',
+    [user_id, outing_id, eligibility.booking.id, sanitize(title), sanitizedContent, sanitize(cover_image || ''), sanitize(tags || ''), category || 'Adventure', slug, 'pending']
+  );
+
+  securityLog('BLOG_SUBMITTED', { userId: user_id, outingId: outing_id, blogId: result.rows[0].id });
+  res.json({ success: true, message: 'Blog submitted for review! It will be published after admin approval.', blogId: result.rows[0].id, slug });
+});
+
+// Public: get published blogs
+app.get('/api/blogs', async (req, res) => {
+  const { category, tag, featured } = req.query;
+  let sql = `SELECT b.*, u.name as author_name, o.title as outing_title, o.location as outing_location, o.image_url as outing_image
+    FROM blogs b JOIN users u ON b.user_id = u.id JOIN outings o ON b.outing_id = o.id WHERE b.status = 'approved'`;
+  const params = [];
+  let paramIdx = 1;
+  if (category) { sql += ` AND b.category = $${paramIdx++}`; params.push(category); }
+  if (featured === '1') { sql += ` AND b.featured = 1`; }
+  sql += ' ORDER BY b.featured DESC, b.created_at DESC LIMIT 50';
+  const result = await dbQuery(sql, params);
+  res.json(result.rows);
+});
+
+// Public: get single blog by slug
+app.get('/api/blogs/by-slug/:slug', async (req, res) => {
+  const blog = (await dbQuery(
+    `SELECT b.*, u.name as author_name, o.title as outing_title, o.location as outing_location, o.image_url as outing_image, o.date as outing_date
+     FROM blogs b JOIN users u ON b.user_id = u.id JOIN outings o ON b.outing_id = o.id WHERE b.slug = $1 AND b.status = 'approved'`,
+    [req.params.slug]
+  )).rows[0];
+  if (!blog) return res.status(404).json({ success: false, message: 'Blog not found' });
+  res.json(blog);
+});
+
+// Blog eligibility check
+app.get('/api/blogs/eligibility/:outingId', authMiddleware, [
+  param('outingId').isInt({ min: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const eligibility = await isTripCompleted(req.user.id, parseInt(req.params.outingId));
+  res.json({ eligible: eligibility.eligible, reason: eligibility.reason || '' });
+});
+
+// User's own blogs
+app.get('/api/my-blogs', authMiddleware, async (req, res) => {
+  const blogs = (await dbQuery(
+    'SELECT b.*, o.title as outing_title, o.location as outing_location FROM blogs b JOIN outings o ON b.outing_id = o.id WHERE b.user_id = $1 ORDER BY b.created_at DESC',
+    [req.user.id]
+  )).rows;
+  res.json(blogs);
+});
+
+// ─── ADMIN: Review & Blog Moderation ────────────────────────────
+app.get('/api/admin/reviews', authMiddleware, adminMiddleware, async (req, res) => {
+  const result = await dbQuery(
+    'SELECT r.*, u.name as user_name, u.email as user_email, o.title as outing_title FROM reviews r JOIN users u ON r.user_id = u.id JOIN outings o ON r.outing_id = o.id ORDER BY r.created_at DESC'
+  );
+  res.json(result.rows);
+});
+
+app.put('/api/admin/reviews/:id', authMiddleware, adminMiddleware, [
+  param('id').isInt({ min: 1 }),
+  body('approved').optional().isInt({ min: 0, max: 1 }),
+  body('admin_reply').optional().trim().isLength({ max: 1000 }).escape(),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { approved, admin_reply } = req.body;
+  if (approved !== undefined) {
+    await dbQuery('UPDATE reviews SET approved = $1 WHERE id = $2', [approved, req.params.id]);
+  }
+  if (admin_reply !== undefined) {
+    await dbQuery('UPDATE reviews SET admin_reply = $1 WHERE id = $2', [admin_reply, req.params.id]);
+  }
+  res.json({ success: true });
+});
+
+app.get('/api/admin/blogs', authMiddleware, adminMiddleware, async (req, res) => {
+  const result = await dbQuery(
+    'SELECT b.*, u.name as author_name, u.email as author_email, o.title as outing_title FROM blogs b JOIN users u ON b.user_id = u.id JOIN outings o ON b.outing_id = o.id ORDER BY b.created_at DESC'
+  );
+  res.json(result.rows);
+});
+
+app.put('/api/admin/blogs/:id', authMiddleware, adminMiddleware, [
+  param('id').isInt({ min: 1 }),
+  body('status').optional().isIn(['pending', 'approved', 'rejected']),
+  body('featured').optional().isInt({ min: 0, max: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { status, featured } = req.body;
+  const blog = (await dbQuery('SELECT * FROM blogs WHERE id = $1', [req.params.id])).rows[0];
+  if (!blog) return res.status(404).json({ success: false, message: 'Blog not found' });
+  if (status !== undefined) {
+    await dbQuery('UPDATE blogs SET status = $1 WHERE id = $2', [status, req.params.id]);
+    // Notify author
+    const statusLabel = status === 'approved' ? 'approved and published! 🎉' : status === 'rejected' ? 'rejected.' : 'updated.';
+    await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+      [blog.user_id, 'blog', 'Blog ' + (status === 'approved' ? 'Published! ✍️' : 'Update'), `Your blog "${blog.title}" has been ${statusLabel}`]);
+  }
+  if (featured !== undefined) {
+    await dbQuery('UPDATE blogs SET featured = $1 WHERE id = $2', [featured, req.params.id]);
+  }
+  res.json({ success: true });
 });
 
 // ─── CHAT ROUTES ────────────────────────────────────────────────
@@ -1625,6 +1936,207 @@ app.put('/api/admin/support-tickets/:id', authMiddleware, adminMiddleware, [
   await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
     [ticket.user_id, 'support', 'Ticket #' + ticket.id + ' Updated', 'Your support ticket has been updated to: ' + status + (admin_reply ? '. Reply: ' + admin_reply : '')]);
   res.json({ success: true });
+});
+
+// ─── GALLERY ROUTES ─────────────────────────────────────────────
+const galleryLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { success: false, message: 'Too many gallery requests. Try again later.' } });
+
+// Gallery security: prevent indexing
+app.use('/api/gallery', (req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  next();
+});
+
+// Admin: Create gallery for an outing
+app.post('/api/gallery/create', authMiddleware, adminMiddleware, [
+  body('outing_id').isInt({ min: 1 }).withMessage('Valid outing ID required'),
+  body('title').trim().notEmpty().isLength({ max: 300 }).withMessage('Gallery title required').escape(),
+  body('cover_image').optional().trim().isLength({ max: 1000 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { outing_id, title, cover_image } = req.body;
+  const outing = (await dbQuery('SELECT id, title FROM outings WHERE id = $1', [outing_id])).rows[0];
+  if (!outing) return res.status(404).json({ success: false, message: 'Outing not found' });
+  // Check if gallery already exists for this outing
+  const existing = (await dbQuery('SELECT id FROM galleries WHERE outing_id = $1', [outing_id])).rows[0];
+  if (existing) return res.status(400).json({ success: false, message: 'Gallery already exists for this outing. Use the existing gallery.' });
+  const result = await dbQuery(
+    'INSERT INTO galleries (outing_id, title, cover_image, created_by) VALUES ($1,$2,$3,$4) RETURNING id',
+    [outing_id, sanitize(title), sanitize(cover_image || ''), req.user.id]
+  );
+  securityLog('GALLERY_CREATED', { galleryId: result.rows[0].id, outingId: outing_id, adminId: req.user.id });
+  res.json({ success: true, galleryId: result.rows[0].id });
+});
+
+// Admin: Upload media to gallery (URL-based)
+app.post('/api/gallery/upload', authMiddleware, adminMiddleware, galleryLimiter, [
+  body('gallery_id').isInt({ min: 1 }).withMessage('Valid gallery ID required'),
+  body('media').isArray({ min: 1, max: 50 }).withMessage('Provide 1-50 media items'),
+  body('media.*.url').trim().notEmpty().isLength({ max: 1000 }).withMessage('Valid media URL required'),
+  body('media.*.caption').optional().trim().isLength({ max: 500 }).escape(),
+  body('media.*.media_type').optional().isIn(['image', 'video']),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { gallery_id, media } = req.body;
+  const gallery = (await dbQuery('SELECT id FROM galleries WHERE id = $1', [gallery_id])).rows[0];
+  if (!gallery) return res.status(404).json({ success: false, message: 'Gallery not found' });
+  const maxSort = (await dbQuery('SELECT COALESCE(MAX(sort_order), 0) as max_sort FROM gallery_media WHERE gallery_id = $1', [gallery_id])).rows[0];
+  let sortOrder = parseInt(maxSort.max_sort) + 1;
+  let uploaded = 0;
+  for (const item of media) {
+    await dbQuery(
+      'INSERT INTO gallery_media (gallery_id, media_url, media_type, caption, sort_order) VALUES ($1,$2,$3,$4,$5)',
+      [gallery_id, sanitize(item.url), item.media_type || 'image', sanitize(item.caption || ''), sortOrder++]
+    );
+    uploaded++;
+  }
+  securityLog('GALLERY_MEDIA_UPLOADED', { galleryId: gallery_id, count: uploaded, adminId: req.user.id });
+  res.json({ success: true, uploaded });
+});
+
+// Admin: Delete a media item
+app.delete('/api/gallery/media/:id', authMiddleware, adminMiddleware, [
+  param('id').isInt({ min: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  await dbQuery('DELETE FROM gallery_likes WHERE media_id = $1', [req.params.id]);
+  await dbQuery('DELETE FROM gallery_media WHERE id = $1', [req.params.id]);
+  res.json({ success: true });
+});
+
+// Admin: Publish/unpublish gallery
+app.put('/api/gallery/publish', authMiddleware, adminMiddleware, [
+  body('gallery_id').isInt({ min: 1 }),
+  body('published').isInt({ min: 0, max: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { gallery_id, published } = req.body;
+  const gallery = (await dbQuery('SELECT g.*, o.title as outing_title FROM galleries g JOIN outings o ON g.outing_id = o.id WHERE g.id = $1', [gallery_id])).rows[0];
+  if (!gallery) return res.status(404).json({ success: false, message: 'Gallery not found' });
+  await dbQuery('UPDATE galleries SET published = $1 WHERE id = $2', [published, gallery_id]);
+  // If publishing, send notifications to all users who booked this outing
+  if (published === 1) {
+    const bookedUsers = (await dbQuery(
+      'SELECT DISTINCT b.user_id FROM bookings b WHERE b.outing_id = $1 AND b.payment_status = $2',
+      [gallery.outing_id, 'paid']
+    )).rows;
+    for (const u of bookedUsers) {
+      await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+        [u.user_id, 'gallery', 'Trip Memories Ready! 📸', `Your ${sanitize(gallery.outing_title)} trip memories are ready! Login now to view your gallery.`]
+      );
+    }
+    securityLog('GALLERY_PUBLISHED', { galleryId: gallery_id, outingId: gallery.outing_id, notified: bookedUsers.length });
+  }
+  res.json({ success: true });
+});
+
+// Admin: Update gallery cover & title
+app.put('/api/gallery/:id', authMiddleware, adminMiddleware, [
+  param('id').isInt({ min: 1 }),
+  body('title').optional().trim().isLength({ max: 300 }).escape(),
+  body('cover_image').optional().trim().isLength({ max: 1000 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { title, cover_image } = req.body;
+  if (title !== undefined) await dbQuery('UPDATE galleries SET title = $1 WHERE id = $2', [sanitize(title), req.params.id]);
+  if (cover_image !== undefined) await dbQuery('UPDATE galleries SET cover_image = $1 WHERE id = $2', [sanitize(cover_image), req.params.id]);
+  res.json({ success: true });
+});
+
+// Admin: List all galleries
+app.get('/api/admin/galleries', authMiddleware, adminMiddleware, async (req, res) => {
+  const result = await dbQuery(`
+    SELECT g.*, o.title as outing_title, o.location as outing_location, o.date as outing_date,
+      (SELECT COUNT(*) FROM gallery_media gm WHERE gm.gallery_id = g.id) as media_count
+    FROM galleries g JOIN outings o ON g.outing_id = o.id ORDER BY g.created_at DESC
+  `);
+  res.json(result.rows);
+});
+
+// Admin: Get gallery detail with media
+app.get('/api/admin/gallery/:id', authMiddleware, adminMiddleware, [
+  param('id').isInt({ min: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const gallery = (await dbQuery(
+    'SELECT g.*, o.title as outing_title, o.location as outing_location, o.date as outing_date FROM galleries g JOIN outings o ON g.outing_id = o.id WHERE g.id = $1',
+    [req.params.id]
+  )).rows[0];
+  if (!gallery) return res.status(404).json({ success: false, message: 'Gallery not found' });
+  const media = (await dbQuery('SELECT * FROM gallery_media WHERE gallery_id = $1 ORDER BY sort_order ASC', [req.params.id])).rows;
+  res.json({ ...gallery, media });
+});
+
+// Admin: Delete gallery
+app.delete('/api/gallery/:id', authMiddleware, adminMiddleware, [
+  param('id').isInt({ min: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  // Delete likes, media, then gallery
+  await dbQuery('DELETE FROM gallery_likes WHERE media_id IN (SELECT id FROM gallery_media WHERE gallery_id = $1)', [req.params.id]);
+  await dbQuery('DELETE FROM gallery_media WHERE gallery_id = $1', [req.params.id]);
+  await dbQuery('DELETE FROM galleries WHERE id = $1', [req.params.id]);
+  securityLog('GALLERY_DELETED', { galleryId: req.params.id, adminId: req.user.id });
+  res.json({ success: true });
+});
+
+// User: Get my galleries (completed trips with published galleries)
+app.get('/api/user/galleries', authMiddleware, async (req, res) => {
+  const galleries = (await dbQuery(`
+    SELECT g.id, g.title, g.cover_image, g.created_at, o.title as outing_title, o.location as outing_location, o.date as outing_date, o.image_url as outing_image,
+      (SELECT COUNT(*) FROM gallery_media gm WHERE gm.gallery_id = g.id) as media_count
+    FROM galleries g
+    JOIN outings o ON g.outing_id = o.id
+    JOIN bookings b ON b.outing_id = g.outing_id AND b.user_id = $1 AND b.payment_status = 'paid'
+    WHERE g.published = 1
+    ORDER BY o.date DESC
+  `, [req.user.id])).rows;
+  res.json(galleries);
+});
+
+// User: Get gallery detail (with access check)
+app.get('/api/gallery/:id', authMiddleware, [
+  param('id').isInt({ min: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const gallery = (await dbQuery(
+    'SELECT g.*, o.title as outing_title, o.location as outing_location, o.date as outing_date FROM galleries g JOIN outings o ON g.outing_id = o.id WHERE g.id = $1',
+    [req.params.id]
+  )).rows[0];
+  if (!gallery) return res.status(404).json({ success: false, message: 'Gallery not found' });
+  if (!gallery.published && req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Gallery not yet published' });
+  // Verify user has a paid booking for this outing (unless admin)
+  if (req.user.role !== 'admin') {
+    const booking = (await dbQuery(
+      'SELECT id FROM bookings WHERE user_id = $1 AND outing_id = $2 AND payment_status = $3',
+      [req.user.id, gallery.outing_id, 'paid']
+    )).rows[0];
+    if (!booking) return res.status(403).json({ success: false, message: 'Gallery access denied. You must have a paid booking for this outing.' });
+    // Check trip completion
+    const tripDate = new Date(gallery.outing_date);
+    if (new Date() < tripDate) return res.status(403).json({ success: false, message: 'Gallery will be available after trip completion.' });
+  }
+  const media = (await dbQuery(`
+    SELECT gm.*, COALESCE((SELECT COUNT(*) FROM gallery_likes gl WHERE gl.media_id = gm.id), 0) as like_count,
+      CASE WHEN EXISTS(SELECT 1 FROM gallery_likes gl WHERE gl.media_id = gm.id AND gl.user_id = $2) THEN 1 ELSE 0 END as liked_by_me
+    FROM gallery_media gm WHERE gm.gallery_id = $1 ORDER BY gm.sort_order ASC
+  `, [req.params.id, req.user.id])).rows;
+  res.json({ ...gallery, media });
+});
+
+// User: Like/unlike a photo
+app.post('/api/gallery/media/:id/like', authMiddleware, [
+  param('id').isInt({ min: 1 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const existing = (await dbQuery('SELECT id FROM gallery_likes WHERE media_id = $1 AND user_id = $2', [req.params.id, req.user.id])).rows[0];
+  if (existing) {
+    await dbQuery('DELETE FROM gallery_likes WHERE id = $1', [existing.id]);
+    res.json({ success: true, liked: false });
+  } else {
+    await dbQuery('INSERT INTO gallery_likes (media_id, user_id) VALUES ($1, $2)', [req.params.id, req.user.id]);
+    res.json({ success: true, liked: true });
+  }
 });
 
 // ─── SECURITY: Global error handler — never leak stack traces ───
