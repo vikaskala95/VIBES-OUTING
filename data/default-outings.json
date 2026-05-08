@@ -7,7 +7,8 @@
     "time": "4:00 AM",
     "cost": 2999,
     "max": 25,
-    "img": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600"
+    "img": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600",
+    "category": "mountains"
   },
   {
     "title": "🏞️ Bheemeshwari Adventure Day",
@@ -17,7 +18,8 @@
     "time": "6:00 AM",
     "cost": 4999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600"
+    "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600",
+    "category": "adventure"
   },
   {
     "title": "⛰️ Chikmagalur Coffee & Chill (2D/1N)",
@@ -27,7 +29,8 @@
     "time": "6:00 AM",
     "cost": 12999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600"
+    "img": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600",
+    "category": "mountains"
   },
   {
     "title": "🏰 Mysore Royal Day Out",
@@ -37,7 +40,8 @@
     "time": "7:00 AM",
     "cost": 1999,
     "max": 30,
-    "img": "https://images.unsplash.com/photo-1567337710282-00832b415979?w=600"
+    "img": "https://images.unsplash.com/photo-1567337710282-00832b415979?w=600",
+    "category": "road_trips"
   },
   {
     "title": "🌿 Ooty Mountain Escape (2D/1N)",
@@ -47,7 +51,8 @@
     "time": "5:00 AM",
     "cost": 9999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600"
+    "img": "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600",
+    "category": "mountains"
   },
   {
     "title": "☕ Coorg Rainforest Retreat (2D/1N)",
@@ -57,7 +62,8 @@
     "time": "6:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600"
+    "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600",
+    "category": "road_trips"
   },
   {
     "title": "🌊 Wayanad Wild Weekend (2D/1N)",
@@ -67,7 +73,8 @@
     "time": "5:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600"
+    "img": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600",
+    "category": "adventure"
   },
   {
     "title": "🏜️ Gandikota Grand Canyon (2D/1N)",
@@ -77,7 +84,8 @@
     "time": "5:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600"
+    "img": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600",
+    "category": "adventure"
   },
   {
     "title": "🛕 Lepakshi Heritage & Vibes",
@@ -87,7 +95,8 @@
     "time": "7:00 AM",
     "cost": 5999,
     "max": 25,
-    "img": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600"
+    "img": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600",
+    "category": "festivals"
   },
   {
     "title": "🌲 Sakleshpur Green Route Trek",
@@ -97,7 +106,8 @@
     "time": "5:00 AM",
     "cost": 9999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600"
+    "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600",
+    "category": "adventure"
   },
   {
     "title": "🏖️ Goa Beach Blowout (2D/1N)",
@@ -107,6 +117,7 @@
     "time": "6:00 AM",
     "cost": 11999,
     "max": 25,
-    "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600"
+    "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600",
+    "category": "beaches"
   }
 ]

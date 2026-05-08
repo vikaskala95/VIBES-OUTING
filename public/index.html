@@ -352,6 +352,21 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 .cat-card-icon{position:absolute;top:1rem;right:1rem;width:36px;height:36px;background:rgba(255,255,255,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#fff;z-index:3;border:1px solid rgba(255,255,255,.15);transition:all .3s ease;opacity:.7}
 .cat-card:hover .cat-card-icon{opacity:1;background:rgba(139,92,246,.3);transform:scale(1.1);border-color:rgba(139,92,246,.4)}
 
+/* ACTIVE VIBE CARD STATE */
+.cat-card-active{transform:translateY(-6px) scale(1.03);box-shadow:0 0 0 3px rgba(139,92,246,.5),0 12px 40px rgba(108,60,225,.3);border-color:rgba(139,92,246,.5)}
+.cat-card-active .cat-card-overlay{background:linear-gradient(180deg,rgba(108,60,225,.1) 0%,rgba(108,60,225,.15) 40%,rgba(15,23,42,.75) 100%)}
+.cat-card-active .cat-card-glass{border-color:rgba(139,92,246,.5);box-shadow:inset 0 0 30px rgba(139,92,246,.1)}
+.cat-card-active .cat-card-icon{opacity:1;background:rgba(139,92,246,.5);transform:scale(1.15);border-color:rgba(139,92,246,.6)}
+.cat-card-active .cat-card-name{text-shadow:0 2px 12px rgba(139,92,246,.5)}
+.cat-card-active::after{content:'✓';position:absolute;top:10px;left:10px;width:24px;height:24px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;z-index:4;box-shadow:0 2px 8px rgba(108,60,225,.4);animation:fadeInUp .3s ease}
+
+/* VIBE FILTER BUTTONS (Outings page) */
+.vibe-filters{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;padding:.25rem 0}
+.vibe-filter-btn{padding:.45rem 1rem;border-radius:999px;border:1.5px solid var(--border);background:#fff;color:var(--text-light);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .3s ease;white-space:nowrap}
+.vibe-filter-btn:hover{border-color:var(--primary-light);color:var(--primary);background:rgba(108,60,225,.04);transform:translateY(-1px)}
+.vibe-btn-active{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(108,60,225,.25)}
+.vibe-btn-active:hover{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;transform:translateY(-1px)}
+
 /* FOOTER */
 .footer{background:linear-gradient(135deg,#1E293B,#0F172A);color:#fff;padding:0;text-align:left}
 .footer-main{max-width:1200px;margin:0 auto;padding:3.5rem 2rem 2rem;display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:2.5rem}
@@ -687,6 +702,7 @@ let currentUser = JSON.parse(sessionStorage.getItem('vibes_user') || 'null');
 let authToken = sessionStorage.getItem('vibes_token') || null;
 let outings = [];
 let currentPage = 'home';
+let selectedVibe = null;
 
 // ─── SECURITY: Client-side HTML escaping (defense-in-depth) ─────
 function escapeHtml(str) {
@@ -1120,47 +1136,47 @@ async function renderHome(app) {
       <h2 class="section-title">✨ Explore by Vibe</h2>
       <p class="section-subtitle">Pick a mood, find your escape</p>
       <div class="categories-row">
-        <div class="cat-card" onclick="searchDestination('Beach')">
+        <div class="cat-card${selectedVibe==='beaches'?' cat-card-active':''}" data-category="beaches" onclick="selectVibe('beaches')">
           <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80')"></div>
           <div class="cat-card-overlay"></div>
           <div class="cat-card-glass"></div>
           <div class="cat-card-icon"><i class="fas fa-umbrella-beach"></i></div>
-          <div class="cat-card-content"><span class="cat-card-name">Beaches</span><span class="cat-card-count">12 experiences</span></div>
+          <div class="cat-card-content"><span class="cat-card-name">Beaches</span><span class="cat-card-count">${outings.filter(o=>o.category==='beaches').length} experiences</span></div>
         </div>
-        <div class="cat-card" onclick="searchDestination('Mountain')">
+        <div class="cat-card${selectedVibe==='mountains'?' cat-card-active':''}" data-category="mountains" onclick="selectVibe('mountains')">
           <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80')"></div>
           <div class="cat-card-overlay"></div>
           <div class="cat-card-glass"></div>
           <div class="cat-card-icon"><i class="fas fa-mountain"></i></div>
-          <div class="cat-card-content"><span class="cat-card-name">Mountains</span><span class="cat-card-count">9 experiences</span></div>
+          <div class="cat-card-content"><span class="cat-card-name">Mountains</span><span class="cat-card-count">${outings.filter(o=>o.category==='mountains').length} experiences</span></div>
         </div>
-        <div class="cat-card" onclick="searchDestination('Festival')">
+        <div class="cat-card${selectedVibe==='festivals'?' cat-card-active':''}" data-category="festivals" onclick="selectVibe('festivals')">
           <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600&q=80')"></div>
           <div class="cat-card-overlay"></div>
           <div class="cat-card-glass"></div>
           <div class="cat-card-icon"><i class="fas fa-music"></i></div>
-          <div class="cat-card-content"><span class="cat-card-name">Festivals</span><span class="cat-card-count">7 experiences</span></div>
+          <div class="cat-card-content"><span class="cat-card-name">Festivals</span><span class="cat-card-count">${outings.filter(o=>o.category==='festivals').length} experiences</span></div>
         </div>
-        <div class="cat-card" onclick="searchDestination('Road Trip')">
+        <div class="cat-card${selectedVibe==='road_trips'?' cat-card-active':''}" data-category="road_trips" onclick="selectVibe('road_trips')">
           <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=80')"></div>
           <div class="cat-card-overlay"></div>
           <div class="cat-card-glass"></div>
           <div class="cat-card-icon"><i class="fas fa-car"></i></div>
-          <div class="cat-card-content"><span class="cat-card-name">Road Trips</span><span class="cat-card-count">8 experiences</span></div>
+          <div class="cat-card-content"><span class="cat-card-name">Road Trips</span><span class="cat-card-count">${outings.filter(o=>o.category==='road_trips').length} experiences</span></div>
         </div>
-        <div class="cat-card" onclick="searchDestination('Trek')">
+        <div class="cat-card${selectedVibe==='adventure'?' cat-card-active':''}" data-category="adventure" onclick="selectVibe('adventure')">
           <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&q=80')"></div>
           <div class="cat-card-overlay"></div>
           <div class="cat-card-glass"></div>
           <div class="cat-card-icon"><i class="fas fa-hiking"></i></div>
-          <div class="cat-card-content"><span class="cat-card-name">Adventure</span><span class="cat-card-count">11 experiences</span></div>
+          <div class="cat-card-content"><span class="cat-card-name">Adventure</span><span class="cat-card-count">${outings.filter(o=>o.category==='adventure').length} experiences</span></div>
         </div>
-        <div class="cat-card" onclick="searchDestination('Night')">
+        <div class="cat-card${selectedVibe==='nightlife'?' cat-card-active':''}" data-category="nightlife" onclick="selectVibe('nightlife')">
           <div class="cat-card-bg" style="background-image:url('https://images.unsplash.com/photo-1475483768296-6163e08872a1?w=600&q=80')"></div>
           <div class="cat-card-overlay"></div>
           <div class="cat-card-glass"></div>
           <div class="cat-card-icon"><i class="fas fa-moon"></i></div>
-          <div class="cat-card-content"><span class="cat-card-name">Nightlife</span><span class="cat-card-count">6 experiences</span></div>
+          <div class="cat-card-content"><span class="cat-card-name">Nightlife</span><span class="cat-card-count">${outings.filter(o=>o.category==='nightlife').length} experiences</span></div>
         </div>
       </div>
     </section>
@@ -1326,12 +1342,18 @@ function outingCard(o) {
 
 // ─── OUTINGS PAGE ───────────────────────────────────────────────
 async function renderOutings(app) {
-  const data = await api('/outings');
+  const url = selectedVibe ? '/outings?category=' + encodeURIComponent(selectedVibe) : '/outings';
+  const data = await api(url);
   outings = Array.isArray(data) ? data : [];
+  const vibeLabels = { beaches: '🏖️ Beaches', mountains: '⛰️ Mountains', festivals: '🎵 Festivals', road_trips: '🚗 Road Trips', adventure: '🥾 Adventure', nightlife: '🌙 Nightlife' };
   app.innerHTML = `
     <section class="section">
-      <h2 class="section-title">🗺️ All Outings</h2>
-      <p class="section-subtitle">Find your perfect adventure</p>
+      <h2 class="section-title">🗺️ ${selectedVibe ? vibeLabels[selectedVibe] || 'Outings' : 'All Outings'}</h2>
+      <p class="section-subtitle">${selectedVibe ? 'Showing ' + (vibeLabels[selectedVibe] || selectedVibe) + ' experiences' : 'Find your perfect adventure'}</p>
+      <div class="vibe-filters">
+        <button class="vibe-filter-btn${!selectedVibe ? ' vibe-btn-active' : ''}" data-category="" onclick="selectedVibe=null;renderOutings(document.getElementById('app'))">All</button>
+        ${Object.entries(vibeLabels).map(([key, label]) => `<button class="vibe-filter-btn${selectedVibe===key ? ' vibe-btn-active' : ''}" data-category="${key}" onclick="selectVibe('${key}')">${label}</button>`).join('')}
+      </div>
       <div class="filters">
         <input type="text" id="searchFilter" placeholder="🔍 Search outings..." oninput="filterOutings()">
         <select id="locationFilter" onchange="filterOutings()">
@@ -1346,7 +1368,7 @@ async function renderOutings(app) {
           <option value="11000-99999">₹11,000+</option>
         </select>
       </div>
-      <div class="cards-grid" id="outingsGrid">${outings.map(o => outingCard(o)).join('')}</div>
+      <div class="cards-grid" id="outingsGrid" style="transition:opacity .3s ease, transform .3s ease">${outings.map(o => outingCard(o)).join('')}</div>
     </section>
   `;
 }
@@ -2545,6 +2567,7 @@ function showCreateOuting() {
         <div class="form-group"><label>Max Participants</label><input type="number" id="newMax" value="20" min="1"></div>
       </div>
       <div class="form-group"><label>Time</label><input type="text" id="newTime" value="10:00 AM"></div>
+      <div class="form-group"><label>Category</label><select id="newCategory"><option value="">None</option><option value="beaches">Beaches</option><option value="mountains">Mountains</option><option value="festivals">Festivals</option><option value="road_trips">Road Trips</option><option value="adventure">Adventure</option><option value="nightlife">Nightlife</option></select></div>
       <div class="form-group"><label>Image URL</label><input type="url" id="newImage" placeholder="https://..."></div>
       <div class="form-group"><label>Description</label><textarea id="newDesc"></textarea></div>
       <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-check"></i> Create</button>
@@ -2554,7 +2577,7 @@ function showCreateOuting() {
 
 async function createOuting(e) {
   e.preventDefault();
-  await api('/outings', { method: 'POST', body: { title: document.getElementById('newTitle').value, location: document.getElementById('newLocation').value, date: document.getElementById('newDate').value, time: document.getElementById('newTime').value, cost: parseInt(document.getElementById('newCost').value), max_participants: parseInt(document.getElementById('newMax').value), image_url: document.getElementById('newImage').value, description: document.getElementById('newDesc').value } });
+  await api('/outings', { method: 'POST', body: { title: document.getElementById('newTitle').value, location: document.getElementById('newLocation').value, date: document.getElementById('newDate').value, time: document.getElementById('newTime').value, cost: parseInt(document.getElementById('newCost').value), max_participants: parseInt(document.getElementById('newMax').value), image_url: document.getElementById('newImage').value, description: document.getElementById('newDesc').value, category: document.getElementById('newCategory').value } });
   closeModal(); toast('Outing created!', 'success'); renderAdmin(document.getElementById('app'));
 }
 
@@ -2846,6 +2869,72 @@ function searchDestination(dest) {
     const sf = document.getElementById('searchFilter');
     if (sf) { sf.value = dest; filterOutings(); }
   }, 300);
+}
+
+async function selectVibe(category) {
+  // If same vibe clicked again, deselect (show all)
+  if (selectedVibe === category) {
+    selectedVibe = null;
+  } else {
+    selectedVibe = category;
+  }
+  // Update active state on vibe cards
+  document.querySelectorAll('.cat-card').forEach(card => {
+    const cardCategory = card.getAttribute('data-category');
+    if (cardCategory === selectedVibe) {
+      card.classList.add('cat-card-active');
+    } else {
+      card.classList.remove('cat-card-active');
+    }
+  });
+  // Navigate to outings page with the selected vibe
+  if (currentPage !== 'outings') {
+    navigate('outings');
+    // Wait for page render, then apply vibe filter
+    setTimeout(() => applyVibeFilter(), 350);
+  } else {
+    applyVibeFilter();
+  }
+}
+
+async function applyVibeFilter() {
+  const grid = document.getElementById('outingsGrid');
+  if (!grid) return;
+  // Fade out transition
+  grid.style.opacity = '0';
+  grid.style.transform = 'translateY(10px)';
+  try {
+    const url = selectedVibe ? '/outings?category=' + encodeURIComponent(selectedVibe) : '/outings';
+    const data = await api(url);
+    outings = Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error('Failed to filter outings:', e);
+  }
+  // Update the vibe filter buttons on outings page
+  document.querySelectorAll('.vibe-filter-btn').forEach(btn => {
+    if (btn.getAttribute('data-category') === selectedVibe) {
+      btn.classList.add('vibe-btn-active');
+    } else {
+      btn.classList.remove('vibe-btn-active');
+    }
+  });
+  // Reset other filters
+  const sf = document.getElementById('searchFilter');
+  const lf = document.getElementById('locationFilter');
+  const bf = document.getElementById('budgetFilter');
+  if (sf) sf.value = '';
+  if (lf) lf.value = '';
+  if (bf) bf.value = '';
+  // Update location dropdown options
+  if (lf) {
+    lf.innerHTML = '<option value="">All Locations</option>' + [...new Set(outings.map(o => o.location))].map(l => `<option>${l}</option>`).join('');
+  }
+  // Re-render grid with transition
+  setTimeout(() => {
+    grid.innerHTML = outings.length ? outings.map(o => outingCard(o)).join('') : '<p style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:3rem">No outings found for this vibe. Try a different one!</p>';
+    grid.style.opacity = '1';
+    grid.style.transform = 'translateY(0)';
+  }, 200);
 }
 
 // Generate sparkle particles
