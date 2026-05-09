@@ -722,23 +722,72 @@ window.addEventListener('popstate', (e) => {
 });
 
 // ─── API ────────────────────────────────────────────────────────
-const API_BASE = window.VIBES_API_BASE || (window.location.hostname === 'localhost' ? '' : 'https://vibesouting-production.up.railway.app');
-const api = async (url, opts = {}) => {
+// Use same-origin proxy via Vercel rewrite in production, direct in dev
+const API_BASE = window.VIBES_API_BASE || (window.location.hostname === 'localhost' ? '' : '');
+const RAILWAY_DIRECT = 'https://vibesouting-production.up.railway.app';
+
+const api = async (url, opts = {}, _retryCount = 0) => {
+  const MAX_RETRIES = 2;
+  const TIMEOUT_MS = 15000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
   try {
     const headers = { 'Content-Type': 'application/json' };
     if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
-    const res = await fetch(API_BASE + '/api' + url, {
+    const base = API_BASE || '';
+    const res = await fetch(base + '/api' + url, {
       method: opts.method || 'GET',
       headers,
       credentials: 'include',
-      body: opts.body ? JSON.stringify(opts.body) : undefined
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
+
     if (res.status === 401) { logout(); toast('Session expired. Please login again.', 'error'); return { success: false }; }
+
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      console.error('API Error: Expected JSON but got', contentType, 'from', base + '/api' + url);
+      // Retry with direct Railway URL if proxy returned non-JSON (HTML 404 etc.)
+      if (!API_BASE && _retryCount === 0 && RAILWAY_DIRECT) {
+        console.warn('Retrying with direct Railway URL...');
+        const directRes = await fetch(RAILWAY_DIRECT + '/api' + url, {
+          method: opts.method || 'GET',
+          headers,
+          credentials: 'include',
+          body: opts.body ? JSON.stringify(opts.body) : undefined,
+        });
+        if (directRes.ok) return await directRes.json();
+      }
+      toast('Server returned an unexpected response. Please try again.', 'error');
+      return { success: false, message: 'Invalid response format' };
+    }
+
     return await res.json();
   } catch (err) {
-    console.error('API Error:', err);
-    toast('Network error. Please check your connection and try again.', 'error');
-    return { success: false, message: 'Network error' };
+    clearTimeout(timeoutId);
+    const isTimeout = err.name === 'AbortError';
+    const isNetwork = err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError') || err.message?.includes('Network request failed');
+
+    console.error(`API Error [${opts.method || 'GET'} /api${url}]:`, err.name, err.message);
+
+    // Retry once on transient failures (cold starts, timeouts)
+    if (_retryCount < MAX_RETRIES && (isTimeout || isNetwork)) {
+      console.warn(`Retrying API call (attempt ${_retryCount + 2}/${MAX_RETRIES + 1})...`);
+      await new Promise(r => setTimeout(r, 1000 * (_retryCount + 1)));
+      return api(url, opts, _retryCount + 1);
+    }
+
+    if (isTimeout) {
+      toast('Request timed out. The server may be starting up — please try again in a moment.', 'error');
+    } else if (isNetwork) {
+      toast('Unable to reach the server. Please check your internet connection and try again.', 'error');
+    } else {
+      toast('Something went wrong. Please try again.', 'error');
+    }
+    return { success: false, message: isTimeout ? 'Request timeout' : 'Network error' };
   }
 };
 
@@ -880,7 +929,7 @@ async function handleSignup(e) {
   else toast(data.message, 'error');
 }
 
-function logout() { currentUser = null; authToken = null; sessionStorage.removeItem('vibes_user'); sessionStorage.removeItem('vibes_token'); if (chatInterval) { clearInterval(chatInterval); chatInterval = null; } fetch(API_BASE + '/api/auth/logout', { method: 'POST', credentials: 'include' }); renderNav(); navigate('home'); toast('Logged out'); }
+function logout() { currentUser = null; authToken = null; sessionStorage.removeItem('vibes_user'); sessionStorage.removeItem('vibes_token'); if (chatInterval) { clearInterval(chatInterval); chatInterval = null; } fetch((API_BASE || '') + '/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {}); renderNav(); navigate('home'); toast('Logged out'); }
 
 function showResetPassword(token) {
   // Render full-page reset form instead of a modal for better UX from email links
@@ -956,7 +1005,7 @@ async function handleResetPassword(e, token) {
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
   try {
-    const res = await fetch(API_BASE + '/api/auth/reset-password', {
+    const res = await fetch((API_BASE || '') + '/api/auth/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

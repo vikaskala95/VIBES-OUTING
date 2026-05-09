@@ -162,6 +162,23 @@ app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/signup', signupLimiter);
 app.use('/api/auth/forgot-password', passwordResetLimiter);
 
+// ─── HEALTH CHECK (before body parsing, no rate limit) ──────────
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
+});
+
+// ─── LOGGING: Request logger for API debugging ─────────────────
+app.use('/api/', (req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    if (duration > 3000 || res.statusCode >= 400) {
+      console.log(`[API] ${req.method} ${req.originalUrl} → ${res.statusCode} (${duration}ms) origin=${req.headers.origin || 'none'}`);
+    }
+  });
+  next();
+});
+
 // ─── SECURITY: Body size limit ──────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
