@@ -794,6 +794,23 @@ async function initDatabase() {
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_trip_expectations_user_id ON trip_expectations(user_id)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_trip_expectations_booking_id ON trip_expectations(booking_id)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_trip_expectations_outing_id ON trip_expectations(outing_id)').catch(() => {});
+
+    // Partner applications table
+    await dbQuery(`CREATE TABLE IF NOT EXISTS partner_applications (
+        id SERIAL PRIMARY KEY,
+        business_name TEXT NOT NULL,
+        contact_name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        property_type TEXT NOT NULL,
+        location TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        application_status TEXT DEFAULT 'Pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_partner_apps_status ON partner_applications(application_status)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_partner_apps_email ON partner_applications(email)').catch(() => {});
   } else {
     // SQLite: tables one at a time (exec doesn't support multi-statement in all versions)
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password TEXT NOT NULL, interests TEXT DEFAULT '', role TEXT DEFAULT 'user', must_change_password INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
@@ -847,6 +864,11 @@ async function initDatabase() {
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_trip_expectations_user_id ON trip_expectations(user_id)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_trip_expectations_booking_id ON trip_expectations(booking_id)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_trip_expectations_outing_id ON trip_expectations(outing_id)`); } catch(e) {}
+
+    // Partner applications table
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS partner_applications (id INTEGER PRIMARY KEY AUTOINCREMENT, business_name TEXT NOT NULL, contact_name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT NOT NULL, property_type TEXT NOT NULL, location TEXT NOT NULL, description TEXT DEFAULT '', application_status TEXT DEFAULT 'Pending', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_partner_apps_status ON partner_applications(application_status)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_partner_apps_email ON partner_applications(email)`); } catch(e) {}
   }
 
   // ─── Seed admin + sample data (same for both backends) ─────────
@@ -1355,6 +1377,8 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) =>
       : "SELECT COUNT(*) as count FROM security_logs WHERE created_at > datetime('now', '-24 hours')"
   )).rows[0];
   const totalExpectations = (await dbQuery('SELECT COUNT(*) as count FROM trip_expectations')).rows[0];
+  const pendingPartnerApps = (await dbQuery("SELECT COUNT(*) as count FROM partner_applications WHERE application_status = $1", ['Pending'])).rows[0];
+  const totalPartnerApps = (await dbQuery('SELECT COUNT(*) as count FROM partner_applications')).rows[0];
   res.json({
     users: parseInt(users.count),
     outings: parseInt(outings.count),
@@ -1369,7 +1393,9 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) =>
     totalGalleries: parseInt(totalGalleries.count),
     publishedGalleries: parseInt(publishedGalleries.count),
     securityEvents24h: parseInt(recentSecurityEvents.count),
-    totalExpectations: parseInt(totalExpectations.count)
+    totalExpectations: parseInt(totalExpectations.count),
+    pendingPartnerApps: parseInt(pendingPartnerApps.count),
+    totalPartnerApps: parseInt(totalPartnerApps.count)
   });
 });
 
@@ -2342,6 +2368,211 @@ app.get('/api/admin/expectations/summary', authMiddleware, adminMiddleware, asyn
      ORDER BY o.date ASC`
   );
   res.json(result.rows);
+});
+
+// ─── PARTNER APPLICATION ROUTES ─────────────────────────────────
+const partnerApplyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  message: { success: false, message: 'Too many applications submitted. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// POST /api/partners/apply — public endpoint (no auth required)
+app.post('/api/partners/apply', partnerApplyLimiter, [
+  body('businessName').trim().notEmpty().withMessage('Business name is required').isLength({ max: 200 }),
+  body('contactName').trim().notEmpty().withMessage('Contact name is required').isLength({ max: 100 }),
+  body('email').trim().isEmail().withMessage('Valid email is required').normalizeEmail(),
+  body('phone').trim().notEmpty().withMessage('Phone number is required')
+    .matches(/^[0-9]{10,15}$/).withMessage('Phone must be 10-15 digits'),
+  body('propertyType').trim().notEmpty().withMessage('Property type is required').isLength({ max: 100 }),
+  body('location').trim().notEmpty().withMessage('Location is required').isLength({ max: 200 }),
+  body('description').optional().trim().isLength({ max: 2000 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  try {
+    const { businessName, contactName, email, phone, propertyType, location, description } = req.body;
+
+    // Check for duplicate pending application from same email
+    const existing = await dbQuery(
+      "SELECT id FROM partner_applications WHERE email = $1 AND application_status = $2",
+      [email, 'Pending']
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ success: false, message: 'You already have a pending application. We will contact you soon.' });
+    }
+
+    const result = await dbQuery(
+      `INSERT INTO partner_applications (business_name, contact_name, email, phone, property_type, location, description, application_status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id`,
+      [businessName, contactName, email, phone, propertyType, location, description || '', 'Pending']
+    );
+
+    securityLog('PARTNER_APPLICATION_SUBMITTED', { email, businessName, ip: req.ip });
+
+    // Send confirmation email to applicant (non-blocking)
+    sendEmailWithLogging({
+      to: email,
+      subject: 'Your Partner Application Received - Vibes Outing',
+      context: 'partner_application_confirmation',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+          <div style="background:linear-gradient(135deg,#6C3CE1,#8B5CF6);color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+            <h1 style="margin:0;font-size:22px">🤝 Application Received!</h1>
+          </div>
+          <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
+            <p>Hello <strong>${sanitize(contactName)}</strong>,</p>
+            <p>Thank you for applying to become a partner with Vibes Outing.</p>
+            <p>We have successfully received your application for:</p>
+            <div style="background:#F8FAFC;padding:16px;border-radius:8px;margin:16px 0">
+              <p style="margin:4px 0"><strong>${sanitize(businessName)}</strong></p>
+              <p style="margin:4px 0;color:#64748B;font-size:14px">${sanitize(propertyType)} — ${sanitize(location)}</p>
+            </div>
+            <p>Our team will review your application and contact you shortly.</p>
+            <p style="color:#64748B;font-size:14px;margin-top:24px">Regards,<br><strong>Vibes Outing Team</strong></p>
+          </div>
+        </div>
+      `,
+    }).catch(() => {});
+
+    // Send notification email to admin (non-blocking)
+    const adminEmail = process.env.ADMIN_EMAIL || 'support@vibesouting.in';
+    sendEmailWithLogging({
+      to: adminEmail,
+      subject: 'New Partner Application Received',
+      context: 'partner_application_admin_notification',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+          <div style="background:linear-gradient(135deg,#F97316,#FB923C);color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+            <h1 style="margin:0;font-size:22px">📋 New Partner Application</h1>
+          </div>
+          <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
+            <p>A new partner application has been submitted.</p>
+            <div style="background:#F8FAFC;padding:16px;border-radius:8px;margin:16px 0">
+              <p style="margin:4px 0"><strong>Business Name:</strong> ${sanitize(businessName)}</p>
+              <p style="margin:4px 0"><strong>Contact Name:</strong> ${sanitize(contactName)}</p>
+              <p style="margin:4px 0"><strong>Email:</strong> ${sanitize(email)}</p>
+              <p style="margin:4px 0"><strong>Phone:</strong> ${sanitize(phone)}</p>
+              <p style="margin:4px 0"><strong>Property Type:</strong> ${sanitize(propertyType)}</p>
+              <p style="margin:4px 0"><strong>Location:</strong> ${sanitize(location)}</p>
+              <p style="margin:4px 0"><strong>Description:</strong> ${sanitize(description || 'N/A')}</p>
+            </div>
+            <p>Please review the application in the admin dashboard.</p>
+          </div>
+        </div>
+      `,
+    }).catch(() => {});
+
+    res.json({ success: true, message: 'Partner application submitted successfully' });
+  } catch (err) {
+    console.error('Partner application error:', err.message);
+    res.status(500).json({ success: false, message: 'Something went wrong' });
+  }
+});
+
+// Admin: Get all partner applications
+app.get('/api/admin/partner-applications', authMiddleware, adminMiddleware, async (req, res) => {
+  const { search, status } = req.query;
+  let sql = 'SELECT * FROM partner_applications';
+  const conditions = [];
+  const params = [];
+  let paramIdx = 1;
+
+  if (status && status !== 'all') {
+    conditions.push(`application_status = $${paramIdx++}`);
+    params.push(status);
+  }
+  if (search) {
+    conditions.push(`(LOWER(business_name) LIKE $${paramIdx} OR LOWER(location) LIKE $${paramIdx} OR LOWER(email) LIKE $${paramIdx})`);
+    params.push(`%${search.toLowerCase()}%`);
+    paramIdx++;
+  }
+
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' AND ');
+  }
+  sql += ' ORDER BY created_at DESC';
+
+  const result = await dbQuery(sql, params);
+  res.json(result.rows);
+});
+
+// Admin: Update partner application status
+app.put('/api/admin/partner-applications/:id/status', authMiddleware, adminMiddleware, [
+  body('status').trim().isIn(['Pending', 'Approved', 'Rejected']).withMessage('Status must be Pending, Approved, or Rejected'),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const existing = await dbQuery('SELECT * FROM partner_applications WHERE id = $1', [parseInt(id)]);
+  if (existing.rows.length === 0) {
+    return res.status(404).json({ success: false, message: 'Application not found' });
+  }
+
+  await dbQuery(
+    'UPDATE partner_applications SET application_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+    [status, parseInt(id)]
+  );
+
+  const app_data = existing.rows[0];
+  securityLog('PARTNER_APPLICATION_STATUS_UPDATED', { applicationId: id, newStatus: status, adminId: req.user.id });
+
+  // Send status email to applicant (non-blocking)
+  if (status === 'Approved' || status === 'Rejected') {
+    const statusEmoji = status === 'Approved' ? '✅' : '❌';
+    const statusColor = status === 'Approved' ? '#10B981' : '#EF4444';
+    const statusMessage = status === 'Approved'
+      ? 'Congratulations! Your partner application has been approved. Our team will reach out to you shortly with the next steps to get your property listed on Vibes Outing.'
+      : 'After careful review, we were unable to approve your application at this time. You are welcome to reapply in the future with updated details.';
+
+    sendEmailWithLogging({
+      to: app_data.email,
+      subject: `${statusEmoji} Partner Application ${status} - Vibes Outing`,
+      context: `partner_application_${status.toLowerCase()}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+          <div style="background:${statusColor};color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+            <h1 style="margin:0;font-size:22px">${statusEmoji} Application ${status}</h1>
+          </div>
+          <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
+            <p>Hello <strong>${sanitize(app_data.contact_name)}</strong>,</p>
+            <p>${statusMessage}</p>
+            <div style="background:#F8FAFC;padding:16px;border-radius:8px;margin:16px 0">
+              <p style="margin:4px 0"><strong>Business:</strong> ${sanitize(app_data.business_name)}</p>
+              <p style="margin:4px 0"><strong>Location:</strong> ${sanitize(app_data.location)}</p>
+            </div>
+            <p style="color:#64748B;font-size:14px;margin-top:24px">Regards,<br><strong>Vibes Outing Team</strong></p>
+          </div>
+        </div>
+      `,
+    }).catch(() => {});
+  }
+
+  res.json({ success: true, message: `Application ${status.toLowerCase()} successfully` });
+});
+
+// Admin: Delete partner application
+app.delete('/api/admin/partner-applications/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const existing = await dbQuery('SELECT id FROM partner_applications WHERE id = $1', [parseInt(id)]);
+  if (existing.rows.length === 0) {
+    return res.status(404).json({ success: false, message: 'Application not found' });
+  }
+  await dbQuery('DELETE FROM partner_applications WHERE id = $1', [parseInt(id)]);
+  securityLog('PARTNER_APPLICATION_DELETED', { applicationId: id, adminId: req.user.id });
+  res.json({ success: true, message: 'Application deleted successfully' });
+});
+
+// Admin: Get single partner application details
+app.get('/api/admin/partner-applications/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const result = await dbQuery('SELECT * FROM partner_applications WHERE id = $1', [parseInt(id)]);
+  if (result.rows.length === 0) {
+    return res.status(404).json({ success: false, message: 'Application not found' });
+  }
+  res.json(result.rows[0]);
 });
 
 // ─── SECURITY: Global error handler — never leak stack traces ───
