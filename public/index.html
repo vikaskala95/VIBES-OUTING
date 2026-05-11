@@ -202,8 +202,8 @@ input,textarea,select{font-family:inherit}
 .card:hover{transform:translateY(-6px);box-shadow:var(--shadow-xl)}
 .card-img{height:220px;background-size:cover;background-position:center;position:relative}
 .card-img::after{content:'';position:absolute;bottom:0;left:0;right:0;height:50%;background:linear-gradient(transparent,rgba(0,0,0,.35))}
-.card-img .badge{position:absolute;top:12px;right:12px;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:.35rem .8rem;border-radius:999px;font-size:.75rem;font-weight:600;z-index:1;box-shadow:0 2px 8px rgba(108,60,225,.25)}
-.card-img .spots-left{position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);color:#fff;padding:.3rem .7rem;border-radius:999px;font-size:.75rem;z-index:1}
+.card-img .badge{position:absolute;top:14px;left:14px;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:6px 14px;border-radius:999px;font-size:.75rem;font-weight:600;z-index:2;box-shadow:0 2px 10px rgba(108,60,225,.3);white-space:nowrap;max-width:calc(100% - 120px);overflow:hidden;text-overflow:ellipsis;line-height:1.2;letter-spacing:.2px}
+.card-img .spots-left{position:absolute;bottom:14px;left:14px;background:rgba(0,0,0,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;padding:6px 12px;border-radius:999px;font-size:.72rem;font-weight:500;z-index:2;white-space:nowrap;line-height:1.2;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .card-body{padding:1.5rem}
 .card-body h3{font-size:1.1rem;font-weight:700;margin-bottom:.5rem;letter-spacing:-.2px;transition:color .2s}
 .card-body h3:hover{color:var(--primary)}
@@ -215,9 +215,9 @@ input,textarea,select{font-family:inherit}
 .price small{font-size:.75rem;font-weight:400;-webkit-text-fill-color:var(--text-light)}
 
 /* TRIP TYPE BADGES */
-.trip-type-badge{position:absolute;top:12px;right:12px;padding:4px 10px;border-radius:8px;font-size:.7rem;font-weight:700;letter-spacing:.3px;z-index:2;backdrop-filter:blur(8px)}
-.trip-type-badge.one-day{background:rgba(16,185,129,.9);color:#fff}
-.trip-type-badge.two-day{background:rgba(139,92,246,.9);color:#fff}
+.trip-type-badge{position:absolute;top:14px;right:14px;padding:6px 12px;border-radius:999px;font-size:.7rem;font-weight:700;letter-spacing:.4px;z-index:2;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap;line-height:1.2;box-shadow:0 2px 10px rgba(0,0,0,.2);text-transform:uppercase}
+.trip-type-badge.one-day{background:rgba(16,185,129,.88);color:#fff}
+.trip-type-badge.two-day{background:rgba(139,92,246,.88);color:#fff}
 .next-weekend-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#F59E0B,#F97316);color:#fff;padding:3px 8px;border-radius:6px;font-size:.7rem;font-weight:600;animation:tagFloat 2s ease-in-out infinite}
 .trip-countdown{display:flex;align-items:center;gap:4px;font-size:.75rem;color:var(--secondary);font-weight:600;margin-top:4px}
 .trip-countdown i{font-size:.65rem}
@@ -602,6 +602,9 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
   .filters{gap:.5rem}
   .filters input,.filters select{padding:.6rem 1rem;font-size:.85rem;width:100%}
   .card-img{height:180px}
+  .card-img .badge{top:10px;left:10px;padding:5px 10px;font-size:.7rem;max-width:calc(100% - 110px)}
+  .card-img .trip-type-badge{top:10px;right:10px;padding:5px 10px;font-size:.65rem}
+  .card-img .spots-left{bottom:10px;left:10px;padding:5px 10px;font-size:.68rem}
   .card-body{padding:1.25rem}
   .modal{margin:.5rem;max-height:95vh;border-radius:14px}
   .footer{padding:2.5rem 1rem}
