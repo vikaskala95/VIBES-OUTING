@@ -1138,8 +1138,8 @@ async function renderHome(app) {
 
       <!-- Content -->
       <div class="hero-content" id="heroContent">
-        <h1>Book traveller-backed<br>things to do</h1>
-        <p class="hero-tagline">Premium group outings for your squad — resorts, cabs, experiences. Zero planning, all vibes ✨</p>
+        <h1>Travel With People Who Match Your Vibe</h1>
+        <p class="hero-tagline">Join curated group outings with like-minded travellers — or bring your own squad for unforgettable experiences.</p>
         <div class="hero-search" id="heroSearch">
           <i class="fas fa-search" style="color:rgba(255,255,255,.5);font-size:.9rem"></i>
           <input type="text" placeholder="Search by destination, experience..." id="heroSearchInput" onkeydown="if(event.key==='Enter'){searchFromHero()}">
@@ -1600,18 +1600,20 @@ async function submitSuggestion(e) {
 // ─── USER DASHBOARD ─────────────────────────────────────────────
 async function renderUserDashboard(app) {
   if (!currentUser) { showLogin(); return; }
-  const [bookings, verification, myReviews, myBlogs, myGalleries, myExpectations] = await Promise.all([
+  const [bookings, verification, myReviews, myBlogs, myGalleries, myExpectations, myPasses] = await Promise.all([
     api('/bookings/' + currentUser.id),
     api('/verify-id/' + currentUser.id),
     api('/my-reviews'),
     api('/my-blogs'),
     api('/user/galleries'),
-    api('/expectations/my')
+    api('/expectations/my'),
+    api('/digital-passes/my')
   ]);
   const verStatus = verification.status || 'none';
   const reviewsList = Array.isArray(myReviews) ? myReviews : [];
   const blogsList = Array.isArray(myBlogs) ? myBlogs : [];
   const galleriesList = Array.isArray(myGalleries) ? myGalleries : [];
+  const passesList = Array.isArray(myPasses) ? myPasses : [];
   const pendingBlogs = blogsList.filter(b => b.status === 'pending');
   const publishedBlogs = blogsList.filter(b => b.status === 'approved');
 
@@ -1662,6 +1664,36 @@ async function renderUserDashboard(app) {
           </td>
         </tr>`}).join('')}</tbody>
       </table></div>` : '<p style="color:var(--text-light)">No bookings yet. <a href="#" onclick="navigate(\'outings\')" style="color:var(--primary)">Explore outings!</a></p>'}
+
+      <!-- MY DIGITAL PASSES SECTION -->
+      <h3 style="margin-top:2.5rem;margin-bottom:1rem">🎫 My Digital Passes</h3>
+      ${passesList.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem;margin-bottom:1.5rem">
+        ${passesList.map(p => {
+          const statusColor = p.boarding_status === 'verified' ? 'var(--success)' : p.boarding_status === 'revoked' ? 'var(--danger)' : 'var(--primary)';
+          const statusLabel = p.boarding_status === 'verified' ? '✅ Boarded' : p.boarding_status === 'revoked' ? '❌ Revoked' : '🎫 Active';
+          const tripDate = new Date(p.outing_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+          return `<div style="background:#fff;border-radius:16px;box-shadow:var(--shadow);overflow:hidden;border-top:4px solid ${statusColor};cursor:pointer" onclick="showDigitalPass('${escapeHtml(p.pass_id)}')">
+            <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:.7rem;opacity:.7;text-transform:uppercase;letter-spacing:1px">Digital Trip Pass</div>
+                <div style="font-size:1rem;font-weight:700;letter-spacing:1px;margin-top:.25rem">${escapeHtml(p.pass_id)}</div>
+              </div>
+              <div style="text-align:right">
+                <span style="background:${statusColor};color:#fff;padding:.2rem .6rem;border-radius:999px;font-size:.7rem;font-weight:600">${statusLabel}</span>
+              </div>
+            </div>
+            <div style="padding:1rem 1.25rem">
+              <div style="font-weight:600;font-size:.95rem">${escapeHtml(p.outing_title)}</div>
+              <div style="font-size:.8rem;color:var(--text-light);margin-top:.25rem"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.outing_location)} &bull; <i class="fas fa-calendar-alt"></i> ${tripDate}</div>
+              <div style="font-size:.8rem;color:var(--text-light);margin-top:.25rem"><i class="fas fa-clock"></i> ${escapeHtml(p.outing_time || '10:00 AM')} &bull; <i class="fas fa-users"></i> ${p.participants} traveler(s)</div>
+              <div style="display:flex;gap:.5rem;margin-top:.75rem">
+                <button class="btn btn-sm" style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;flex:1" onclick="event.stopPropagation();showDigitalPass('${escapeHtml(p.pass_id)}')"><i class="fas fa-qrcode"></i> View Pass</button>
+                <button class="btn btn-sm" style="background:#F1F5F9;flex:1" onclick="event.stopPropagation();printDigitalPass('${escapeHtml(p.pass_id)}')"><i class="fas fa-print"></i> Print</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : '<p style="color:var(--text-light);font-size:.9rem">Your digital trip passes will appear here after booking confirmation. <a href="#" onclick="navigate(\'outings\')" style="color:var(--primary)">Book an outing!</a></p>'}
 
       <!-- MY REVIEWS SECTION -->
       <h3 style="margin-top:2.5rem;margin-bottom:1rem">⭐ My Reviews</h3>
@@ -1812,6 +1844,106 @@ async function payRemaining(bookingId) {
   };
   const rzp = new Razorpay(options);
   rzp.open();
+}
+
+// ─── DIGITAL PASS VIEWER & PRINTER ─────────────────────────────
+async function showDigitalPass(passId) {
+  const pass = await api('/digital-passes/' + passId);
+  if (!pass || pass.success === false) { toast(pass?.message || 'Pass not found', 'error'); return; }
+  const tripDate = new Date(pass.outing_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  const statusColor = pass.boarding_status === 'verified' ? '#10B981' : pass.boarding_status === 'revoked' ? '#EF4444' : '#6C3CE1';
+  const statusLabel = pass.boarding_status === 'verified' ? '✅ BOARDED' : pass.boarding_status === 'revoked' ? '❌ REVOKED' : '🎫 ACTIVE';
+  const generatedDate = new Date(pass.generated_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <div id="passContent" style="text-align:center">
+      <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:1.5rem;border-radius:16px 16px 0 0;margin:-2rem -2rem 0 -2rem">
+        <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:2px;opacity:.7">VIBES@Outing — Digital Trip Pass</div>
+        <div style="font-size:1.4rem;font-weight:800;letter-spacing:2px;margin-top:.5rem">${escapeHtml(pass.pass_id)}</div>
+        <div style="margin-top:.5rem"><span style="background:${statusColor};color:#fff;padding:.3rem .8rem;border-radius:999px;font-size:.75rem;font-weight:700">${statusLabel}</span></div>
+      </div>
+      <div style="padding:1.5rem 0">
+        <div style="display:inline-block;padding:12px;background:#fff;border:3px solid #E2E8F0;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.1)">
+          <img src="${pass.qr_code}" alt="QR Code" style="width:200px;height:200px;display:block">
+        </div>
+        <div style="font-size:.7rem;color:var(--text-light);margin-top:.5rem">Scan at boarding for instant verification</div>
+      </div>
+      <div style="background:#F8FAFC;border-radius:12px;padding:1.25rem;text-align:left;margin:0 -1rem">
+        <h4 style="margin:0 0 .75rem;color:var(--primary);font-size:.9rem"><i class="fas fa-user-circle"></i> Traveler Details</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.85rem">
+          <div><strong>Name:</strong> ${escapeHtml(pass.user_name)}</div>
+          <div><strong>Email:</strong> ${escapeHtml(pass.user_email)}</div>
+          <div><strong>Phone:</strong> ${escapeHtml(pass.user_phone || 'N/A')}</div>
+          <div><strong>Travelers:</strong> ${pass.participants}</div>
+          ${pass.participant_names ? `<div style="grid-column:1/-1"><strong>Co-travelers:</strong> ${escapeHtml(pass.participant_names)}</div>` : ''}
+          ${pass.emergency_name ? `<div><strong>Emergency:</strong> ${escapeHtml(pass.emergency_name)}</div><div><strong>Emergency Ph:</strong> ${escapeHtml(pass.emergency_contact)}</div>` : ''}
+        </div>
+        <h4 style="margin:1rem 0 .75rem;color:var(--primary);font-size:.9rem"><i class="fas fa-map-marked-alt"></i> Trip Details</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.85rem">
+          <div style="grid-column:1/-1"><strong>Trip:</strong> ${escapeHtml(pass.outing_title)}</div>
+          <div><strong>Location:</strong> ${escapeHtml(pass.outing_location)}</div>
+          <div><strong>Date:</strong> ${tripDate}</div>
+          <div><strong>Time:</strong> ${escapeHtml(pass.outing_time || '10:00 AM')}</div>
+          <div><strong>Amount:</strong> ₹${pass.total_amount}</div>
+        </div>
+        <h4 style="margin:1rem 0 .75rem;color:var(--primary);font-size:.9rem"><i class="fas fa-shield-alt"></i> Security</h4>
+        <div style="font-size:.8rem;color:var(--text-light)">
+          <div><strong>Booking ID:</strong> #${pass.booking_id}</div>
+          <div><strong>Generated:</strong> ${generatedDate}</div>
+          ${pass.boarding_status === 'verified' && pass.verification_time ? `<div><strong>Boarded at:</strong> ${new Date(pass.verification_time).toLocaleString('en-IN')}</div>` : ''}
+        </div>
+      </div>
+      <div style="background:#FEF3C7;padding:.75rem;border-radius:8px;margin-top:1rem;font-size:.75rem;color:#92400E;text-align:left">
+        <strong>📋 Instructions:</strong> Arrive 15 min early • Keep pass ready on phone • Carry valid photo ID
+      </div>
+      <div style="display:flex;gap:.5rem;margin-top:1.25rem">
+        <button class="btn btn-primary" style="flex:1" onclick="printDigitalPass('${escapeHtml(pass.pass_id)}')"><i class="fas fa-print"></i> Print</button>
+        <button class="btn" style="flex:1;background:#25D366;color:#fff" onclick="sharePassWhatsApp('${escapeHtml(pass.pass_id)}','${escapeHtml(pass.outing_title)}','${tripDate}','${escapeHtml(pass.outing_location)}')"><i class="fab fa-whatsapp"></i> Share</button>
+      </div>
+      <div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid #E2E8F0;font-size:.7rem;color:var(--text-light)">
+        <strong>VIBES@Outing</strong> • vibesouting.in • support@vibesouting.in
+      </div>
+    </div>
+  `);
+}
+
+async function printDigitalPass(passId) {
+  const pass = await api('/digital-passes/' + passId);
+  if (!pass || pass.success === false) { toast('Pass not found', 'error'); return; }
+  const tripDate = new Date(pass.outing_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  const statusLabel = pass.boarding_status === 'verified' ? 'BOARDED' : pass.boarding_status === 'revoked' ? 'REVOKED' : 'ACTIVE';
+  const printWin = window.open('', '_blank', 'width=450,height=700');
+  printWin.document.write(`<!DOCTYPE html><html><head><title>Trip Pass - ${escapeHtml(pass.pass_id)}</title>
+    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:20px;max-width:400px;margin:0 auto}
+    .header{background:#1a1a2e;color:#fff;padding:20px;text-align:center;border-radius:12px 12px 0 0}
+    .body{padding:20px;border:2px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px}
+    .qr{text-align:center;margin:15px 0}
+    .qr img{width:180px;height:180px;border:2px solid #ccc;border-radius:8px}
+    .info{margin:10px 0;font-size:13px;line-height:1.8}
+    .info strong{display:inline-block;min-width:90px}
+    .pass-id{font-size:20px;font-weight:800;letter-spacing:2px;margin-top:8px}
+    .status{display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:#6C3CE1;color:#fff}
+    .section-title{font-size:13px;font-weight:700;color:#6C3CE1;margin:12px 0 6px;border-bottom:1px solid #E2E8F0;padding-bottom:4px}
+    .footer{text-align:center;margin-top:15px;font-size:10px;color:#999;border-top:1px dashed #ccc;padding-top:10px}
+    .instructions{background:#FEF3C7;padding:8px 12px;border-radius:6px;font-size:11px;color:#92400E;margin-top:10px}
+    @media print{body{padding:0}}</style></head><body>
+    <div class="header"><div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;opacity:.7">VIBES@Outing — Digital Trip Pass</div>
+    <div class="pass-id">${escapeHtml(pass.pass_id)}</div><div style="margin-top:8px"><span class="status">${statusLabel}</span></div></div>
+    <div class="body">
+    <div class="qr"><img src="${pass.qr_code}" alt="QR Code"><div style="font-size:10px;color:#999;margin-top:5px">Scan for boarding verification</div></div>
+    <div class="section-title">Traveler</div><div class="info"><strong>Name:</strong>${escapeHtml(pass.user_name)}<br><strong>Email:</strong>${escapeHtml(pass.user_email)}<br><strong>Phone:</strong>${escapeHtml(pass.user_phone||'N/A')}<br><strong>Travelers:</strong>${pass.participants}</div>
+    <div class="section-title">Trip Details</div><div class="info"><strong>Trip:</strong>${escapeHtml(pass.outing_title)}<br><strong>Location:</strong>${escapeHtml(pass.outing_location)}<br><strong>Date:</strong>${tripDate}<br><strong>Time:</strong>${escapeHtml(pass.outing_time||'10:00 AM')}<br><strong>Amount:</strong>₹${pass.total_amount}</div>
+    <div class="section-title">Security</div><div class="info" style="font-size:11px"><strong>Booking:</strong>#${pass.booking_id}<br><strong>Generated:</strong>${new Date(pass.generated_at).toLocaleString('en-IN')}</div>
+    <div class="instructions"><strong>📋 Instructions:</strong> Arrive 15 min early • Keep pass ready • Carry valid photo ID</div>
+    <div class="footer"><strong>VIBES@Outing</strong> • vibesouting.in • support@vibesouting.in</div>
+    </div></body></html>`);
+  printWin.document.close();
+  setTimeout(() => { printWin.print(); }, 500);
+}
+
+function sharePassWhatsApp(passId, title, date, location) {
+  const msg = encodeURIComponent(`🎫 *My Digital Trip Pass*\n\nPass ID: *${passId}*\n🗓 *${title}*\n📍 ${location}\n📅 ${date}\n\nBooked via VIBES@Outing! 🚀`);
+  window.open(`https://wa.me/?text=${msg}`, '_blank');
 }
 
 function showVerifyId() {
@@ -2384,6 +2516,8 @@ async function renderAdmin(app) {
         <a href="#" class="${adminTab==='galleries'?'active':''}" onclick="adminTab='galleries';renderAdmin(document.getElementById('app'))"><i class="fas fa-images"></i> Galleries <span style="background:var(--accent);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.totalGalleries || 0}</span></a>
         <a href="#" class="${adminTab==='expectations'?'active':''}" onclick="adminTab='expectations';renderAdmin(document.getElementById('app'))"><i class="fas fa-magic"></i> Expectations <span style="background:var(--primary-light);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.totalExpectations || 0}</span></a>
         <a href="#" class="${adminTab==='partners'?'active':''}" onclick="adminTab='partners';renderAdmin(document.getElementById('app'))"><i class="fas fa-handshake"></i> Partners <span style="background:var(--secondary);color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.pendingPartnerApps || 0}</span></a>
+        <a href="#" class="${adminTab==='passes'?'active':''}" onclick="adminTab='passes';renderAdmin(document.getElementById('app'))"><i class="fas fa-qrcode"></i> Digital Passes <span style="background:#1a1a2e;color:#fff;padding:0 6px;border-radius:10px;font-size:.7rem;margin-left:auto">${stats.totalPasses || 0}</span></a>
+        <a href="#" class="${adminTab==='boarding'?'active':''}" onclick="adminTab='boarding';renderAdmin(document.getElementById('app'))"><i class="fas fa-camera"></i> QR Scanner</a>
       </div>
       <div class="dash-content">
         <div class="mobile-admin-nav" role="navigation" aria-label="Admin navigation">
@@ -2399,6 +2533,8 @@ async function renderAdmin(app) {
           <a href="#" class="${adminTab==='galleries'?'active':''}" onclick="adminTab='galleries';renderAdmin(document.getElementById('app'))">📸 Galleries</a>
           <a href="#" class="${adminTab==='expectations'?'active':''}" onclick="adminTab='expectations';renderAdmin(document.getElementById('app'))">✨ Expectations</a>
           <a href="#" class="${adminTab==='partners'?'active':''}" onclick="adminTab='partners';renderAdmin(document.getElementById('app'))">🤝 Partners</a>
+          <a href="#" class="${adminTab==='passes'?'active':''}" onclick="adminTab='passes';renderAdmin(document.getElementById('app'))">🎫 Passes</a>
+          <a href="#" class="${adminTab==='boarding'?'active':''}" onclick="adminTab='boarding';renderAdmin(document.getElementById('app'))">📷 Scanner</a>
         </div>
         <div id="adminContent"></div>
       </div>
@@ -2416,6 +2552,8 @@ async function renderAdmin(app) {
   else if (adminTab === 'galleries') renderAdminGalleries();
   else if (adminTab === 'expectations') renderAdminExpectations();
   else if (adminTab === 'partners') renderAdminPartnerApps();
+  else if (adminTab === 'passes') renderAdminDigitalPasses();
+  else if (adminTab === 'boarding') renderAdminBoardingScanner();
 }
 
 // ─── ADMIN: PARTNER APPLICATIONS ────────────────────────────────
@@ -2534,6 +2672,196 @@ async function deletePartnerApp(id) {
   } else {
     toast(data.message || 'Failed to delete', 'error');
   }
+}
+
+// ─── ADMIN: DIGITAL PASSES ──────────────────────────────────────
+async function renderAdminDigitalPasses() {
+  const container = document.getElementById('adminContent');
+  container.innerHTML = '<div class="loading-spinner"></div>';
+  const passes = await api('/admin/digital-passes');
+  const passList = Array.isArray(passes) ? passes : [];
+  const verified = passList.filter(p => p.boarding_status === 'verified').length;
+  const pending = passList.filter(p => p.boarding_status === 'not_verified').length;
+  const revoked = passList.filter(p => p.boarding_status === 'revoked').length;
+
+  container.innerHTML = `
+    <h2 style="margin-bottom:1rem"><i class="fas fa-qrcode" style="color:#1a1a2e"></i> Digital Passes (${passList.length})</h2>
+    <div class="dash-stats" style="margin-bottom:1.5rem">
+      <div class="dash-stat"><div class="icon" style="background:rgba(108,60,225,.1);color:var(--primary)"><i class="fas fa-ticket-alt"></i></div><h4>Total</h4><div class="value">${passList.length}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(16,185,129,.1);color:var(--success)"><i class="fas fa-check-double"></i></div><h4>Boarded</h4><div class="value">${verified}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(245,158,11,.1);color:var(--warning)"><i class="fas fa-clock"></i></div><h4>Pending</h4><div class="value">${pending}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(239,68,68,.1);color:var(--danger)"><i class="fas fa-ban"></i></div><h4>Revoked</h4><div class="value">${revoked}</div></div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+      <input type="text" id="passSearch" placeholder="Search by name, email, or pass ID..." style="flex:1;min-width:200px;padding:.5rem .75rem;border:1px solid #E2E8F0;border-radius:8px" onkeyup="filterAdminPasses()">
+      <select id="passStatusFilter" style="padding:.5rem;border:1px solid #E2E8F0;border-radius:8px" onchange="filterAdminPasses()">
+        <option value="all">All Status</option>
+        <option value="not_verified">Pending</option>
+        <option value="verified">Boarded</option>
+        <option value="revoked">Revoked</option>
+      </select>
+    </div>
+    <div id="passesTableWrap">${renderAdminPassesTable(passList)}</div>
+  `;
+}
+
+function renderAdminPassesTable(passes) {
+  if (!passes.length) return '<p style="color:var(--text-light)">No digital passes generated yet.</p>';
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Pass ID</th><th>User</th><th>Trip</th><th>Date</th><th>Payment</th><th>Boarding</th><th>Actions</th></tr></thead>
+    <tbody>${passes.map(p => {
+      const statusColor = p.boarding_status === 'verified' ? 'var(--success)' : p.boarding_status === 'revoked' ? 'var(--danger)' : 'var(--warning)';
+      const statusLabel = p.boarding_status === 'verified' ? '✅ Boarded' : p.boarding_status === 'revoked' ? '❌ Revoked' : '⏳ Pending';
+      const payLabel = p.payment_status === 'paid' ? '<span style="color:var(--success)">Paid</span>' : '<span style="color:var(--danger)">Unpaid</span>';
+      return `<tr>
+        <td><code style="font-size:.8rem;background:#F1F5F9;padding:2px 6px;border-radius:4px">${escapeHtml(p.pass_id)}</code></td>
+        <td><strong>${escapeHtml(p.user_name)}</strong><br><small style="color:var(--text-light)">${escapeHtml(p.user_email)}</small></td>
+        <td>${escapeHtml(p.outing_title)}<br><small style="color:var(--text-light)">${escapeHtml(p.outing_location)}</small></td>
+        <td style="font-size:.85rem">${new Date(p.outing_date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</td>
+        <td>${payLabel}</td>
+        <td><span style="color:${statusColor};font-weight:600;font-size:.85rem">${statusLabel}</span></td>
+        <td style="white-space:nowrap">
+          <button onclick="showDigitalPass('${escapeHtml(p.pass_id)}')" style="background:none;border:none;color:var(--primary);cursor:pointer;padding:4px;font-size:.85rem" title="View"><i class="fas fa-eye"></i></button>
+          ${p.boarding_status === 'not_verified' ? `
+            <button onclick="adminManualVerify('${escapeHtml(p.pass_id)}')" style="background:none;border:none;color:var(--success);cursor:pointer;padding:4px;font-size:.85rem" title="Manual Verify"><i class="fas fa-check-circle"></i></button>
+            <button onclick="adminRevokePass('${escapeHtml(p.pass_id)}')" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:4px;font-size:.85rem" title="Revoke"><i class="fas fa-ban"></i></button>
+          ` : ''}
+          <button onclick="viewBoardingLogs('${escapeHtml(p.pass_id)}')" style="background:none;border:none;color:#64748B;cursor:pointer;padding:4px;font-size:.85rem" title="Logs"><i class="fas fa-history"></i></button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+async function filterAdminPasses() {
+  const search = document.getElementById('passSearch').value.trim();
+  const status = document.getElementById('passStatusFilter').value;
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (status !== 'all') params.set('boarding_status', status);
+  const passes = await api('/admin/digital-passes?' + params.toString());
+  document.getElementById('passesTableWrap').innerHTML = renderAdminPassesTable(Array.isArray(passes) ? passes : []);
+}
+
+async function adminManualVerify(passId) {
+  if (!confirm('Manually verify boarding for pass ' + passId + '?')) return;
+  const data = await api('/admin/digital-passes/manual-verify', { method: 'POST', body: { pass_id: passId } });
+  if (data.success) { toast('Pass verified!', 'success'); renderAdminDigitalPasses(); }
+  else toast(data.message || 'Failed', 'error');
+}
+
+async function adminRevokePass(passId) {
+  if (!confirm('Revoke pass ' + passId + '? This cannot be undone.')) return;
+  const data = await api('/admin/digital-passes/revoke', { method: 'POST', body: { pass_id: passId } });
+  if (data.success) { toast('Pass revoked', 'success'); renderAdminDigitalPasses(); }
+  else toast(data.message || 'Failed', 'error');
+}
+
+async function viewBoardingLogs(passId) {
+  const logs = await api('/admin/boarding-logs?pass_id=' + passId);
+  const logList = Array.isArray(logs) ? logs : [];
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <h2><i class="fas fa-history" style="color:var(--primary)"></i> Boarding Logs — ${escapeHtml(passId)}</h2>
+    ${logList.length ? `<div class="table-wrap" style="margin-top:1rem"><table>
+      <thead><tr><th>Time</th><th>Result</th><th>Scanned By</th><th>Device</th></tr></thead>
+      <tbody>${logList.map(l => `<tr>
+        <td style="font-size:.8rem">${new Date(l.scan_time).toLocaleString('en-IN')}</td>
+        <td><span style="color:${l.verification_result==='verified'?'var(--success)':l.verification_result==='duplicate_entry'?'var(--warning)':'var(--danger)'};font-weight:600;font-size:.85rem">${escapeHtml(l.verification_result)}</span></td>
+        <td>${escapeHtml(l.scanned_by_name || 'Unknown')}</td>
+        <td style="font-size:.8rem">${escapeHtml(l.device_info || '-')}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : '<p style="color:var(--text-light);margin-top:1rem">No boarding logs yet.</p>'}
+  `);
+}
+
+// ─── ADMIN: QR BOARDING SCANNER ─────────────────────────────────
+function renderAdminBoardingScanner() {
+  const container = document.getElementById('adminContent');
+  container.innerHTML = `
+    <h2 style="margin-bottom:1rem"><i class="fas fa-camera" style="color:var(--primary)"></i> QR Boarding Scanner</h2>
+    <p style="color:var(--text-light);margin-bottom:1.5rem">Scan a traveler's QR code or enter Pass ID to verify boarding.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;max-width:800px">
+      <div style="background:#fff;padding:1.5rem;border-radius:16px;box-shadow:var(--shadow)">
+        <h3 style="margin-bottom:1rem;font-size:1rem"><i class="fas fa-keyboard"></i> Manual Entry</h3>
+        <div class="form-group"><label>Pass ID</label><input type="text" id="scanPassId" placeholder="e.g. VO-2026-TRIP-A1B2C3" style="font-family:monospace;letter-spacing:1px"></div>
+        <button class="btn btn-primary btn-block" onclick="manualScanVerify()"><i class="fas fa-search"></i> Verify Pass</button>
+      </div>
+      <div style="background:#fff;padding:1.5rem;border-radius:16px;box-shadow:var(--shadow)">
+        <h3 style="margin-bottom:1rem;font-size:1rem"><i class="fas fa-qrcode"></i> QR Code Input</h3>
+        <div class="form-group"><label>Paste QR Data (JSON)</label><textarea id="scanQrData" rows="4" placeholder='{"pass_id":"...","token":"...","type":"vibes_boarding_pass"}' style="font-family:monospace;font-size:.8rem"></textarea></div>
+        <button class="btn btn-block" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff" onclick="qrScanVerify()"><i class="fas fa-camera"></i> Verify QR</button>
+      </div>
+    </div>
+    <div id="scanResult" style="margin-top:1.5rem"></div>
+    <div style="margin-top:2rem">
+      <h3 style="margin-bottom:1rem"><i class="fas fa-history"></i> Recent Boarding Logs</h3>
+      <div id="recentBoardingLogs"><div class="loading-spinner"></div></div>
+    </div>
+  `;
+  loadRecentBoardingLogs();
+}
+
+async function loadRecentBoardingLogs() {
+  const logs = await api('/admin/boarding-logs');
+  const logList = Array.isArray(logs) ? logs : [];
+  document.getElementById('recentBoardingLogs').innerHTML = logList.length ?
+    `<div class="table-wrap"><table>
+      <thead><tr><th>Pass ID</th><th>Time</th><th>Result</th><th>Scanned By</th></tr></thead>
+      <tbody>${logList.slice(0,20).map(l => `<tr>
+        <td><code style="font-size:.8rem">${escapeHtml(l.pass_id)}</code></td>
+        <td style="font-size:.8rem">${new Date(l.scan_time).toLocaleString('en-IN')}</td>
+        <td><span style="color:${l.verification_result==='verified'?'var(--success)':l.verification_result==='duplicate_entry'?'var(--warning)':'var(--danger)'};font-weight:600">${escapeHtml(l.verification_result)}</span></td>
+        <td>${escapeHtml(l.scanned_by_name || 'Unknown')}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : '<p style="color:var(--text-light)">No boarding logs yet.</p>';
+}
+
+async function manualScanVerify() {
+  const passId = document.getElementById('scanPassId').value.trim();
+  if (!passId) { toast('Enter a Pass ID', 'error'); return; }
+  // Fetch the pass first to get verification token
+  const pass = await api('/digital-passes/' + passId);
+  if (!pass || pass.success === false) {
+    showScanResult({ success: false, status: 'invalid', message: 'Pass not found', icon: '❌' });
+    return;
+  }
+  const result = await api('/digital-passes/verify-boarding', { method: 'POST', body: { pass_id: passId, verification_token: pass.verification_token, device_info: 'Admin Panel Manual Entry' } });
+  showScanResult(result);
+  loadRecentBoardingLogs();
+}
+
+async function qrScanVerify() {
+  const qrData = document.getElementById('scanQrData').value.trim();
+  if (!qrData) { toast('Paste QR data', 'error'); return; }
+  const result = await api('/digital-passes/scan', { method: 'POST', body: { qr_data: qrData, device_info: 'Admin Panel QR Input' } });
+  showScanResult(result);
+  loadRecentBoardingLogs();
+}
+
+function showScanResult(result) {
+  const bgColor = result.success ? 'linear-gradient(135deg,#10B981,#059669)' : result.status === 'duplicate' ? 'linear-gradient(135deg,#F59E0B,#D97706)' : 'linear-gradient(135deg,#EF4444,#DC2626)';
+  document.getElementById('scanResult').innerHTML = `
+    <div style="background:${bgColor};color:#fff;padding:2rem;border-radius:16px;text-align:center;max-width:500px;animation:fadeIn .3s ease">
+      <div style="font-size:3rem;margin-bottom:.5rem">${result.icon || '❓'}</div>
+      <h2 style="margin:0 0 .5rem">${escapeHtml(result.message || 'Unknown result')}</h2>
+      ${result.user ? `<div style="background:rgba(255,255,255,.15);padding:1rem;border-radius:12px;margin-top:1rem;text-align:left">
+        <p style="margin:4px 0"><strong>👤 Name:</strong> ${escapeHtml(result.user.name)}</p>
+        ${result.user.email ? `<p style="margin:4px 0"><strong>📧 Email:</strong> ${escapeHtml(result.user.email)}</p>` : ''}
+        ${result.user.phone ? `<p style="margin:4px 0"><strong>📱 Phone:</strong> ${escapeHtml(result.user.phone)}</p>` : ''}
+      </div>` : ''}
+      ${result.trip ? `<div style="background:rgba(255,255,255,.15);padding:1rem;border-radius:12px;margin-top:.75rem;text-align:left">
+        <p style="margin:4px 0"><strong>🗓 Trip:</strong> ${escapeHtml(result.trip.title)}</p>
+        <p style="margin:4px 0"><strong>📍 Location:</strong> ${escapeHtml(result.trip.location)}</p>
+        <p style="margin:4px 0"><strong>📅 Date:</strong> ${escapeHtml(result.trip.date)}</p>
+      </div>` : ''}
+      ${result.booking ? `<div style="background:rgba(255,255,255,.15);padding:.75rem;border-radius:12px;margin-top:.75rem;text-align:left;font-size:.9rem">
+        <p style="margin:4px 0"><strong>👥 Participants:</strong> ${result.booking.participants}</p>
+        <p style="margin:4px 0"><strong>💰 Amount:</strong> ₹${result.booking.total_amount}</p>
+      </div>` : ''}
+      ${result.boarding_time ? `<p style="margin-top:.5rem;font-size:.85rem;opacity:.8">Boarded at: ${new Date(result.boarding_time).toLocaleString('en-IN')}</p>` : ''}
+    </div>
+  `;
 }
 
 async function renderAdminExpectations() {
@@ -2695,6 +3023,8 @@ function renderAdminOverview(stats) {
       <div class="dash-stat"><div class="icon" style="background:rgba(6,214,160,.1);color:var(--accent)"><i class="fas fa-pen-fancy"></i></div><h4>Total Blogs</h4><div class="value">${stats.totalBlogs || 0}</div></div>
       <div class="dash-stat"><div class="icon" style="background:rgba(245,158,11,.1);color:var(--warning)"><i class="fas fa-clock"></i></div><h4>Pending Blogs</h4><div class="value">${stats.pendingBlogs || 0}</div></div>
       <div class="dash-stat"><div class="icon" style="background:rgba(108,60,225,.1);color:var(--primary)"><i class="fas fa-images"></i></div><h4>Trip Galleries</h4><div class="value">${stats.totalGalleries || 0}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(26,26,46,.1);color:#1a1a2e"><i class="fas fa-qrcode"></i></div><h4>Digital Passes</h4><div class="value">${stats.totalPasses || 0}</div></div>
+      <div class="dash-stat"><div class="icon" style="background:rgba(16,185,129,.1);color:var(--success)"><i class="fas fa-check-double"></i></div><h4>Boarded</h4><div class="value">${stats.verifiedPasses || 0}</div></div>
     </div>
   `;
 }

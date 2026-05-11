@@ -8,6 +8,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const nodemailer = require('nodemailer');
+const QRCode = require('qrcode');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
@@ -404,6 +405,51 @@ async function sendBookingEmail(userEmail, userName, outingTitle, outingDate, ou
   });
   if (result.ok) {
     securityLog('BOOKING_EMAIL_SENT', { recipient: maskEmail(userEmail) });
+  }
+}
+
+async function sendBoardingPassEmail(userEmail, userName, outing, booking, digitalPass) {
+  const result = await sendEmailWithLogging({
+    to: userEmail,
+    subject: `🎫 Your Digital Trip Pass — ${sanitize(outing.title)}`,
+    context: 'boarding_pass',
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+        <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+          <h1 style="margin:0;font-size:22px">🎫 Digital Trip Pass</h1>
+          <p style="margin:8px 0 0;opacity:.85;font-size:14px">VIBES@Outing — Official Boarding Pass</p>
+        </div>
+        <div style="background:#fff;padding:24px;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px">
+          <p>Hi <strong>${sanitize(userName)}</strong>,</p>
+          <p>Your digital trip pass has been generated! Show this at boarding for instant verification.</p>
+          <div style="background:linear-gradient(135deg,#EEF2FF,#F0F9FF);padding:16px;border-radius:8px;margin:16px 0;border:1px solid #C7D2FE">
+            <p style="margin:4px 0;font-size:18px;font-weight:700;color:#1a1a2e;letter-spacing:1px;text-align:center">${sanitize(digitalPass.pass_id)}</p>
+          </div>
+          <div style="background:#F8FAFC;padding:16px;border-radius:8px;margin:16px 0">
+            <p style="margin:4px 0"><strong>🗓 Trip:</strong> ${sanitize(outing.title)}</p>
+            <p style="margin:4px 0"><strong>📍 Location:</strong> ${sanitize(outing.location)}</p>
+            <p style="margin:4px 0"><strong>📅 Date:</strong> ${sanitize(outing.date)}</p>
+            <p style="margin:4px 0"><strong>⏰ Time:</strong> ${sanitize(outing.time || '10:00 AM')}</p>
+            <p style="margin:4px 0"><strong>👥 Participants:</strong> ${booking.participants}</p>
+            <p style="margin:4px 0"><strong>💰 Total:</strong> ₹${booking.total_amount}</p>
+          </div>
+          <div style="text-align:center;margin:16px 0">
+            <img src="${digitalPass.qr_code}" alt="QR Code" style="width:200px;height:200px;border:2px solid #E2E8F0;border-radius:8px">
+            <p style="font-size:12px;color:#64748B;margin-top:8px">Show this QR code at boarding</p>
+          </div>
+          <div style="background:#FEF3C7;padding:12px;border-radius:8px;margin:12px 0;font-size:13px;color:#92400E">
+            <strong>📋 Instructions:</strong><br>
+            • Arrive 15 minutes before reporting time<br>
+            • Keep this pass ready on your phone or print it<br>
+            • Carry a valid photo ID for verification
+          </div>
+          <p style="color:#64748B;font-size:14px;margin-top:16px">Have a great trip! 🚀<br>— Team VIBES@Outing</p>
+        </div>
+      </div>
+    `,
+  });
+  if (result.ok) {
+    securityLog('BOARDING_PASS_EMAIL_SENT', { recipient: maskEmail(userEmail), passId: digitalPass.pass_id });
   }
 }
 
@@ -811,6 +857,37 @@ async function initDatabase() {
       )`);
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_partner_apps_status ON partner_applications(application_status)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_partner_apps_email ON partner_applications(email)').catch(() => {});
+
+    // Digital passes table
+    await dbQuery(`CREATE TABLE IF NOT EXISTS digital_passes (
+        id SERIAL PRIMARY KEY,
+        pass_id TEXT UNIQUE NOT NULL,
+        booking_id INTEGER NOT NULL REFERENCES bookings(id),
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        outing_id INTEGER NOT NULL REFERENCES outings(id),
+        qr_code TEXT NOT NULL,
+        verification_token TEXT UNIQUE NOT NULL,
+        boarding_status TEXT DEFAULT 'not_verified',
+        verification_time TIMESTAMP,
+        scanned_by INTEGER,
+        generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_digital_passes_booking_id ON digital_passes(booking_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_digital_passes_user_id ON digital_passes(user_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_digital_passes_outing_id ON digital_passes(outing_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_digital_passes_pass_id ON digital_passes(pass_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_digital_passes_verification_token ON digital_passes(verification_token)').catch(() => {});
+
+    // Boarding logs table
+    await dbQuery(`CREATE TABLE IF NOT EXISTS boarding_logs (
+        id SERIAL PRIMARY KEY,
+        pass_id TEXT NOT NULL,
+        scanned_by INTEGER,
+        scan_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        device_info TEXT DEFAULT '',
+        verification_result TEXT NOT NULL
+      )`);
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_boarding_logs_pass_id ON boarding_logs(pass_id)').catch(() => {});
   } else {
     // SQLite: tables one at a time (exec doesn't support multi-statement in all versions)
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password TEXT NOT NULL, interests TEXT DEFAULT '', role TEXT DEFAULT 'user', must_change_password INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
@@ -869,6 +946,18 @@ async function initDatabase() {
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS partner_applications (id INTEGER PRIMARY KEY AUTOINCREMENT, business_name TEXT NOT NULL, contact_name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT NOT NULL, property_type TEXT NOT NULL, location TEXT NOT NULL, description TEXT DEFAULT '', application_status TEXT DEFAULT 'Pending', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_partner_apps_status ON partner_applications(application_status)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_partner_apps_email ON partner_applications(email)`); } catch(e) {}
+
+    // Digital passes table
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS digital_passes (id INTEGER PRIMARY KEY AUTOINCREMENT, pass_id TEXT UNIQUE NOT NULL, booking_id INTEGER NOT NULL, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, qr_code TEXT NOT NULL, verification_token TEXT UNIQUE NOT NULL, boarding_status TEXT DEFAULT 'not_verified', verification_time DATETIME, scanned_by INTEGER, generated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (booking_id) REFERENCES bookings(id), FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (outing_id) REFERENCES outings(id))`);
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_digital_passes_booking_id ON digital_passes(booking_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_digital_passes_user_id ON digital_passes(user_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_digital_passes_outing_id ON digital_passes(outing_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_digital_passes_pass_id ON digital_passes(pass_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_digital_passes_verification_token ON digital_passes(verification_token)`); } catch(e) {}
+
+    // Boarding logs table
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS boarding_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, pass_id TEXT NOT NULL, scanned_by INTEGER, scan_time DATETIME DEFAULT CURRENT_TIMESTAMP, device_info TEXT DEFAULT '', verification_result TEXT NOT NULL)`);
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_boarding_logs_pass_id ON boarding_logs(pass_id)`); } catch(e) {}
   }
 
   // ─── Seed admin + sample data (same for both backends) ─────────
@@ -1188,8 +1277,21 @@ app.post('/api/bookings/verify-payment', authMiddleware, [
       await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
         [booking.user_id, 'booking', 'Booking Confirmed! 🎉', `Your spot for "${outing.title}" on ${new Date(outing.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})} is confirmed. Token ₹${booking.token_amount} paid.`]);
     }
+    // Auto-generate Digital Trip Pass
+    let digitalPass = null;
+    try {
+      digitalPass = await generateDigitalPass(booking_id, booking.user_id, booking.outing_id);
+      if (user && outing && digitalPass) {
+        await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+          [booking.user_id, 'boarding', 'Digital Pass Ready! 🎫', `Your digital trip pass (${digitalPass.pass_id}) for "${outing.title}" is ready. View it in My Digital Passes.`]);
+        // Send boarding pass email
+        sendBoardingPassEmail(user.email, user.name, outing, booking, digitalPass);
+      }
+    } catch (passErr) {
+      console.error('[DIGITAL_PASS] Generation failed:', passErr.message);
+    }
     const whatsappLink = (user && outing) ? getWhatsAppLink(user.phone, outing.title, outing.date, outing.location, booking.token_amount) : '';
-    res.json({ success: true, payment_id: razorpay_payment_id, whatsapp_link: whatsappLink, token_amount: booking.token_amount, remaining_amount: booking.remaining_amount, outing_date: outing ? outing.date : '' });
+    res.json({ success: true, payment_id: razorpay_payment_id, whatsapp_link: whatsappLink, token_amount: booking.token_amount, remaining_amount: booking.remaining_amount, outing_date: outing ? outing.date : '', digital_pass_id: digitalPass ? digitalPass.pass_id : null });
   } else {
     await dbQuery('UPDATE bookings SET payment_status = $1 WHERE id = $2', ['failed', booking_id]);
     securityLog('PAYMENT_VERIFICATION_FAILED', { userId: req.user.id, bookingId: booking_id, ip: req.ip });
@@ -1283,7 +1385,14 @@ app.post('/api/bookings', authMiddleware, async (req, res) => {
     [user_id, outing_id, participants, sanitize(participant_names || ''), total_amount, tokenAmount, remainingAmount, 'paid', 'pending', paymentId]
   );
   await dbQuery('UPDATE outings SET current_participants = current_participants + $1 WHERE id = $2', [participants, outing_id]);
-  res.json({ success: true, booking_id: result.rows[0].id, payment_id: paymentId, token_amount: tokenAmount, remaining_amount: remainingAmount });
+  // Auto-generate Digital Trip Pass for demo booking
+  let digitalPass = null;
+  try {
+    digitalPass = await generateDigitalPass(result.rows[0].id, user_id, outing_id);
+  } catch (passErr) {
+    console.error('[DIGITAL_PASS] Demo generation failed:', passErr.message);
+  }
+  res.json({ success: true, booking_id: result.rows[0].id, payment_id: paymentId, token_amount: tokenAmount, remaining_amount: remainingAmount, digital_pass_id: digitalPass ? digitalPass.pass_id : null });
 });
 
 app.get('/api/bookings/:userId', authMiddleware, [
@@ -1379,6 +1488,9 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) =>
   const totalExpectations = (await dbQuery('SELECT COUNT(*) as count FROM trip_expectations')).rows[0];
   const pendingPartnerApps = (await dbQuery("SELECT COUNT(*) as count FROM partner_applications WHERE application_status = $1", ['Pending'])).rows[0];
   const totalPartnerApps = (await dbQuery('SELECT COUNT(*) as count FROM partner_applications')).rows[0];
+  const totalPasses = (await dbQuery('SELECT COUNT(*) as count FROM digital_passes')).rows[0];
+  const verifiedPasses = (await dbQuery("SELECT COUNT(*) as count FROM digital_passes WHERE boarding_status = 'verified'")).rows[0];
+  const pendingPasses = (await dbQuery("SELECT COUNT(*) as count FROM digital_passes WHERE boarding_status = 'not_verified'")).rows[0];
   res.json({
     users: parseInt(users.count),
     outings: parseInt(outings.count),
@@ -1395,7 +1507,10 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) =>
     securityEvents24h: parseInt(recentSecurityEvents.count),
     totalExpectations: parseInt(totalExpectations.count),
     pendingPartnerApps: parseInt(pendingPartnerApps.count),
-    totalPartnerApps: parseInt(totalPartnerApps.count)
+    totalPartnerApps: parseInt(totalPartnerApps.count),
+    totalPasses: parseInt(totalPasses.count),
+    verifiedPasses: parseInt(verifiedPasses.count),
+    pendingPasses: parseInt(pendingPasses.count)
   });
 });
 
@@ -2573,6 +2688,334 @@ app.get('/api/admin/partner-applications/:id', authMiddleware, adminMiddleware, 
     return res.status(404).json({ success: false, message: 'Application not found' });
   }
   res.json(result.rows[0]);
+});
+
+// ─── DIGITAL PASS & BOARDING VERIFICATION SYSTEM ────────────────
+
+// Helper: Generate a unique Pass ID
+function generatePassId() {
+  const year = new Date().getFullYear();
+  const random = crypto.randomBytes(3).toString('hex').toUpperCase();
+  const seq = Date.now().toString(36).toUpperCase().slice(-4);
+  return `VO-${year}-TRIP-${random}${seq}`;
+}
+
+// Helper: Generate digital pass for a confirmed booking
+async function generateDigitalPass(bookingId, userId, outingId) {
+  // Check if pass already exists
+  const existing = (await dbQuery('SELECT id, pass_id FROM digital_passes WHERE booking_id = $1', [bookingId])).rows[0];
+  if (existing) return existing;
+
+  const passId = generatePassId();
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+
+  // QR payload: JSON with pass_id, booking_id, and verification token
+  const qrPayload = JSON.stringify({
+    pass_id: passId,
+    booking_id: bookingId,
+    token: verificationToken,
+    type: 'vibes_boarding_pass'
+  });
+
+  // Generate QR code as data URL
+  const qrDataUrl = await QRCode.toDataURL(qrPayload, {
+    errorCorrectionLevel: 'H',
+    width: 300,
+    margin: 2,
+    color: { dark: '#1a1a2e', light: '#ffffff' }
+  });
+
+  const result = await dbQuery(
+    'INSERT INTO digital_passes (pass_id, booking_id, user_id, outing_id, qr_code, verification_token) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+    [passId, bookingId, userId, outingId, qrDataUrl, verificationToken]
+  );
+
+  return { id: result.rows[0].id, pass_id: passId, qr_code: qrDataUrl, verification_token: verificationToken };
+}
+
+// User: Get my digital passes
+app.get('/api/digital-passes/my', authMiddleware, async (req, res) => {
+  const passes = (await dbQuery(`
+    SELECT dp.*, o.title as outing_title, o.location as outing_location, o.date as outing_date,
+           o.time as outing_time, o.image_url as outing_image,
+           b.participants, b.participant_names, b.total_amount, b.token_amount, b.remaining_amount,
+           b.payment_status, b.remaining_payment_status,
+           u.name as user_name, u.email as user_email, u.phone as user_phone
+    FROM digital_passes dp
+    JOIN bookings b ON dp.booking_id = b.id
+    JOIN outings o ON dp.outing_id = o.id
+    JOIN users u ON dp.user_id = u.id
+    WHERE dp.user_id = $1
+    ORDER BY dp.generated_at DESC
+  `, [req.user.id])).rows;
+  res.json(passes);
+});
+
+// User: Get a specific digital pass
+app.get('/api/digital-passes/:passId', authMiddleware, async (req, res) => {
+  const pass = (await dbQuery(`
+    SELECT dp.*, o.title as outing_title, o.location as outing_location, o.date as outing_date,
+           o.time as outing_time, o.image_url as outing_image, o.description as outing_description,
+           b.participants, b.participant_names, b.total_amount, b.token_amount, b.remaining_amount,
+           b.payment_status, b.remaining_payment_status,
+           u.name as user_name, u.email as user_email, u.phone as user_phone
+    FROM digital_passes dp
+    JOIN bookings b ON dp.booking_id = b.id
+    JOIN outings o ON dp.outing_id = o.id
+    JOIN users u ON dp.user_id = u.id
+    WHERE dp.pass_id = $1
+  `, [req.params.passId])).rows[0];
+
+  if (!pass) return res.status(404).json({ success: false, message: 'Pass not found' });
+  // IDOR: users can only see their own passes, admins can see all
+  if (req.user.role !== 'admin' && pass.user_id !== req.user.id) {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
+
+  // Fetch emergency contact info if verified
+  const idVerification = (await dbQuery('SELECT full_name, emergency_contact, emergency_name FROM id_verifications WHERE user_id = $1 AND status = $2', [pass.user_id, 'verified'])).rows[0];
+  res.json({ ...pass, emergency_contact: idVerification?.emergency_contact || '', emergency_name: idVerification?.emergency_name || '' });
+});
+
+// QR Verification endpoint — admin/organizer scans QR to verify boarding
+app.post('/api/digital-passes/verify-boarding', authMiddleware, adminMiddleware, [
+  body('pass_id').trim().notEmpty().withMessage('Pass ID required'),
+  body('verification_token').trim().notEmpty().withMessage('Verification token required'),
+  body('device_info').optional().trim().isLength({ max: 500 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { pass_id, verification_token, device_info } = req.body;
+
+  const pass = (await dbQuery(`
+    SELECT dp.*, u.name as user_name, u.email as user_email, u.phone as user_phone,
+           o.title as outing_title, o.location as outing_location, o.date as outing_date, o.time as outing_time,
+           b.participants, b.payment_status, b.remaining_payment_status, b.total_amount
+    FROM digital_passes dp
+    JOIN users u ON dp.user_id = u.id
+    JOIN outings o ON dp.outing_id = o.id
+    JOIN bookings b ON dp.booking_id = b.id
+    WHERE dp.pass_id = $1
+  `, [pass_id])).rows[0];
+
+  if (!pass) {
+    await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+      [pass_id, req.user.id, sanitize(device_info || ''), 'invalid_pass']);
+    securityLog('BOARDING_INVALID_PASS', { passId: pass_id, scannedBy: req.user.id, ip: req.ip });
+    return res.json({ success: false, status: 'invalid', message: 'Invalid Pass — No matching digital pass found', icon: '❌' });
+  }
+
+  // Verify token with constant-time comparison
+  const tokenMatch = crypto.timingSafeEqual(
+    Buffer.from(pass.verification_token),
+    Buffer.from(verification_token)
+  );
+  if (!tokenMatch) {
+    await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+      [pass_id, req.user.id, sanitize(device_info || ''), 'invalid_token']);
+    securityLog('BOARDING_INVALID_TOKEN', { passId: pass_id, scannedBy: req.user.id, ip: req.ip });
+    return res.json({ success: false, status: 'invalid', message: 'Invalid Pass — Verification token mismatch', icon: '❌' });
+  }
+
+  // Check if already boarded
+  if (pass.boarding_status === 'verified') {
+    await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+      [pass_id, req.user.id, sanitize(device_info || ''), 'duplicate_entry']);
+    securityLog('BOARDING_DUPLICATE', { passId: pass_id, userId: pass.user_id, scannedBy: req.user.id, ip: req.ip });
+    return res.json({
+      success: false, status: 'duplicate', message: 'Duplicate Entry — This pass has already been used',
+      icon: '⚠️', user: { name: pass.user_name, email: pass.user_email, phone: pass.user_phone },
+      trip: { title: pass.outing_title, location: pass.outing_location, date: pass.outing_date, time: pass.outing_time },
+      boarding_time: pass.verification_time
+    });
+  }
+
+  // Check payment status
+  if (pass.payment_status !== 'paid') {
+    await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+      [pass_id, req.user.id, sanitize(device_info || ''), 'payment_incomplete']);
+    return res.json({ success: false, status: 'payment_issue', message: 'Payment Incomplete — Token payment not confirmed', icon: '💳' });
+  }
+
+  // VERIFIED — Update boarding status
+  await dbQuery('UPDATE digital_passes SET boarding_status = $1, verification_time = CURRENT_TIMESTAMP, scanned_by = $2 WHERE pass_id = $3',
+    ['verified', req.user.id, pass_id]);
+  await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+    [pass_id, req.user.id, sanitize(device_info || ''), 'verified']);
+
+  // Notify user
+  await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+    [pass.user_id, 'boarding', 'Boarding Verified! ✅', `You have been verified for "${pass.outing_title}". Enjoy your trip! 🎉`]);
+
+  securityLog('BOARDING_VERIFIED', { passId: pass_id, userId: pass.user_id, scannedBy: req.user.id, ip: req.ip });
+
+  res.json({
+    success: true, status: 'verified', message: 'VERIFIED — Boarding Allowed', icon: '✅',
+    user: { name: pass.user_name, email: pass.user_email, phone: pass.user_phone },
+    trip: { title: pass.outing_title, location: pass.outing_location, date: pass.outing_date, time: pass.outing_time },
+    booking: { participants: pass.participants, total_amount: pass.total_amount, payment_status: pass.payment_status, remaining_status: pass.remaining_payment_status }
+  });
+});
+
+// Admin: Get all digital passes
+app.get('/api/admin/digital-passes', authMiddleware, adminMiddleware, async (req, res) => {
+  const { search, outing_id, boarding_status } = req.query;
+  let sql = `SELECT dp.*, u.name as user_name, u.email as user_email,
+             o.title as outing_title, o.location as outing_location, o.date as outing_date,
+             b.payment_status, b.remaining_payment_status, b.participants
+             FROM digital_passes dp
+             JOIN users u ON dp.user_id = u.id
+             JOIN outings o ON dp.outing_id = o.id
+             JOIN bookings b ON dp.booking_id = b.id`;
+  const conditions = [];
+  const params = [];
+  let paramIdx = 1;
+
+  if (outing_id) { conditions.push(`dp.outing_id = $${paramIdx++}`); params.push(parseInt(outing_id)); }
+  if (boarding_status && boarding_status !== 'all') { conditions.push(`dp.boarding_status = $${paramIdx++}`); params.push(boarding_status); }
+  if (search) {
+    conditions.push(`(LOWER(u.name) LIKE $${paramIdx} OR LOWER(u.email) LIKE $${paramIdx} OR LOWER(dp.pass_id) LIKE $${paramIdx})`);
+    params.push(`%${search.toLowerCase()}%`);
+    paramIdx++;
+  }
+
+  if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
+  sql += ' ORDER BY dp.generated_at DESC';
+
+  const result = await dbQuery(sql, params);
+  res.json(result.rows);
+});
+
+// Admin: Get boarding logs
+app.get('/api/admin/boarding-logs', authMiddleware, adminMiddleware, async (req, res) => {
+  const { pass_id } = req.query;
+  let sql = `SELECT bl.*, u.name as scanned_by_name
+             FROM boarding_logs bl
+             LEFT JOIN users u ON bl.scanned_by = u.id`;
+  const params = [];
+  if (pass_id) { sql += ' WHERE bl.pass_id = $1'; params.push(pass_id); }
+  sql += ' ORDER BY bl.scan_time DESC LIMIT 200';
+  const result = await dbQuery(sql, params);
+  res.json(result.rows);
+});
+
+// Admin: Manually verify a user's boarding
+app.post('/api/admin/digital-passes/manual-verify', authMiddleware, adminMiddleware, [
+  body('pass_id').trim().notEmpty().withMessage('Pass ID required'),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { pass_id } = req.body;
+  const pass = (await dbQuery('SELECT * FROM digital_passes WHERE pass_id = $1', [pass_id])).rows[0];
+  if (!pass) return res.status(404).json({ success: false, message: 'Pass not found' });
+  if (pass.boarding_status === 'verified') return res.status(400).json({ success: false, message: 'Already verified' });
+
+  await dbQuery('UPDATE digital_passes SET boarding_status = $1, verification_time = CURRENT_TIMESTAMP, scanned_by = $2 WHERE pass_id = $3',
+    ['verified', req.user.id, pass_id]);
+  await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+    [pass_id, req.user.id, 'manual_verification', 'verified']);
+  await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+    [pass.user_id, 'boarding', 'Boarding Verified! ✅', 'Your boarding has been manually verified by the organizer.']);
+  securityLog('BOARDING_MANUAL_VERIFY', { passId: pass_id, adminId: req.user.id });
+  res.json({ success: true, message: 'Pass manually verified' });
+});
+
+// Admin: Revoke/cancel a pass
+app.post('/api/admin/digital-passes/revoke', authMiddleware, adminMiddleware, [
+  body('pass_id').trim().notEmpty().withMessage('Pass ID required'),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { pass_id } = req.body;
+  const pass = (await dbQuery('SELECT * FROM digital_passes WHERE pass_id = $1', [pass_id])).rows[0];
+  if (!pass) return res.status(404).json({ success: false, message: 'Pass not found' });
+
+  await dbQuery('UPDATE digital_passes SET boarding_status = $1 WHERE pass_id = $2', ['revoked', pass_id]);
+  await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+    [pass_id, req.user.id, 'admin_action', 'revoked']);
+  await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+    [pass.user_id, 'boarding', 'Pass Revoked ❌', 'Your digital trip pass has been revoked. Contact support for details.']);
+  securityLog('PASS_REVOKED', { passId: pass_id, adminId: req.user.id });
+  res.json({ success: true, message: 'Pass revoked' });
+});
+
+// Public: QR Verification page data (used by scanner)
+app.post('/api/digital-passes/scan', authMiddleware, adminMiddleware, [
+  body('qr_data').trim().notEmpty().withMessage('QR data required'),
+  body('device_info').optional().trim().isLength({ max: 500 }),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { qr_data, device_info } = req.body;
+
+  try {
+    const parsed = JSON.parse(qr_data);
+    if (parsed.type !== 'vibes_boarding_pass' || !parsed.pass_id || !parsed.token) {
+      return res.json({ success: false, status: 'invalid', message: 'Invalid QR Code — Not a valid boarding pass', icon: '❌' });
+    }
+    // Delegate to verify-boarding
+    req.body.pass_id = parsed.pass_id;
+    req.body.verification_token = parsed.token;
+    req.body.device_info = device_info || '';
+
+    // Re-use the verify-boarding logic
+    const pass = (await dbQuery(`
+      SELECT dp.*, u.name as user_name, u.email as user_email, u.phone as user_phone,
+             o.title as outing_title, o.location as outing_location, o.date as outing_date, o.time as outing_time,
+             b.participants, b.payment_status, b.remaining_payment_status, b.total_amount
+      FROM digital_passes dp
+      JOIN users u ON dp.user_id = u.id
+      JOIN outings o ON dp.outing_id = o.id
+      JOIN bookings b ON dp.booking_id = b.id
+      WHERE dp.pass_id = $1
+    `, [parsed.pass_id])).rows[0];
+
+    if (!pass) {
+      await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+        [parsed.pass_id, req.user.id, sanitize(device_info || ''), 'invalid_pass']);
+      return res.json({ success: false, status: 'invalid', message: 'Invalid Pass', icon: '❌' });
+    }
+
+    const tokenMatch = crypto.timingSafeEqual(Buffer.from(pass.verification_token), Buffer.from(parsed.token));
+    if (!tokenMatch) {
+      await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+        [parsed.pass_id, req.user.id, sanitize(device_info || ''), 'invalid_token']);
+      return res.json({ success: false, status: 'invalid', message: 'Invalid Token', icon: '❌' });
+    }
+
+    if (pass.boarding_status === 'verified') {
+      await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+        [parsed.pass_id, req.user.id, sanitize(device_info || ''), 'duplicate_entry']);
+      return res.json({
+        success: false, status: 'duplicate', message: 'Already Boarded', icon: '⚠️',
+        user: { name: pass.user_name }, trip: { title: pass.outing_title }, boarding_time: pass.verification_time
+      });
+    }
+
+    if (pass.boarding_status === 'revoked') {
+      await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+        [parsed.pass_id, req.user.id, sanitize(device_info || ''), 'revoked_pass']);
+      return res.json({ success: false, status: 'revoked', message: 'Pass Revoked', icon: '🚫' });
+    }
+
+    if (pass.payment_status !== 'paid') {
+      return res.json({ success: false, status: 'payment_issue', message: 'Payment Incomplete', icon: '💳' });
+    }
+
+    // Mark as verified
+    await dbQuery('UPDATE digital_passes SET boarding_status = $1, verification_time = CURRENT_TIMESTAMP, scanned_by = $2 WHERE pass_id = $3',
+      ['verified', req.user.id, parsed.pass_id]);
+    await dbQuery('INSERT INTO boarding_logs (pass_id, scanned_by, device_info, verification_result) VALUES ($1,$2,$3,$4)',
+      [parsed.pass_id, req.user.id, sanitize(device_info || ''), 'verified']);
+    await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+      [pass.user_id, 'boarding', 'Boarding Verified! ✅', `Welcome aboard "${pass.outing_title}"! 🎉`]);
+    securityLog('BOARDING_VERIFIED_QR', { passId: parsed.pass_id, userId: pass.user_id, scannedBy: req.user.id });
+
+    return res.json({
+      success: true, status: 'verified', message: 'VERIFIED — Boarding Allowed', icon: '✅',
+      user: { name: pass.user_name, email: pass.user_email, phone: pass.user_phone },
+      trip: { title: pass.outing_title, location: pass.outing_location, date: pass.outing_date, time: pass.outing_time },
+      booking: { participants: pass.participants, total_amount: pass.total_amount, payment_status: pass.payment_status }
+    });
+  } catch (err) {
+    return res.json({ success: false, status: 'invalid', message: 'Invalid QR Code format', icon: '❌' });
+  }
 });
 
 // ─── SECURITY: Global error handler — never leak stack traces ───
