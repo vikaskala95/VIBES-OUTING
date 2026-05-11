@@ -8,7 +8,8 @@
     "cost": 2999,
     "max": 25,
     "img": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600",
-    "category": "mountains"
+    "category": "mountains",
+    "trip_type": "one_day"
   },
   {
     "title": "🏞️ Bheemeshwari Adventure Day",
@@ -19,7 +20,8 @@
     "cost": 4999,
     "max": 20,
     "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600",
-    "category": "adventure"
+    "category": "adventure",
+    "trip_type": "one_day"
   },
   {
     "title": "⛰️ Chikmagalur Coffee & Chill (2D/1N)",
@@ -30,7 +32,8 @@
     "cost": 12999,
     "max": 20,
     "img": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600",
-    "category": "mountains"
+    "category": "mountains",
+    "trip_type": "2d1n"
   },
   {
     "title": "🏰 Mysore Royal Day Out",
@@ -41,7 +44,8 @@
     "cost": 1999,
     "max": 30,
     "img": "https://images.unsplash.com/photo-1567337710282-00832b415979?w=600",
-    "category": "road_trips"
+    "category": "road_trips",
+    "trip_type": "one_day"
   },
   {
     "title": "🌿 Ooty Mountain Escape (2D/1N)",
@@ -52,7 +56,8 @@
     "cost": 9999,
     "max": 20,
     "img": "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600",
-    "category": "mountains"
+    "category": "mountains",
+    "trip_type": "2d1n"
   },
   {
     "title": "☕ Coorg Rainforest Retreat (2D/1N)",
@@ -63,7 +68,8 @@
     "cost": 10999,
     "max": 20,
     "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600",
-    "category": "road_trips"
+    "category": "road_trips",
+    "trip_type": "2d1n"
   },
   {
     "title": "🌊 Wayanad Wild Weekend (2D/1N)",
@@ -74,7 +80,8 @@
     "cost": 10999,
     "max": 20,
     "img": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600",
-    "category": "adventure"
+    "category": "adventure",
+    "trip_type": "2d1n"
   },
   {
     "title": "🏜️ Gandikota Grand Canyon (2D/1N)",
@@ -85,7 +92,8 @@
     "cost": 10999,
     "max": 20,
     "img": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600",
-    "category": "adventure"
+    "category": "adventure",
+    "trip_type": "2d1n"
   },
   {
     "title": "🛕 Lepakshi Heritage & Vibes",
@@ -96,7 +104,8 @@
     "cost": 5999,
     "max": 25,
     "img": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600",
-    "category": "festivals"
+    "category": "festivals",
+    "trip_type": "one_day"
   },
   {
     "title": "🌲 Sakleshpur Green Route Trek",
@@ -107,7 +116,8 @@
     "cost": 9999,
     "max": 20,
     "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600",
-    "category": "adventure"
+    "category": "adventure",
+    "trip_type": "one_day"
   },
   {
     "title": "🏖️ Goa Beach Blowout (2D/1N)",
@@ -118,6 +128,7 @@
     "cost": 11999,
     "max": 25,
     "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600",
-    "category": "beaches"
+    "category": "beaches",
+    "trip_type": "2d1n"
   }
 ]

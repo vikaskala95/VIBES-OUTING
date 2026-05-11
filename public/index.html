@@ -214,6 +214,28 @@ input,textarea,select{font-family:inherit}
 .price{font-size:1.2rem;font-weight:800;color:var(--primary);background:linear-gradient(135deg,var(--primary),var(--primary-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;color:transparent}
 .price small{font-size:.75rem;font-weight:400;-webkit-text-fill-color:var(--text-light)}
 
+/* TRIP TYPE BADGES */
+.trip-type-badge{position:absolute;top:12px;right:12px;padding:4px 10px;border-radius:8px;font-size:.7rem;font-weight:700;letter-spacing:.3px;z-index:2;backdrop-filter:blur(8px)}
+.trip-type-badge.one-day{background:rgba(16,185,129,.9);color:#fff}
+.trip-type-badge.two-day{background:rgba(139,92,246,.9);color:#fff}
+.next-weekend-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#F59E0B,#F97316);color:#fff;padding:3px 8px;border-radius:6px;font-size:.7rem;font-weight:600;animation:tagFloat 2s ease-in-out infinite}
+.trip-countdown{display:flex;align-items:center;gap:4px;font-size:.75rem;color:var(--secondary);font-weight:600;margin-top:4px}
+.trip-countdown i{font-size:.65rem}
+
+/* WEEKEND DATE SELECTOR */
+.weekend-date-selector{display:flex;flex-direction:column;gap:.5rem;max-height:200px;overflow-y:auto;padding:4px 0}
+.weekend-date-option{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border:2px solid var(--border);border-radius:12px;cursor:pointer;transition:all .2s ease;background:#fff}
+.weekend-date-option:hover{border-color:var(--primary-light);background:rgba(108,60,225,.03)}
+.weekend-date-option.selected{border-color:var(--primary);background:rgba(108,60,225,.06);box-shadow:0 0 0 3px rgba(108,60,225,.1)}
+.weekend-date-option.next-weekend{border-color:var(--secondary);position:relative}
+.weekend-date-option .date-label{font-weight:600;font-size:.9rem;color:var(--text)}
+.weekend-date-option .date-sub{font-size:.75rem;color:var(--text-light);margin-top:2px}
+.weekend-date-option .date-countdown{font-size:.75rem;color:var(--secondary);font-weight:600}
+.weekend-date-option .next-badge{background:linear-gradient(135deg,#F59E0B,#F97316);color:#fff;padding:2px 6px;border-radius:4px;font-size:.6rem;font-weight:700;text-transform:uppercase}
+.booking-trip-info{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:.8rem;font-weight:600;margin-bottom:1rem}
+.booking-trip-info.one-day{background:rgba(16,185,129,.08);color:#10B981}
+.booking-trip-info.two-day{background:rgba(139,92,246,.08);color:#8B5CF6}
+
 /* MODAL */
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.6);backdrop-filter:blur(6px);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:all .35s ease}
 .modal-overlay.active{opacity:1;pointer-events:all}
@@ -1352,6 +1374,28 @@ function toggleAccordion(header) {
 }
 
 // ─── OUTING CARD ────────────────────────────────────────────────
+function getNextWeekendInfo(tripType) {
+  const now = new Date();
+  const targetDay = tripType === '2d1n' ? 5 : 6; // Friday=5, Saturday=6
+  const cursor = new Date(now);
+  cursor.setHours(0, 0, 0, 0);
+  while (cursor.getDay() !== targetDay) cursor.setDate(cursor.getDate() + 1);
+  const depTime = tripType === '2d1n' ? 22 : 4;
+  const dep = new Date(cursor); dep.setHours(depTime, 0, 0, 0);
+  const autoClose = tripType === '2d1n' ? 12 : 6;
+  const hoursUntil = (dep - now) / (1000 * 60 * 60);
+  if (hoursUntil <= autoClose) { cursor.setDate(cursor.getDate() + 7); const dep2 = new Date(cursor); dep2.setHours(depTime, 0, 0, 0); return { date: cursor, hoursUntil: (dep2 - now) / (1000 * 60 * 60) }; }
+  return { date: cursor, hoursUntil };
+}
+
+function formatCountdown(hours) {
+  if (hours <= 0) return '';
+  const days = Math.floor(hours / 24);
+  const hrs = Math.round(hours % 24);
+  if (days > 0) return `${days}D ${hrs}H`;
+  return `${hrs}H`;
+}
+
 function outingCard(o) {
   const spotsLeft = o.max_participants - o.current_participants;
   const dateStr = new Date(o.date).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
@@ -1359,18 +1403,31 @@ function outingCard(o) {
   const title = escapeHtml(o.title);
   const location = escapeHtml(o.location);
   const desc = escapeHtml(o.description || '');
+  const tripType = o.trip_type || 'one_day';
+  const tripLabel = tripType === '2d1n' ? '2D/1N' : 'One Day';
+  const tripBadgeClass = tripType === '2d1n' ? 'two-day' : 'one-day';
+  const departureTime = tripType === '2d1n' ? '10:00 PM (Fri)' : '4:00 AM (Sat)';
+  const nextWeekend = getNextWeekendInfo(tripType);
+  const countdownText = formatCountdown(nextWeekend.hoursUntil);
+  const nextDateStr = nextWeekend.date.toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+  const isSoldOut = spotsLeft <= 0;
   return `
     <div class="card">
-      <div class="card-img" style="background-image:url('${imgUrl}');cursor:pointer" onclick="navigate('outing-${o.id}')">
+      <div class="card-img" style="background-image:url('${imgUrl}');cursor:pointer;position:relative" onclick="navigate('outing-${o.id}')">
         <span class="badge">${location}</span>
+        <span class="trip-type-badge ${tripBadgeClass}">${tripLabel}</span>
         <span class="spots-left"><i class="fas fa-users"></i> ${spotsLeft} spots left</span>
       </div>
       <div class="card-body">
         <h3 style="cursor:pointer" onclick="navigate('outing-${o.id}')">${title}</h3>
         <div class="card-meta">
           <span><i class="far fa-calendar"></i> ${dateStr}</span>
-          <span><i class="far fa-clock"></i> ${escapeHtml(o.time)}</span>
+          <span><i class="far fa-clock"></i> ${escapeHtml(departureTime)}</span>
           <span><i class="fas fa-map-marker-alt"></i> ${location}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem">
+          <span class="next-weekend-badge"><i class="fas fa-calendar-check"></i> Next: ${nextDateStr}</span>
+          ${countdownText ? `<span class="trip-countdown"><i class="fas fa-hourglass-half"></i> Starts in ${countdownText}</span>` : ''}
         </div>
         <p>${desc}</p>
         ${o.matchReasons ? `<div class="rec-reasons">${o.matchReasons.map(r => `<span class="rec-reason">${escapeHtml(r)}</span>`).join('')}</div>` : ''}
@@ -1381,7 +1438,10 @@ function outingCard(o) {
           </div>
           <div style="display:flex;gap:.5rem">
             <button class="btn btn-sm" style="background:#F1F5F9;color:var(--text)" onclick="navigate('outing-${o.id}')"><i class="fas fa-info-circle"></i></button>
-            <button class="btn btn-primary btn-sm" onclick="bookOuting(${o.id})"><i class="fas fa-bolt"></i> Book</button>
+            ${isSoldOut
+              ? `<button class="btn btn-sm" style="background:#EF4444;color:#fff" disabled><i class="fas fa-ban"></i> Sold Out</button>`
+              : `<button class="btn btn-primary btn-sm" onclick="bookOuting(${o.id})"><i class="fas fa-bolt"></i> Book</button>`
+            }
           </div>
         </div>
       </div>
@@ -1438,18 +1498,51 @@ function filterOutings() {
 // ─── BOOKING ────────────────────────────────────────────────────
 async function bookOuting(id) {
   if (!currentUser) return showLogin();
-  const o = await api('/outings/' + id);
+  const [o, dateInfo] = await Promise.all([api('/outings/' + id), api('/outings/' + id + '/available-dates')]);
   const spotsLeft = o.max_participants - o.current_participants;
+  if (spotsLeft <= 0) { toast('This trip is sold out!', 'error'); return; }
+
+  const tripType = dateInfo.trip_type || 'one_day';
+  const tripLabel = tripType === '2d1n' ? '2D/1N Trip' : 'One Day Trip';
+  const tripInfoClass = tripType === '2d1n' ? 'two-day' : 'one-day';
+  const tripIcon = tripType === '2d1n' ? '🌙' : '🌅';
+  const dates = dateInfo.dates || [];
+  const firstDate = dates.length > 0 ? dates[0] : null;
+
   openModal(`
     <button class="close" onclick="closeModal()">&times;</button>
-    <h2><i class="fas fa-ticket-alt" style="color:var(--primary)"></i> Book: ${o.title}</h2>
-    <div style="background:#F8FAFC;padding:1rem;border-radius:10px;margin-bottom:1.5rem">
-      <div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><span>📍 ${o.location}</span><span>📅 ${new Date(o.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span></div>
-      <div style="display:flex;justify-content:space-between"><span>💰 ₹${o.cost}/person</span><span>👥 ${spotsLeft} spots left</span></div>
+    <h2><i class="fas fa-ticket-alt" style="color:var(--primary)"></i> Book: ${escapeHtml(o.title)}</h2>
+    <div class="booking-trip-info ${tripInfoClass}">
+      ${tripIcon} ${escapeHtml(dateInfo.label || tripLabel)} &nbsp;•&nbsp; Departure: ${escapeHtml(dateInfo.departure_time)}
     </div>
+    <div style="background:#F8FAFC;padding:1rem;border-radius:10px;margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><span>📍 ${escapeHtml(o.location)}</span><span>💰 ₹${o.cost}/person</span></div>
+      <div style="display:flex;justify-content:space-between"><span>👥 ${spotsLeft} spots left</span><span>⏰ ${escapeHtml(dateInfo.departure_time)}</span></div>
+    </div>
+
+    <div class="form-group">
+      <label style="font-weight:600;margin-bottom:.5rem;display:block">📅 Select Weekend Date</label>
+      <div class="weekend-date-selector" id="weekendDates">
+        ${dates.length > 0 ? dates.map((d, i) => `
+          <div class="weekend-date-option${i === 0 ? ' selected next-weekend' : ''}" data-date="${escapeHtml(d.date)}" onclick="selectWeekendDate(this, '${escapeHtml(d.date)}')">
+            <div>
+              <div class="date-label">${escapeHtml(d.day)}</div>
+              <div class="date-sub">Departure: ${escapeHtml(d.departure_time)}</div>
+            </div>
+            <div style="text-align:right">
+              ${i === 0 ? '<span class="next-badge">Next Weekend</span>' : ''}
+              <div class="date-countdown">Starts in ${formatCountdown(d.hours_until)}</div>
+            </div>
+          </div>
+        `).join('') : '<p style="color:var(--text-light);text-align:center;padding:1rem">No dates available</p>'}
+      </div>
+      <input type="hidden" id="selectedWeekendDate" value="${firstDate ? firstDate.date : ''}">
+      <input type="hidden" id="selectedDepartureTime" value="${dateInfo.departure_time || ''}">
+    </div>
+
     <form onsubmit="confirmBooking(event, ${o.id}, ${o.cost})">
       <div class="form-group"><label>Number of Participants</label><input type="number" id="bookParticipants" min="1" max="${spotsLeft}" value="1" required onchange="updateTotal(${o.cost})"></div>
-      <div class="form-group"><label>Participant Names (comma separated)</label><input type="text" id="bookNames" placeholder="${currentUser.name}" value="${currentUser.name}"></div>
+      <div class="form-group"><label>Participant Names (comma separated)</label><input type="text" id="bookNames" placeholder="${escapeHtml(currentUser.name)}" value="${escapeHtml(currentUser.name)}"></div>
       <div style="background:rgba(108,60,225,.06);padding:1rem;border-radius:10px;margin-bottom:1rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
           <span style="font-weight:600">Total Trip Cost</span>
@@ -1464,9 +1557,23 @@ async function bookOuting(id) {
           <span style="font-size:1rem;font-weight:600;color:var(--secondary)" id="bookRemaining">₹${o.cost - Math.ceil(o.cost * 0.20)}</span>
         </div>
       </div>
-      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-lock"></i> Pay ₹<span id="bookTokenBtn">${Math.ceil(o.cost * 0.20)}</span> Token & Confirm</button>
+      <div id="bookSelectedSummary" style="background:rgba(16,185,129,.06);padding:.75rem 1rem;border-radius:10px;margin-bottom:1rem;font-size:.85rem;display:${firstDate ? 'block' : 'none'}">
+        <strong>✅ Selected:</strong> <span id="bookSelectedDateText">${firstDate ? firstDate.day : ''}</span> — Departure at <strong>${escapeHtml(dateInfo.departure_time)}</strong>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit" id="bookSubmitBtn" ${dates.length === 0 ? 'disabled style="opacity:.5"' : ''}><i class="fas fa-lock"></i> Pay ₹<span id="bookTokenBtn">${Math.ceil(o.cost * 0.20)}</span> Token & Confirm</button>
     </form>
   `);
+}
+
+function selectWeekendDate(el, dateStr) {
+  document.querySelectorAll('.weekend-date-option').forEach(opt => opt.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('selectedWeekendDate').value = dateStr;
+  const label = el.querySelector('.date-label');
+  document.getElementById('bookSelectedDateText').textContent = label ? label.textContent : dateStr;
+  document.getElementById('bookSelectedSummary').style.display = 'block';
+  document.getElementById('bookSubmitBtn').disabled = false;
+  document.getElementById('bookSubmitBtn').style.opacity = '1';
 }
 
 function updateTotal(cost) {
@@ -1486,15 +1593,19 @@ async function confirmBooking(e, outingId, cost) {
   const participantNames = document.getElementById('bookNames').value;
   const totalAmount = cost * participants;
   const tokenAmount = Math.ceil(totalAmount * 0.20);
+  const selectedDate = document.getElementById('selectedWeekendDate') ? document.getElementById('selectedWeekendDate').value : '';
+  const departureTime = document.getElementById('selectedDepartureTime') ? document.getElementById('selectedDepartureTime').value : '';
+
+  if (!selectedDate) { toast('Please select a weekend date', 'error'); return; }
 
   // Step 1: Create Razorpay order on server (20% token)
   const orderRes = await api('/bookings/create-order', { method: 'POST', body: {
-    outing_id: outingId, participants, participant_names: participantNames
+    outing_id: outingId, participants, participant_names: participantNames, selected_date: selectedDate, departure_time: departureTime
   }});
 
   if (!orderRes.success) {
     if (orderRes.message && orderRes.message.includes('API keys')) {
-      const fallback = await api('/bookings', { method: 'POST', body: { outing_id: outingId, participants, participant_names: participantNames, total_amount: totalAmount } });
+      const fallback = await api('/bookings', { method: 'POST', body: { outing_id: outingId, participants, participant_names: participantNames, total_amount: totalAmount, selected_date: selectedDate, departure_time: departureTime } });
       if (fallback.success) { closeModal(); toast('🎉 Token booking confirmed (demo)! Paid ₹' + fallback.token_amount + ' | Remaining ₹' + fallback.remaining_amount, 'success'); navigate(currentPage); }
       else toast(fallback.message, 'error');
       return;
@@ -2093,6 +2204,15 @@ async function renderOutingDetail(app, outingId) {
   const hasBooked = currentUser ? (await api('/bookings/' + currentUser.id)).some(b => b.outing_id === outingId && b.payment_status === 'paid') : false;
   const tripPassed = new Date(o.date) < new Date();
   const canReviewBlog = hasBooked && tripPassed;
+  const tripType = o.trip_type || 'one_day';
+  const tripLabel = tripType === '2d1n' ? '2D/1N Trip' : 'One Day Trip';
+  const departureTime = tripType === '2d1n' ? '10:00 PM (Friday)' : '4:00 AM (Saturday)';
+  const tripInfoClass = tripType === '2d1n' ? 'two-day' : 'one-day';
+  const tripIcon = tripType === '2d1n' ? '🌙' : '🌅';
+  const nextWeekend = getNextWeekendInfo(tripType);
+  const nextDateStr = nextWeekend.date.toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'short' });
+  const countdownText = formatCountdown(nextWeekend.hoursUntil);
+  const isSoldOut = spotsLeft <= 0;
 
   // Check eligibility
   let eligibility = { eligible: false, alreadyReviewed: false };
@@ -2107,22 +2227,32 @@ async function renderOutingDetail(app, outingId) {
   app.innerHTML = `
     <section class="section" style="max-width:800px">
       <div style="margin-bottom:1rem"><a href="#" onclick="navigate('outings')" style="color:var(--primary);font-size:.9rem"><i class="fas fa-arrow-left"></i> Back to Outings</a></div>
-      <div style="border-radius:var(--radius);overflow:hidden;height:300px;background:url('${safeImageUrl(o.image_url)}') center/cover;margin-bottom:1.5rem"></div>
+      <div style="border-radius:var(--radius);overflow:hidden;height:300px;background:url('${safeImageUrl(o.image_url)}') center/cover;margin-bottom:1.5rem;position:relative">
+        <span class="trip-type-badge ${tripType === '2d1n' ? 'two-day' : 'one-day'}" style="position:absolute;top:16px;right:16px">${tripLabel}</span>
+      </div>
       <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:1rem">
         <div>
           <h1 style="font-size:1.8rem;margin-bottom:.5rem">${escapeHtml(o.title)}</h1>
-          <div class="card-meta" style="margin-bottom:1rem">
+          <div class="card-meta" style="margin-bottom:.5rem">
             <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(o.location)}</span>
             <span><i class="far fa-calendar"></i> ${dateStr}</span>
-            <span><i class="far fa-clock"></i> ${escapeHtml(o.time)}</span>
+            <span><i class="far fa-clock"></i> ${escapeHtml(departureTime)}</span>
             <span><i class="fas fa-users"></i> ${spotsLeft} spots left</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+            <div class="booking-trip-info ${tripInfoClass}" style="margin-bottom:0">${tripIcon} ${tripLabel} — ${escapeHtml(departureTime)}</div>
+            <span class="next-weekend-badge"><i class="fas fa-calendar-check"></i> Next: ${nextDateStr}</span>
+            ${countdownText ? `<span class="trip-countdown"><i class="fas fa-hourglass-half"></i> Starts in ${countdownText}</span>` : ''}
           </div>
         </div>
         <div style="text-align:right">
           <div style="color:var(--text-light);text-decoration:line-through;font-size:.95rem">₹${o.cost}/person</div>
           <div class="price" style="font-size:1.5rem">₹${Math.ceil(o.cost * 0.20)} <small>token (20%)</small></div>
           <div style="font-size:.8rem;color:var(--secondary);margin-top:.25rem">Remaining ₹${o.cost - Math.ceil(o.cost * 0.20)} due 24hrs before trip</div>
-          <button class="btn btn-primary" onclick="bookOuting(${o.id})" style="margin-top:.5rem"><i class="fas fa-bolt"></i> Book Now</button>
+          ${isSoldOut
+            ? `<button class="btn" style="background:#EF4444;color:#fff;margin-top:.5rem" disabled><i class="fas fa-ban"></i> Sold Out</button>`
+            : `<button class="btn btn-primary" onclick="bookOuting(${o.id})" style="margin-top:.5rem"><i class="fas fa-bolt"></i> Book Now</button>`
+          }
         </div>
       </div>
       <div style="background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:2rem">
