@@ -146,6 +146,7 @@ const signupLimiter = rateLimit({
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
+  message: { success: false, message: 'Too many requests. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -3131,7 +3132,7 @@ app.use((err, req, res, next) => {
 });
 
 // ─── SECURITY: 404 handler ──────────────────────────────────────
-app.get('/api/*', (req, res) => {
+app.all('/api/*', (req, res) => {
   res.status(404).json({ success: false, message: 'Endpoint not found' });
 });
 

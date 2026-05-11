@@ -751,6 +751,7 @@ const RAILWAY_DIRECT = 'https://vibesouting-production.up.railway.app';
 const api = async (url, opts = {}, _retryCount = 0) => {
   const MAX_RETRIES = 2;
   const TIMEOUT_MS = 15000;
+  const showToast = opts.showToast !== false;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -769,25 +770,44 @@ const api = async (url, opts = {}, _retryCount = 0) => {
 
     if (res.status === 401) { logout(); toast('Session expired. Please login again.', 'error'); return { success: false }; }
 
+    if (res.status === 429) {
+      const msg = 'Too many requests. Please wait a moment and try again.';
+      if (showToast) toast(msg, 'error');
+      return { success: false, message: msg };
+    }
+
     const contentType = res.headers.get('content-type') || '';
     if (!contentType.includes('application/json')) {
       console.error('API Error: Expected JSON but got', contentType, 'from', base + '/api' + url);
+      // Try to parse as JSON anyway (some proxies strip content-type)
+      try {
+        const text = await res.text();
+        const parsed = JSON.parse(text);
+        return parsed;
+      } catch (_) {}
       // Retry with direct Railway URL if proxy returned non-JSON (HTML 404 etc.)
       if (!API_BASE && _retryCount === 0 && RAILWAY_DIRECT) {
         console.warn('Retrying with direct Railway URL...');
-        const directRes = await fetch(RAILWAY_DIRECT + '/api' + url, {
-          method: opts.method || 'GET',
-          headers,
-          credentials: 'include',
-          body: opts.body ? JSON.stringify(opts.body) : undefined,
-        });
-        if (directRes.ok) return await directRes.json();
+        try {
+          const directRes = await fetch(RAILWAY_DIRECT + '/api' + url, {
+            method: opts.method || 'GET',
+            headers,
+            credentials: 'include',
+            body: opts.body ? JSON.stringify(opts.body) : undefined,
+          });
+          if (directRes.ok) return await directRes.json();
+        } catch (_) {}
       }
-      toast('Server returned an unexpected response. Please try again.', 'error');
-      return { success: false, message: 'Invalid response format' };
+      const msg = res.status >= 500 ? 'Server temporarily unavailable. Please try again.' : 'Failed to load data. Please try again.';
+      if (showToast) toast(msg, 'error');
+      return { success: false, message: msg };
     }
 
-    return await res.json();
+    const data = await res.json();
+    if (!res.ok && data.message && showToast) {
+      toast(data.message, 'error');
+    }
+    return data;
   } catch (err) {
     clearTimeout(timeoutId);
     const isTimeout = err.name === 'AbortError';
@@ -802,14 +822,16 @@ const api = async (url, opts = {}, _retryCount = 0) => {
       return api(url, opts, _retryCount + 1);
     }
 
+    let msg;
     if (isTimeout) {
-      toast('Request timed out. The server may be starting up — please try again in a moment.', 'error');
+      msg = 'Request timed out. The server may be starting up — please try again in a moment.';
     } else if (isNetwork) {
-      toast('Unable to reach the server. Please check your internet connection and try again.', 'error');
+      msg = 'Unable to reach the server. Please check your internet connection and try again.';
     } else {
-      toast('Something went wrong. Please try again.', 'error');
+      msg = 'Something went wrong. Please try again.';
     }
-    return { success: false, message: isTimeout ? 'Request timeout' : 'Network error' };
+    if (showToast) toast(msg, 'error');
+    return { success: false, message: msg };
   }
 };
 
@@ -1169,8 +1191,8 @@ async function renderHome(app) {
         </div>
         <div class="hero-tags">
           <span class="hero-tag" onclick="searchDestination('Goa')"><i class="fas fa-umbrella-beach"></i> Goa</span>
-          <span class="hero-tag" onclick="searchDestination('Maysore')"><i class="fas fa-water"></i> Maysore</span>
-          <span class="hero-tag" onclick="searchDestination('Chilmangaluru')"><i class="fas fa-mountain"></i> Chilmangaluru</span>
+          <span class="hero-tag" onclick="searchDestination('Mysore')"><i class="fas fa-water"></i> Mysore</span>
+          <span class="hero-tag" onclick="searchDestination('Chikmagalur')"><i class="fas fa-mountain"></i> Chikmagalur</span>
           <span class="hero-tag" onclick="searchDestination('Coorg')"><i class="fas fa-city"></i> Coorg</span>
           <span class="hero-tag" onclick="searchDestination('Ooty')"><i class="fas fa-leaf"></i> Ooty</span>
         </div>
@@ -1452,9 +1474,24 @@ function outingCard(o) {
 // ─── OUTINGS PAGE ───────────────────────────────────────────────
 async function renderOutings(app) {
   const url = selectedVibe ? '/outings?category=' + encodeURIComponent(selectedVibe) : '/outings';
-  const data = await api(url);
+  const data = await api(url, { showToast: false });
+  const apiFailed = !Array.isArray(data) && data && data.success === false;
   outings = Array.isArray(data) ? data : [];
   const vibeLabels = { beaches: '🏖️ Beaches', mountains: '⛰️ Mountains', festivals: '🎵 Festivals', road_trips: '🚗 Road Trips', adventure: '🥾 Adventure', nightlife: '🌙 Nightlife' };
+
+  let gridContent = '';
+  if (apiFailed) {
+    gridContent = `<div style="grid-column:1/-1;text-align:center;padding:3rem">
+      <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:var(--warning);margin-bottom:1rem"></i>
+      <p style="color:var(--text-light);font-size:1.1rem;margin-bottom:1rem">${data.message || 'Failed to load outings. Please try again.'}</p>
+      <button class="btn btn-primary" onclick="renderOutings(document.getElementById('app'))"><i class="fas fa-redo"></i> Retry</button>
+    </div>`;
+  } else if (outings.length === 0) {
+    gridContent = '<p style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:3rem">No outings found. Check back soon!</p>';
+  } else {
+    gridContent = outings.map(o => outingCard(o)).join('');
+  }
+
   app.innerHTML = `
     <section class="section">
       <h2 class="section-title">🗺️ ${selectedVibe ? vibeLabels[selectedVibe] || 'Outings' : 'All Outings'}</h2>
@@ -1463,7 +1500,7 @@ async function renderOutings(app) {
         <button class="vibe-filter-btn${!selectedVibe ? ' vibe-btn-active' : ''}" data-category="" onclick="selectedVibe=null;renderOutings(document.getElementById('app'))">All</button>
         ${Object.entries(vibeLabels).map(([key, label]) => `<button class="vibe-filter-btn${selectedVibe===key ? ' vibe-btn-active' : ''}" data-category="${key}" onclick="selectVibe('${key}')">${label}</button>`).join('')}
       </div>
-      <div class="filters">
+      ${!apiFailed ? `<div class="filters">
         <input type="text" id="searchFilter" placeholder="🔍 Search outings..." oninput="filterOutings()">
         <select id="locationFilter" onchange="filterOutings()">
           <option value="">All Locations</option>
@@ -1476,18 +1513,23 @@ async function renderOutings(app) {
           <option value="6000-11000">₹6,000 – ₹11,000</option>
           <option value="11000-99999">₹11,000+</option>
         </select>
-      </div>
-      <div class="cards-grid" id="outingsGrid" style="transition:opacity .3s ease, transform .3s ease">${outings.map(o => outingCard(o)).join('')}</div>
+      </div>` : ''}
+      <div class="cards-grid" id="outingsGrid" style="transition:opacity .3s ease, transform .3s ease">${gridContent}</div>
     </section>
   `;
+  // Apply pending search from hero/destination chips
+  if (typeof _pendingSearch !== 'undefined' && _pendingSearch) {
+    const sf = document.getElementById('searchFilter');
+    if (sf) { sf.value = _pendingSearch; _pendingSearch = null; filterOutings(); }
+  }
 }
 
 function filterOutings() {
-  const search = document.getElementById('searchFilter').value.toLowerCase();
-  const loc = document.getElementById('locationFilter').value;
-  const budget = document.getElementById('budgetFilter').value;
+  const search = (document.getElementById('searchFilter')?.value || '').toLowerCase();
+  const loc = document.getElementById('locationFilter')?.value || '';
+  const budget = document.getElementById('budgetFilter')?.value || '';
   let filtered = outings.filter(o => {
-    if (search && !o.title.toLowerCase().includes(search) && !o.location.toLowerCase().includes(search)) return false;
+    if (search && !o.title.toLowerCase().includes(search) && !o.location.toLowerCase().includes(search) && !(o.description || '').toLowerCase().includes(search) && !(o.category || '').toLowerCase().includes(search)) return false;
     if (loc && o.location !== loc) return false;
     if (budget) { const [min, max] = budget.split('-').map(Number); if (o.cost < min || o.cost > max) return false; }
     return true;
@@ -3482,23 +3524,16 @@ function toggleSlider() {
 }
 
 // Search from hero
+let _pendingSearch = null;
 function searchFromHero() {
   const q = document.getElementById('heroSearchInput')?.value?.trim();
+  if (q) _pendingSearch = q;
   navigate('outings');
-  if (q) {
-    setTimeout(() => {
-      const sf = document.getElementById('searchFilter');
-      if (sf) { sf.value = q; filterOutings(); }
-    }, 300);
-  }
 }
 
 function searchDestination(dest) {
+  _pendingSearch = dest;
   navigate('outings');
-  setTimeout(() => {
-    const sf = document.getElementById('searchFilter');
-    if (sf) { sf.value = dest; filterOutings(); }
-  }, 300);
 }
 
 async function selectVibe(category) {
@@ -3533,12 +3568,20 @@ async function applyVibeFilter() {
   // Fade out transition
   grid.style.opacity = '0';
   grid.style.transform = 'translateY(10px)';
+  let apiFailed = false;
+  let errorMsg = '';
   try {
     const url = selectedVibe ? '/outings?category=' + encodeURIComponent(selectedVibe) : '/outings';
-    const data = await api(url);
+    const data = await api(url, { showToast: false });
+    if (!Array.isArray(data) && data && data.success === false) {
+      apiFailed = true;
+      errorMsg = data.message || 'Failed to load outings.';
+    }
     outings = Array.isArray(data) ? data : [];
   } catch (e) {
     console.error('Failed to filter outings:', e);
+    apiFailed = true;
+    errorMsg = 'Failed to load outings. Please try again.';
   }
   // Update the vibe filter buttons on outings page
   document.querySelectorAll('.vibe-filter-btn').forEach(btn => {
@@ -3561,7 +3604,15 @@ async function applyVibeFilter() {
   }
   // Re-render grid with transition
   setTimeout(() => {
-    grid.innerHTML = outings.length ? outings.map(o => outingCard(o)).join('') : '<p style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:3rem">No outings found for this vibe. Try a different one!</p>';
+    if (apiFailed) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem">
+        <i class="fas fa-exclamation-triangle" style="font-size:2rem;color:var(--warning);margin-bottom:1rem"></i>
+        <p style="color:var(--text-light);margin-bottom:1rem">${errorMsg}</p>
+        <button class="btn btn-primary btn-sm" onclick="applyVibeFilter()"><i class="fas fa-redo"></i> Retry</button>
+      </div>`;
+    } else {
+      grid.innerHTML = outings.length ? outings.map(o => outingCard(o)).join('') : '<p style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:3rem">No outings found for this vibe. Try a different one!</p>';
+    }
     grid.style.opacity = '1';
     grid.style.transform = 'translateY(0)';
   }, 200);
