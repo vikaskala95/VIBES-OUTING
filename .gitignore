@@ -6,3 +6,5 @@ vibes.db-shm
 .env
 debug.log
 public/debug.log
+
+client_secret_*.json
