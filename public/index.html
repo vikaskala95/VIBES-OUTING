@@ -1131,15 +1131,17 @@ async function handleResetPassword(e, token) {
 }
 
 // Check for reset-password token in URL on page load (supports both path and query param)
+let _pendingPasswordReset = false;
 (function() {
   const params = new URLSearchParams(window.location.search);
   const isResetPath = window.location.pathname === '/reset-password';
   const isResetAction = params.get('action') === 'reset-password';
   const token = params.get('token');
   if ((isResetPath || isResetAction) && token) {
+    _pendingPasswordReset = true;
     // Clean the URL without reloading
     window.history.replaceState({}, '', '/');
-    setTimeout(() => showResetPassword(token), 500);
+    setTimeout(() => showResetPassword(token), 300);
   }
 })();
 
@@ -4967,7 +4969,9 @@ function downloadCurrentMedia() {
 
 // ─── INIT ───────────────────────────────────────────────────────
 renderNav();
-navigate('home');
+if (!_pendingPasswordReset) {
+  navigate('home');
+}
 </script>
 </body>
 </html>

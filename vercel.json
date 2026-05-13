@@ -3,7 +3,7 @@
     {
       "source": "/:path(.*)",
       "has": [{ "type": "host", "value": "www.vibesouting.in" }],
-      "destination": "https://vibesouting.in/:path",
+      "destination": "https://vibesouting.in/:path*",
       "permanent": true
     }
   ],

@@ -27,7 +27,7 @@ services:
       - key: ALLOWED_ORIGINS
         value: https://www.vibesouting.in,https://vibesouting.in,https://api.vibesouting.in
       - key: PASSWORD_RESET_URL
-        value: https://www.vibesouting.in
+        value: https://vibesouting.in
       - key: API_ONLY
         value: "true"
 
