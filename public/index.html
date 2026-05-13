@@ -798,9 +798,14 @@ const RAILWAY_DIRECT = 'https://vibesouting-production.up.railway.app';
 
 // Fetch public config (Google Client ID etc.)
 window.GOOGLE_CLIENT_ID = '';
-fetch((API_BASE || '') + '/api/config').then(r => r.json()).then(cfg => {
+window._googleConfigReady = fetch((API_BASE || '') + '/api/config').then(r => r.json()).then(cfg => {
   window.GOOGLE_CLIENT_ID = cfg.googleClientId || '';
-}).catch(() => {});
+}).catch(() => {
+  // Fallback: try Railway direct
+  return fetch('https://vibesouting-production.up.railway.app/api/config').then(r => r.json()).then(cfg => {
+    window.GOOGLE_CLIENT_ID = cfg.googleClientId || '';
+  }).catch(() => {});
+});
 
 const api = async (url, opts = {}, _retryCount = 0) => {
   const MAX_RETRIES = 2;
@@ -1047,14 +1052,22 @@ async function handleSignup(e) {
 
 // ─── GOOGLE SIGN-IN ─────────────────────────────────────────────
 let _googleSignInInitialized = false;
-function handleGoogleSignIn() {
+async function handleGoogleSignIn() {
   if (typeof google === 'undefined' || !google.accounts) {
     toast('Google Sign-In is loading. Please try again in a moment.', 'error');
     return;
   }
+  // Ensure config is loaded before initializing
+  if (!window.GOOGLE_CLIENT_ID) {
+    try { await window._googleConfigReady; } catch(e) {}
+  }
+  if (!window.GOOGLE_CLIENT_ID) {
+    toast('Google Sign-In is not configured. Please try again later.', 'error');
+    return;
+  }
   if (!_googleSignInInitialized) {
     google.accounts.id.initialize({
-      client_id: window.GOOGLE_CLIENT_ID || '',
+      client_id: window.GOOGLE_CLIENT_ID,
       callback: handleGoogleCredential,
       auto_select: false,
       cancel_on_tap_outside: true,
