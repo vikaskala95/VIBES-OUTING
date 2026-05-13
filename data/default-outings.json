@@ -38,8 +38,14 @@
     "time": "6:00 AM",
     "cost": 12999,
     "max": 20,
-    "img": "",
-    "images": [],
+    "img": "/outing_pic/Chikmagalur/Chikmagalur_2.png",
+    "images": [
+      "/outing_pic/Chikmagalur/Chikmagalur_1.png.png",
+      "/outing_pic/Chikmagalur/Chikmagalur_2.png",
+      "/outing_pic/Chikmagalur/Chikmagalur_3.png",
+      "/outing_pic/Chikmagalur/Chikmagalur_4.png",
+      "/outing_pic/Chikmagalur/Chikmagalur_5.png"
+    ],
     "category": "mountains",
     "trip_type": "2d1n"
   },
@@ -51,8 +57,13 @@
     "time": "7:00 AM",
     "cost": 1999,
     "max": 30,
-    "img": "",
-    "images": [],
+    "img": "/outing_pic/Mysore/Mysore_1.png",
+    "images": [
+      "/outing_pic/Mysore/Mysore_1.png",
+      "/outing_pic/Mysore/Mysore_2.png",
+      "/outing_pic/Mysore/Mysore_3.png",
+      "/outing_pic/Mysore/Mysore_4.png"
+    ],
     "category": "road_trips",
     "trip_type": "one_day"
   },
