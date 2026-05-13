@@ -17,6 +17,7 @@ const { body, param, validationResult } = require('express-validator');
 const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
+const { OAuth2Client } = require('google-auth-library');
 
 const app = express();
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -45,17 +46,21 @@ const JWT_SECRET_FINAL = JWT_SECRET || crypto.randomBytes(64).toString('hex');
 const JWT_EXPIRES = '7d';
 const BCRYPT_ROUNDS = 12;
 
+// ─── SECURITY: Google OAuth 2.0 Client ──────────────────────────
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+
 // ─── SECURITY: Helmet — Comprehensive HTTP security headers ────
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://cdnjs.cloudflare.com", "https://www.googletagmanager.com", "https://www.google-analytics.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://cdnjs.cloudflare.com", "https://www.googletagmanager.com", "https://www.google-analytics.com", "https://accounts.google.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://accounts.google.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
-      imgSrc: ["'self'", "data:", "blob:", "https://images.unsplash.com", "https://*.unsplash.com", "https://img.icons8.com", "https://*.razorpay.com", "https://www.google-analytics.com"],
-      connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com", "https://vibesouting.in", "https://www.vibesouting.in", "https://api.vibesouting.in", "https://www.google-analytics.com", "https://analytics.google.com"],
-      frameSrc: ["'self'", "https://api.razorpay.com", "https://checkout.razorpay.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://images.unsplash.com", "https://*.unsplash.com", "https://img.icons8.com", "https://*.razorpay.com", "https://www.google-analytics.com", "https://lh3.googleusercontent.com", "https://*.googleusercontent.com"],
+      connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com", "https://vibesouting.in", "https://www.vibesouting.in", "https://api.vibesouting.in", "https://www.google-analytics.com", "https://analytics.google.com", "https://accounts.google.com", "https://oauth2.googleapis.com"],
+      frameSrc: ["'self'", "https://api.razorpay.com", "https://checkout.razorpay.com", "https://accounts.google.com"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
@@ -1015,6 +1020,13 @@ async function initDatabase() {
   // Migration: add category column to outings if missing
   await dbQuery("ALTER TABLE outings ADD COLUMN category TEXT DEFAULT ''").catch(() => {});
 
+  // Migration: add Google OAuth columns to users if missing
+  await dbQuery("ALTER TABLE users ADD COLUMN google_id TEXT").catch(() => {});
+  await dbQuery("ALTER TABLE users ADD COLUMN avatar_url TEXT DEFAULT ''").catch(() => {});
+  await dbQuery("ALTER TABLE users ALTER COLUMN password DROP NOT NULL").catch(() => {
+    // SQLite doesn't support ALTER COLUMN — password is already nullable for Google-only users
+  });
+
   // Migration: add images column to outings if missing
   await dbQuery("ALTER TABLE outings ADD COLUMN images TEXT DEFAULT '[]'").catch(() => {});
 
@@ -1203,10 +1215,92 @@ app.post('/api/auth/login', [
   res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
 });
 
+// ─── GOOGLE OAUTH: Sign in / Sign up with Google ────────────────
+app.post('/api/auth/google', [
+  body('credential').notEmpty().withMessage('Google credential is required'),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  if (!googleClient || !GOOGLE_CLIENT_ID) {
+    return res.status(503).json({ success: false, message: 'Google sign-in is not configured' });
+  }
+
+  const { credential } = req.body;
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    payload = ticket.getPayload();
+  } catch (err) {
+    console.error('[GOOGLE_AUTH] Token verification failed:', err.message);
+    return res.status(401).json({ success: false, message: 'Invalid Google token' });
+  }
+
+  const { sub: googleId, email, name, picture } = payload;
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Google account has no email' });
+  }
+
+  try {
+    // Check if user exists by google_id or email
+    let user = (await dbQuery('SELECT id, name, email, role, google_id, avatar_url FROM users WHERE google_id = $1', [googleId])).rows[0];
+
+    if (!user) {
+      // Check by email — link Google account to existing email user
+      user = (await dbQuery('SELECT id, name, email, role, google_id, avatar_url FROM users WHERE email = $1', [email])).rows[0];
+
+      if (user) {
+        // Link Google account to existing user
+        await dbQuery('UPDATE users SET google_id = $1, avatar_url = $2 WHERE id = $3', [googleId, picture || '', user.id]);
+        user.google_id = googleId;
+        user.avatar_url = picture || '';
+        securityLog('GOOGLE_ACCOUNT_LINKED', { userId: user.id, email, ip: req.ip });
+      } else {
+        // Create new user (no password needed for Google-only accounts)
+        const randomPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
+        const result = await dbQuery(
+          'INSERT INTO users (name, email, password, google_id, avatar_url) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+          [name, email, randomPassword, googleId, picture || '']
+        );
+        user = (await dbQuery('SELECT id, name, email, role FROM users WHERE id = $1', [result.rows[0].id])).rows[0];
+        user.avatar_url = picture || '';
+        securityLog('GOOGLE_SIGNUP', { userId: user.id, email, ip: req.ip });
+      }
+    } else {
+      // Update avatar if changed
+      if (picture && picture !== user.avatar_url) {
+        await dbQuery('UPDATE users SET avatar_url = $1 WHERE id = $2', [picture, user.id]);
+        user.avatar_url = picture;
+      }
+    }
+
+    const token = generateToken({ id: user.id, email: user.email, role: user.role });
+    setAuthCookie(res, token);
+    securityLog('GOOGLE_LOGIN', { userId: user.id, email, ip: req.ip });
+    res.json({
+      success: true,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar_url: user.avatar_url || '' },
+      token,
+      isNewUser: !user.google_id || user.google_id === googleId,
+    });
+  } catch (err) {
+    console.error('[GOOGLE_AUTH] Database error:', err.message);
+    res.status(500).json({ success: false, message: 'Authentication failed. Please try again.' });
+  }
+});
+
 // ─── SECURITY: Logout — clear cookie ────────────────────────────
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('vibes_token');
   res.json({ success: true });
+});
+
+// ─── PUBLIC CONFIG: Expose non-secret client config ─────────────
+app.get('/api/config', (req, res) => {
+  res.json({
+    googleClientId: GOOGLE_CLIENT_ID || '',
+  });
 });
 
 // ─── OUTING ROUTES ──────────────────────────────────────────────

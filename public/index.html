@@ -721,7 +721,12 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 @media(max-width:480px){
   .gallery-grid{columns:1}
 }
+/* Google Sign-In Button */
+.google-signin-btn{display:flex;align-items:center;justify-content:center;background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:8px;padding:.65rem 1rem;font-size:.95rem;font-weight:500;font-family:'Google Sans',Roboto,Arial,sans-serif;cursor:pointer;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.google-signin-btn:hover{background:#f8f9fa;box-shadow:0 1px 3px rgba(0,0,0,.16);border-color:#d2d2d2}
+.google-signin-btn:active{background:#f1f3f4}
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -790,6 +795,12 @@ window.addEventListener('popstate', (e) => {
 // Use same-origin proxy via Vercel rewrite in production, direct in dev
 const API_BASE = window.VIBES_API_BASE || (window.location.hostname === 'localhost' ? '' : '');
 const RAILWAY_DIRECT = 'https://vibesouting-production.up.railway.app';
+
+// Fetch public config (Google Client ID etc.)
+window.GOOGLE_CLIENT_ID = '';
+fetch((API_BASE || '') + '/api/config').then(r => r.json()).then(cfg => {
+  window.GOOGLE_CLIENT_ID = cfg.googleClientId || '';
+}).catch(() => {});
 
 const api = async (url, opts = {}, _retryCount = 0) => {
   const MAX_RETRIES = 2;
@@ -938,6 +949,15 @@ function showLogin() {
       <div class="form-group"><label>Password</label><input type="password" id="loginPass" required placeholder="••••••••"></div>
       <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-arrow-right"></i> Login</button>
     </form>
+    <div style="display:flex;align-items:center;gap:.75rem;margin:1.25rem 0">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="color:var(--text-light);font-size:.8rem;white-space:nowrap">or continue with</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+    <button class="btn btn-block google-signin-btn" onclick="handleGoogleSignIn()" type="button">
+      <svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:8px;flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Sign in with Google
+    </button>
     <p style="text-align:center;margin-top:1rem;font-size:.85rem;color:var(--text-light)">No account? <a href="#" onclick="closeModal();showSignup()" style="color:var(--primary);font-weight:600">Sign up</a></p>
     <p style="text-align:center;margin-top:.5rem;font-size:.85rem"><a href="#" onclick="closeModal();showForgotPassword()" style="color:var(--primary);font-weight:600">Forgot password?</a></p>
   `);
@@ -989,6 +1009,15 @@ function showSignup() {
   openModal(`
     <button class="close" onclick="closeModal()">&times;</button>
     <h2><i class="fas fa-user-plus" style="color:var(--primary)"></i> Create Account</h2>
+    <button class="btn btn-block google-signin-btn" onclick="handleGoogleSignIn()" type="button" style="margin-bottom:1rem">
+      <svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:8px;flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Sign up with Google
+    </button>
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="color:var(--text-light);font-size:.8rem;white-space:nowrap">or sign up with email</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
     <form onsubmit="handleSignup(event)">
       <div class="form-group"><label>Full Name</label><input type="text" id="signName" required placeholder="John Doe"></div>
       <div class="form-row">
@@ -1014,6 +1043,78 @@ async function handleSignup(e) {
   const data = await api('/auth/signup', { method: 'POST', body: { name: document.getElementById('signName').value, email: document.getElementById('signEmail').value, phone: document.getElementById('signPhone').value, password: document.getElementById('signPass').value, interests: document.getElementById('signInterests').value } });
   if (data.success) { currentUser = data.user; authToken = data.token; sessionStorage.setItem('vibes_user', JSON.stringify(data.user)); sessionStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate('home'); toast('Account created! Welcome!', 'success'); }
   else toast(data.message, 'error');
+}
+
+// ─── GOOGLE SIGN-IN ─────────────────────────────────────────────
+let _googleSignInInitialized = false;
+function handleGoogleSignIn() {
+  if (typeof google === 'undefined' || !google.accounts) {
+    toast('Google Sign-In is loading. Please try again in a moment.', 'error');
+    return;
+  }
+  if (!_googleSignInInitialized) {
+    google.accounts.id.initialize({
+      client_id: window.GOOGLE_CLIENT_ID || '',
+      callback: handleGoogleCredential,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    });
+    _googleSignInInitialized = true;
+  }
+  // Use One Tap / popup prompt
+  google.accounts.id.prompt((notification) => {
+    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+      // Fallback: use popup with google.accounts.oauth2
+      // If prompt is blocked, use the renderButton approach
+      const tempDiv = document.createElement('div');
+      tempDiv.id = 'g_id_onload_temp';
+      tempDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10001;background:white;padding:2rem;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.2)';
+      tempDiv.innerHTML = '<p style="text-align:center;margin-bottom:1rem;font-weight:600">Select your Google account</p><div id="google-btn-container"></div><p style="text-align:center;margin-top:1rem"><a href="#" onclick="this.parentElement.parentElement.remove()" style="color:var(--primary);font-size:.85rem">Cancel</a></p>';
+      document.body.appendChild(tempDiv);
+      google.accounts.id.renderButton(document.getElementById('google-btn-container'), {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        width: 300,
+        text: 'continue_with',
+        shape: 'rectangular',
+      });
+    }
+  });
+}
+
+async function handleGoogleCredential(response) {
+  // Remove any temp popup
+  const tempDiv = document.getElementById('g_id_onload_temp');
+  if (tempDiv) tempDiv.remove();
+
+  // Show loading state
+  const modalContent = document.getElementById('modalContent');
+  const prevHtml = modalContent ? modalContent.innerHTML : '';
+  if (modalContent) {
+    modalContent.innerHTML = '<div style="text-align:center;padding:3rem"><div class="loading-spinner"></div><p style="margin-top:1rem;color:var(--text-light)">Signing in with Google...</p></div>';
+  }
+
+  try {
+    const data = await api('/auth/google', { method: 'POST', body: { credential: response.credential } });
+    if (data.success) {
+      currentUser = data.user;
+      authToken = data.token;
+      sessionStorage.setItem('vibes_user', JSON.stringify(data.user));
+      sessionStorage.setItem('vibes_token', data.token);
+      closeModal();
+      renderNav();
+      navigate('home');
+      toast('Successfully signed in with Google!', 'success');
+    } else {
+      if (modalContent) modalContent.innerHTML = prevHtml;
+      toast(data.message || 'Google sign-in failed', 'error');
+    }
+  } catch (err) {
+    console.error('Google sign-in error:', err);
+    if (modalContent) modalContent.innerHTML = prevHtml;
+    toast('Google sign-in failed. Please try again.', 'error');
+  }
 }
 
 function logout() { currentUser = null; authToken = null; sessionStorage.removeItem('vibes_user'); sessionStorage.removeItem('vibes_token'); if (chatInterval) { clearInterval(chatInterval); chatInterval = null; } fetch((API_BASE || '') + '/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {}); renderNav(); navigate('home'); toast('Logged out'); }
