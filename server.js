@@ -192,12 +192,13 @@ if (!process.env.API_ONLY) {
     etag: true,
     maxAge: IS_PROD ? '1d' : 0,
   }));
-  app.use('/outing_pic', express.static(path.join(__dirname, 'outing_pic'), {
-    dotfiles: 'deny',
-    etag: true,
-    maxAge: IS_PROD ? '7d' : 0,
-  }));
 }
+// Always serve outing images (needed by both API-only and monolith modes)
+app.use('/outing_pic', express.static(path.join(__dirname, 'public', 'outing_pic'), {
+  dotfiles: 'deny',
+  etag: true,
+  maxAge: IS_PROD ? '7d' : 0,
+}));
 
 // ─── SECURITY: CSRF Protection — require Authorization header for mutating requests ─
 app.use((req, res, next) => {
