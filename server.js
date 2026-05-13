@@ -192,6 +192,11 @@ if (!process.env.API_ONLY) {
     etag: true,
     maxAge: IS_PROD ? '1d' : 0,
   }));
+  app.use('/outing_pic', express.static(path.join(__dirname, 'outing_pic'), {
+    dotfiles: 'deny',
+    etag: true,
+    maxAge: IS_PROD ? '7d' : 0,
+  }));
 }
 
 // ─── SECURITY: CSRF Protection — require Authorization header for mutating requests ─
@@ -643,6 +648,7 @@ async function initDatabase() {
         location TEXT NOT NULL,
         description TEXT,
         image_url TEXT DEFAULT '',
+        images TEXT DEFAULT '[]',
         date TEXT NOT NULL,
         time TEXT DEFAULT '10:00 AM',
         cost INTEGER NOT NULL,
@@ -895,7 +901,7 @@ async function initDatabase() {
   } else {
     // SQLite: tables one at a time (exec doesn't support multi-statement in all versions)
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password TEXT NOT NULL, interests TEXT DEFAULT '', role TEXT DEFAULT 'user', must_change_password INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
-    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS outings (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, location TEXT NOT NULL, description TEXT, image_url TEXT DEFAULT '', date TEXT NOT NULL, time TEXT DEFAULT '10:00 AM', cost INTEGER NOT NULL, max_participants INTEGER DEFAULT 20, current_participants INTEGER DEFAULT 0, status TEXT DEFAULT 'active', category TEXT DEFAULT '', trip_type TEXT DEFAULT 'one_day', created_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS outings (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, location TEXT NOT NULL, description TEXT, image_url TEXT DEFAULT '', images TEXT DEFAULT '[]', date TEXT NOT NULL, time TEXT DEFAULT '10:00 AM', cost INTEGER NOT NULL, max_participants INTEGER DEFAULT 20, current_participants INTEGER DEFAULT 0, status TEXT DEFAULT 'active', category TEXT DEFAULT '', trip_type TEXT DEFAULT 'one_day', created_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, participants INTEGER DEFAULT 1, participant_names TEXT DEFAULT '', total_amount INTEGER NOT NULL, token_amount INTEGER DEFAULT 0, remaining_amount INTEGER DEFAULT 0, payment_status TEXT DEFAULT 'pending', remaining_payment_status TEXT DEFAULT 'pending', payment_id TEXT, remaining_payment_id TEXT, selected_date TEXT DEFAULT '', departure_time TEXT DEFAULT '', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (outing_id) REFERENCES outings(id))`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS suggestions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, location TEXT NOT NULL, description TEXT, budget TEXT, status TEXT DEFAULT 'pending', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, booking_id INTEGER, rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5), title TEXT DEFAULT '', comment TEXT DEFAULT '', images TEXT DEFAULT '', recommend INTEGER DEFAULT 1, approved INTEGER DEFAULT 1, helpful_count INTEGER DEFAULT 0, admin_reply TEXT DEFAULT '', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (outing_id) REFERENCES outings(id), FOREIGN KEY (booking_id) REFERENCES bookings(id))`);
@@ -985,8 +991,8 @@ async function initDatabase() {
     const sampleOutings = loadDefaultOutings();
     for (const o of sampleOutings) {
       await dbQuery(
-        'INSERT INTO outings (title, location, description, date, time, cost, max_participants, image_url, category, trip_type, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1)',
-        [o.title, o.location, o.description, o.date, o.time, o.cost, o.max, o.img, o.category || '', o.trip_type || 'one_day']
+        'INSERT INTO outings (title, location, description, date, time, cost, max_participants, image_url, images, category, trip_type, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1)',
+        [o.title, o.location, o.description, o.date, o.time, o.cost, o.max, o.img, JSON.stringify(o.images || []), o.category || '', o.trip_type || 'one_day']
       );
     }
   }
@@ -1007,6 +1013,55 @@ async function initDatabase() {
 
   // Migration: add category column to outings if missing
   await dbQuery("ALTER TABLE outings ADD COLUMN category TEXT DEFAULT ''").catch(() => {});
+
+  // Migration: add images column to outings if missing
+  await dbQuery("ALTER TABLE outings ADD COLUMN images TEXT DEFAULT '[]'").catch(() => {});
+
+  // Migration: sync images, image_url, cost, title, location, description from default-outings.json
+  const allOutingsForSync = (await dbQuery("SELECT id, title, image_url, cost, images FROM outings")).rows;
+  const defaultOutingsSync = loadDefaultOutings();
+  for (const o of allOutingsForSync) {
+    const match = defaultOutingsSync.find(d => o.title && o.title.includes(d.title.replace(/^[^\w]+/, '').trim().substring(0, 15)));
+    if (match) {
+      const newImgUrl = match.img || '';
+      const newCost = match.cost;
+      const newImages = JSON.stringify(match.images || []);
+      const currentImages = o.images || '[]';
+      const needsUpdate = (newImgUrl !== o.image_url) || (newCost !== o.cost) || (newImages !== currentImages) || (match.title !== o.title);
+      if (needsUpdate) {
+        await dbQuery('UPDATE outings SET title = $1, location = $2, description = $3, image_url = $4, cost = $5, images = $6 WHERE id = $7',
+          [match.title, match.location, match.description, newImgUrl, newCost, newImages, o.id]);
+      }
+    }
+  }
+
+  // Migration: remove seeded outings that no longer exist in default-outings.json
+  for (const o of allOutingsForSync) {
+    if (o.title && o.title.startsWith('Test ')) continue; // skip user-created
+    const match = defaultOutingsSync.find(d => o.title && o.title.includes(d.title.replace(/^[^\w]+/, '').trim().substring(0, 15)));
+    if (!match) {
+      // Check if this was a default-seeded outing (created_by = 1) before deleting
+      const detail = (await dbQuery("SELECT created_by FROM outings WHERE id = $1", [o.id])).rows[0];
+      if (detail && (detail.created_by === 1 || detail.created_by === '1')) {
+        await dbQuery("DELETE FROM outings WHERE id = $1", [o.id]);
+        console.log(`🗑️ Removed obsolete seeded outing: ${o.title}`);
+      }
+    }
+  }
+
+  // Migration: seed new outings from default-outings.json that don't exist yet
+  const existingTitles = allOutingsForSync.map(o => o.title);
+  for (const o of defaultOutingsSync) {
+    const titleCore = o.title.replace(/^[^\w]+/, '').trim().substring(0, 15);
+    const exists = existingTitles.some(t => t && t.includes(titleCore));
+    if (!exists) {
+      await dbQuery(
+        'INSERT INTO outings (title, location, description, date, time, cost, max_participants, image_url, images, category, trip_type, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1)',
+        [o.title, o.location, o.description, o.date, o.time, o.cost, o.max, o.img, JSON.stringify(o.images || []), o.category || '', o.trip_type || 'one_day']
+      );
+      console.log(`📌 Seeded new outing: ${o.title}`);
+    }
+  }
 
   // Migration: populate category for existing outings that have empty category
   const uncategorized = (await dbQuery("SELECT id, title, description, location FROM outings WHERE category IS NULL OR category = ''")).rows;
@@ -1248,14 +1303,16 @@ app.post('/api/outings', authMiddleware, adminMiddleware, [
   body('cost').isInt({ min: 0, max: 1000000 }).withMessage('Valid cost required'),
   body('max_participants').optional().isInt({ min: 1, max: 1000 }),
   body('image_url').optional().trim().isURL().withMessage('Valid image URL required'),
+  body('images').optional(),
   body('category').optional().trim().isIn(['', 'beaches', 'mountains', 'festivals', 'road_trips', 'adventure', 'nightlife']).withMessage('Invalid category'),
   body('trip_type').optional().trim().isIn(['one_day', '2d1n']).withMessage('Invalid trip type'),
 ], async (req, res) => {
   if (!validate(req, res)) return;
-  const { title, location, description, date, time, cost, max_participants, image_url, category, trip_type } = req.body;
+  const { title, location, description, date, time, cost, max_participants, image_url, images, category, trip_type } = req.body;
+  const imagesJson = Array.isArray(images) ? JSON.stringify(images) : (images || '[]');
   const result = await dbQuery(
-    'INSERT INTO outings (title, location, description, date, time, cost, max_participants, image_url, category, trip_type, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id',
-    [sanitize(title), sanitize(location), sanitize(description || ''), date, sanitize(time || '10:00 AM'), cost, max_participants || 20, image_url || '', sanitize(category || ''), sanitize(trip_type || 'one_day'), req.user.id]
+    'INSERT INTO outings (title, location, description, date, time, cost, max_participants, image_url, images, category, trip_type, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id',
+    [sanitize(title), sanitize(location), sanitize(description || ''), date, sanitize(time || '10:00 AM'), cost, max_participants || 20, image_url || '', imagesJson, sanitize(category || ''), sanitize(trip_type || 'one_day'), req.user.id]
   );
   res.json({ success: true, id: result.rows[0].id });
 });
@@ -1272,10 +1329,11 @@ app.put('/api/outings/:id', authMiddleware, adminMiddleware, [
   body('trip_type').optional().trim().isIn(['one_day', '2d1n']).withMessage('Invalid trip type'),
 ], async (req, res) => {
   if (!validate(req, res)) return;
-  const { title, location, description, date, time, cost, max_participants, image_url, status, category, trip_type } = req.body;
+  const { title, location, description, date, time, cost, max_participants, image_url, images, status, category, trip_type } = req.body;
+  const imagesJson = Array.isArray(images) ? JSON.stringify(images) : (images || '[]');
   await dbQuery(
-    'UPDATE outings SET title=$1, location=$2, description=$3, date=$4, time=$5, cost=$6, max_participants=$7, image_url=$8, status=$9, category=$10, trip_type=$11 WHERE id=$12',
-    [sanitize(title), sanitize(location), sanitize(description || ''), date, sanitize(time), cost, max_participants, image_url || '', status, sanitize(category || ''), sanitize(trip_type || 'one_day'), req.params.id]
+    'UPDATE outings SET title=$1, location=$2, description=$3, date=$4, time=$5, cost=$6, max_participants=$7, image_url=$8, images=$9, status=$10, category=$11, trip_type=$12 WHERE id=$13',
+    [sanitize(title), sanitize(location), sanitize(description || ''), date, sanitize(time), cost, max_participants, image_url || '', imagesJson, status, sanitize(category || ''), sanitize(trip_type || 'one_day'), req.params.id]
   );
   res.json({ success: true });
 });

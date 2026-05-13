@@ -1,13 +1,19 @@
 [
   {
-    "title": "🌄 Nandi Hills Sunrise Vibes",
-    "location": "Nandi Hills",
-    "description": "Pickup from Bangalore at 4 AM → chase the sunrise, aesthetic pics, and chill breakfast at a hilltop cafe. High-end Resort + Private Cab from Bangalore included. Perfect GenZ weekend escape!",
+    "title": "🌄 Nandi Hills Sunrise & Adiyogi Shiva Experience",
+    "location": "Nandi Hills & Isha Foundation (Chikkaballapur)",
+    "description": "Pickup from Bangalore at 4 AM → chase the sunrise at Nandi Hills, aesthetic pics, chill breakfast at a hilltop cafe, then visit the iconic 112-ft Adiyogi Shiva statue at Isha Yoga Center, guided meditation & Dhyanalinga visit. High-end Resort + Private Cab from Bangalore included. Perfect GenZ weekend escape!",
     "date": "2026-05-10",
     "time": "4:00 AM",
-    "cost": 2999,
+    "cost": 1500,
     "max": 25,
-    "img": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600",
+    "img": "/outing_pic/Nandi_hills/Gemini_Nandi_hills_1.png",
+    "images": [
+      "/outing_pic/Nandi_hills/Gemini_Nandi_hills_1.png",
+      "/outing_pic/Nandi_hills/Gemini_Nandi_hills_2.png",
+      "/outing_pic/Adiyogi_Shiva/Adiyogi_Shiva_Statue_1.png",
+      "/outing_pic/Adiyogi_Shiva/Adiyogi_Shiva_Statue_2.png"
+    ],
     "category": "mountains",
     "trip_type": "one_day"
   },
@@ -19,7 +25,8 @@
     "time": "6:00 AM",
     "cost": 4999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600",
+    "img": "",
+    "images": [],
     "category": "adventure",
     "trip_type": "one_day"
   },
@@ -31,7 +38,8 @@
     "time": "6:00 AM",
     "cost": 12999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600",
+    "img": "",
+    "images": [],
     "category": "mountains",
     "trip_type": "2d1n"
   },
@@ -43,7 +51,8 @@
     "time": "7:00 AM",
     "cost": 1999,
     "max": 30,
-    "img": "https://images.unsplash.com/photo-1567337710282-00832b415979?w=600",
+    "img": "",
+    "images": [],
     "category": "road_trips",
     "trip_type": "one_day"
   },
@@ -55,7 +64,8 @@
     "time": "5:00 AM",
     "cost": 9999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600",
+    "img": "",
+    "images": [],
     "category": "mountains",
     "trip_type": "2d1n"
   },
@@ -67,7 +77,8 @@
     "time": "6:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600",
+    "img": "",
+    "images": [],
     "category": "road_trips",
     "trip_type": "2d1n"
   },
@@ -79,7 +90,8 @@
     "time": "5:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600",
+    "img": "",
+    "images": [],
     "category": "adventure",
     "trip_type": "2d1n"
   },
@@ -91,7 +103,8 @@
     "time": "5:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600",
+    "img": "",
+    "images": [],
     "category": "adventure",
     "trip_type": "2d1n"
   },
@@ -103,7 +116,8 @@
     "time": "7:00 AM",
     "cost": 5999,
     "max": 25,
-    "img": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600",
+    "img": "",
+    "images": [],
     "category": "festivals",
     "trip_type": "one_day"
   },
@@ -115,7 +129,8 @@
     "time": "5:00 AM",
     "cost": 9999,
     "max": 20,
-    "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600",
+    "img": "",
+    "images": [],
     "category": "adventure",
     "trip_type": "one_day"
   },
@@ -127,7 +142,8 @@
     "time": "6:00 AM",
     "cost": 11999,
     "max": 25,
-    "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600",
+    "img": "",
+    "images": [],
     "category": "beaches",
     "trip_type": "2d1n"
   }

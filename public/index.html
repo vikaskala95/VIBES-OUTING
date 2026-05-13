@@ -200,10 +200,30 @@ input,textarea,select{font-family:inherit}
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.75rem}
 .card{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:all .35s ease}
 .card:hover{transform:translateY(-6px);box-shadow:var(--shadow-xl)}
-.card-img{height:220px;background-size:cover;background-position:center;position:relative}
+.card-img{height:220px;background-size:cover;background-position:center;position:relative;overflow:hidden}
 .card-img::after{content:'';position:absolute;bottom:0;left:0;right:0;height:50%;background:linear-gradient(transparent,rgba(0,0,0,.35))}
+
+/* Card Image Carousel */
+.card-carousel{position:relative;height:240px;overflow:hidden;background-color:#e8e0f0;border-radius:var(--radius) var(--radius) 0 0}
+.card-carousel-inner{display:flex;width:100%;height:100%;transition:transform .4s ease}
+.card-carousel-slide{min-width:100%;width:100%;height:100%;flex-shrink:0;position:relative;overflow:hidden}
+.card-carousel-slide img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;transition:transform .5s ease}
+.card:hover .card-carousel-slide img{transform:scale(1.05)}
+.card-carousel-slide.no-img{background:linear-gradient(135deg,#e8e0f0 0%,#d4c5e9 50%,#c9b8e8 100%);display:flex;align-items:center;justify-content:center}
+.card-carousel-slide.no-img::after{content:'\\f03e';font-family:'Font Awesome 5 Free';font-weight:900;font-size:3rem;color:rgba(108,60,225,.25)}
+.card-carousel .carousel-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.4);backdrop-filter:blur(4px);color:#fff;border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center;z-index:3;opacity:0;transition:opacity .3s}
+.card-carousel:hover .carousel-btn{opacity:1}
+.card-carousel .carousel-btn:hover{background:rgba(0,0,0,.6)}
+.card-carousel .carousel-prev{left:8px}
+.card-carousel .carousel-next{right:8px}
+.card-carousel .carousel-dots{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:3}
+.card-carousel .carousel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);border:none;padding:0;cursor:pointer;transition:all .2s}
+.card-carousel .carousel-dot.active{background:#fff;width:14px;border-radius:999px}
+.card-carousel::after{content:none}
 .card-img .badge{position:absolute;top:14px;left:14px;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:6px 14px;border-radius:999px;font-size:.75rem;font-weight:600;z-index:2;box-shadow:0 2px 10px rgba(108,60,225,.3);white-space:nowrap;max-width:calc(100% - 120px);overflow:hidden;text-overflow:ellipsis;line-height:1.2;letter-spacing:.2px}
 .card-img .spots-left{position:absolute;bottom:14px;left:14px;background:rgba(0,0,0,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;padding:6px 12px;border-radius:999px;font-size:.72rem;font-weight:500;z-index:2;white-space:nowrap;line-height:1.2;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.spots-left-info{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:.8rem;font-weight:600;color:var(--primary);background:rgba(108,60,225,.08);margin:8px 0 4px;letter-spacing:.2px}
+.spots-left-info.sold-out{color:#EF4444;background:rgba(239,68,68,.08)}
 .card-body{padding:1.5rem}
 .card-body h3{font-size:1.1rem;font-weight:700;margin-bottom:.5rem;letter-spacing:-.2px;transition:color .2s}
 .card-body h3:hover{color:var(--primary)}
@@ -602,6 +622,8 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
   .filters{gap:.5rem}
   .filters input,.filters select{padding:.6rem 1rem;font-size:.85rem;width:100%}
   .card-img{height:180px}
+  .card-carousel{height:200px}
+  .card-carousel .carousel-btn{opacity:1;width:24px;height:24px;font-size:.6rem}
   .card-img .badge{top:10px;left:10px;padding:5px 10px;font-size:.7rem;max-width:calc(100% - 110px)}
   .card-img .trip-type-badge{top:10px;right:10px;padding:5px 10px;font-size:.65rem}
   .card-img .spots-left{bottom:10px;left:10px;padding:5px 10px;font-size:.68rem}
@@ -735,10 +757,28 @@ function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function safeImageUrl(url) {
-  if (!url || typeof url !== 'string') return 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600';
+  if (!url || typeof url !== 'string') return '';
+  // Allow relative paths (e.g. /outing_pic/...)
+  if (url.startsWith('/')) return url;
   // Only allow http/https URLs
   try { const u = new URL(url); if (u.protocol === 'http:' || u.protocol === 'https:') return url; } catch(e) {}
-  return 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600';
+  return '';
+}
+
+// ─── CARD IMAGE CAROUSEL ────────────────────────────────────────
+function slideCarousel(carouselId, target) {
+  const el = document.getElementById(carouselId);
+  if (!el) return;
+  const inner = el.querySelector('.card-carousel-inner');
+  const dots = el.querySelectorAll('.carousel-dot');
+  const total = inner.children.length;
+  let idx = parseInt(el.dataset.idx) || 0;
+  if (target === 'prev') idx = (idx - 1 + total) % total;
+  else if (target === 'next') idx = (idx + 1) % total;
+  else idx = parseInt(target);
+  el.dataset.idx = idx;
+  inner.style.transform = `translateX(-${idx * 100}%)`;
+  dots.forEach((d, i) => d.classList.toggle('active', i === idx));
 }
 
 // ─── BROWSER HISTORY ────────────────────────────────────────────
@@ -1436,12 +1476,28 @@ function outingCard(o) {
   const countdownText = formatCountdown(nextWeekend.hoursUntil);
   const nextDateStr = nextWeekend.date.toLocaleDateString('en-IN', { day:'numeric', month:'short' });
   const isSoldOut = spotsLeft <= 0;
+
+  // Parse images array
+  let images = [];
+  try { images = typeof o.images === 'string' ? JSON.parse(o.images) : (o.images || []); } catch(e) {}
+  images = images.filter(u => u && u.trim());
+  if (!images.length && imgUrl) images = [imgUrl];
+  if (!images.length) images = [''];
+
+  const carouselId = 'carousel-' + o.id;
+  const hasMultiple = images.length > 1;
+
+  const slidesHtml = images.map(url => url ? `<div class="card-carousel-slide"><img src="${safeImageUrl(url)}" alt="Outing photo" loading="lazy"></div>` : `<div class="card-carousel-slide no-img"></div>`).join('');
+  const dotsHtml = hasMultiple ? `<div class="carousel-dots">${images.map((_, i) => `<button class="carousel-dot${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="event.stopPropagation();slideCarousel('${carouselId}',${i})"></button>`).join('')}</div>` : '';
+
   return `
     <div class="card">
-      <div class="card-img" style="background-image:url('${imgUrl}');cursor:pointer;position:relative" onclick="navigate('outing-${o.id}')">
-        <span class="badge">${location}</span>
-        <span class="trip-type-badge ${tripBadgeClass}">${tripLabel}</span>
-        <span class="spots-left"><i class="fas fa-users"></i> ${spotsLeft} spots left</span>
+      <div class="card-carousel" id="${carouselId}" data-idx="0" onclick="navigate('outing-${o.id}')" style="cursor:pointer;position:relative">
+        <div class="card-carousel-inner">${slidesHtml}</div>
+        ${hasMultiple ? `<button class="carousel-btn carousel-prev" onclick="event.stopPropagation();slideCarousel('${carouselId}','prev')"><i class="fas fa-chevron-left"></i></button>
+        <button class="carousel-btn carousel-next" onclick="event.stopPropagation();slideCarousel('${carouselId}','next')"><i class="fas fa-chevron-right"></i></button>` : ''}
+        ${dotsHtml}
+        <span class="trip-type-badge ${tripBadgeClass}" style="position:absolute;top:14px;right:14px;z-index:2">${tripLabel}</span>
       </div>
       <div class="card-body">
         <h3 style="cursor:pointer" onclick="navigate('outing-${o.id}')">${title}</h3>
@@ -1456,6 +1512,9 @@ function outingCard(o) {
         </div>
         <p>${desc}</p>
         ${o.matchReasons ? `<div class="rec-reasons">${o.matchReasons.map(r => `<span class="rec-reason">${escapeHtml(r)}</span>`).join('')}</div>` : ''}
+        <div class="spots-left-info ${isSoldOut ? 'sold-out' : ''}">
+          <i class="fas ${isSoldOut ? 'fa-ban' : 'fa-users'}"></i> ${isSoldOut ? 'Sold Out' : `${spotsLeft} Spots Left`}
+        </div>
         <div class="card-footer" style="margin-top:.75rem">
           <div class="price">
             <span style="text-decoration:line-through;color:var(--text-light);font-size:.85rem;font-weight:400">₹${o.cost}</span>
@@ -2269,11 +2328,26 @@ async function renderOutingDetail(app, outingId) {
     ]);
   }
 
+  // Parse images for detail gallery
+  let detailImages = [];
+  try { detailImages = typeof o.images === 'string' ? JSON.parse(o.images) : (o.images || []); } catch(e) {}
+  detailImages = detailImages.filter(u => u && u.trim());
+  if (!detailImages.length && o.image_url) detailImages = [o.image_url];
+  if (!detailImages.length) detailImages = [''];
+  const detailCarouselId = 'detail-carousel-' + outingId;
+
   app.innerHTML = `
     <section class="section" style="max-width:800px">
       <div style="margin-bottom:1rem"><a href="#" onclick="navigate('outings')" style="color:var(--primary);font-size:.9rem"><i class="fas fa-arrow-left"></i> Back to Outings</a></div>
-      <div style="border-radius:var(--radius);overflow:hidden;height:300px;background:url('${safeImageUrl(o.image_url)}') center/cover;margin-bottom:1.5rem;position:relative">
-        <span class="trip-type-badge ${tripType === '2d1n' ? 'two-day' : 'one-day'}" style="position:absolute;top:16px;right:16px">${tripLabel}</span>
+      <div class="card-carousel" id="${detailCarouselId}" data-idx="0" style="border-radius:var(--radius);height:350px;margin-bottom:1.5rem">
+        <div class="card-carousel-inner">${detailImages.map(url => url ? `<div class="card-carousel-slide"><img src="${safeImageUrl(url)}" alt="Outing photo" loading="lazy"></div>` : `<div class="card-carousel-slide no-img"></div>`).join('')}</div>
+        ${detailImages.length > 1 ? `
+        <button class="carousel-btn carousel-prev" onclick="slideCarousel('${detailCarouselId}','prev')" style="opacity:1"><i class="fas fa-chevron-left"></i></button>
+        <button class="carousel-btn carousel-next" onclick="slideCarousel('${detailCarouselId}','next')" style="opacity:1"><i class="fas fa-chevron-right"></i></button>
+        <div class="carousel-dots">${detailImages.map((_, i) => `<button class="carousel-dot${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="slideCarousel('${detailCarouselId}',${i})"></button>`).join('')}</div>
+        ` : ''}
+        <span class="trip-type-badge ${tripType === '2d1n' ? 'two-day' : 'one-day'}" style="position:absolute;top:16px;right:16px;z-index:2">${tripLabel}</span>
+        ${detailImages.length > 1 ? `<span style="position:absolute;top:16px;left:16px;z-index:2;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);color:#fff;padding:4px 10px;border-radius:999px;font-size:.72rem;font-weight:500"><i class="fas fa-images"></i> ${detailImages.length} photos</span>` : ''}
       </div>
       <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:1rem">
         <div>
