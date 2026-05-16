@@ -25,13 +25,18 @@
     "time": "6:00 AM",
     "cost": 4999,
     "max": 20,
-    "img": "",
-    "images": [],
+    "img": "/outing_pic/Bhima/Bhima_1.png",
+    "images": [
+      "/outing_pic/Bhima/Bhima_1.png",
+      "/outing_pic/Bhima/Bhima_2.png",
+      "/outing_pic/Bhima/Bhima_3.png",
+      "/outing_pic/Bhima/Bhima_4.png"
+    ],
     "category": "adventure",
     "trip_type": "one_day"
   },
   {
-    "title": "⛰️ Chikmagalur Coffee & Chill (2D/1N)",
+    "title": "☕️ Chikmagalur Coffee & Chill (2D/1N)",
     "location": "Chikmagalur",
     "description": "Pickup from Bangalore → 2-day getaway — Mullayanagiri trek, coffee plantation tour, campfire & stargazing. High-end Resort + Private Cab from Bangalore. Peak aesthetic energy.",
     "date": "2026-05-24",
@@ -68,41 +73,56 @@
     "trip_type": "one_day"
   },
   {
-    "title": "🌿 Ooty Mountain Escape (2D/1N)",
+    "title": "🏔 Ooty Mountain Escape (2D/1N)",
     "location": "Ooty",
     "description": "Pickup from Bangalore → Toy train, botanical gardens, lake boating & cozy resort stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Main character energy guaranteed.",
     "date": "2026-06-14",
     "time": "5:00 AM",
     "cost": 9999,
     "max": 20,
-    "img": "",
-    "images": [],
+    "img": "/outing_pic/Ooty/ooty_1.png",
+    "images": [
+      "/outing_pic/Ooty/ooty_1.png",
+      "/outing_pic/Ooty/ooty_2.png",
+      "/outing_pic/Ooty/ooty_3.png"
+    ],
     "category": "mountains",
     "trip_type": "2d1n"
   },
   {
-    "title": "☕ Coorg Rainforest Retreat (2D/1N)",
+    "title": "☔ Coorg Rainforest Retreat (2D/1N)",
     "location": "Coorg",
     "description": "Starts from Bangalore → Abbey Falls, Raja Seat sunset, coffee trail & private villa stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Touch grass, literally.",
     "date": "2026-06-21",
     "time": "6:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "",
-    "images": [],
+    "img": "/outing_pic/Coorg/Coorg_1.png",
+    "images": [
+      "/outing_pic/Coorg/Coorg_1.png",
+      "/outing_pic/Coorg/Coorg_2.png",
+      "/outing_pic/Coorg/Coorg_3.png"
+    ],
     "category": "road_trips",
     "trip_type": "2d1n"
   },
   {
-    "title": "🌊 Wayanad Wild Weekend (2D/1N)",
+    "title": "🌈 Wayanad Wild Weekend (2D/1N)",
     "location": "Wayanad",
     "description": "Pickup from Bangalore → Edakkal Caves, bamboo rafting, Banasura dam & treehouse stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Nature but make it aesthetic.",
     "date": "2026-06-28",
     "time": "5:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "",
-    "images": [],
+    "img": "/outing_pic/Wayanad/wayanad_1.jpg",
+    "images": [
+      "/outing_pic/Wayanad/wayanad_1.jpg",
+      "/outing_pic/Wayanad/wayanad_2.jpg",
+      "/outing_pic/Wayanad/wayanad_3.jpg",
+      "/outing_pic/Wayanad/wayanad_6.jpg",
+      "/outing_pic/Wayanad/wayanad_12.jpg",
+      "/outing_pic/Wayanad/wayanad_13.jpg"
+    ],
     "category": "adventure",
     "trip_type": "2d1n"
   },
@@ -114,8 +134,11 @@
     "time": "5:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "",
-    "images": [],
+    "img": "/outing_pic/Gandikota/Gandikota_1.png",
+    "images": [
+      "/outing_pic/Gandikota/Gandikota_1.png",
+      "/outing_pic/Gandikota/Gandikota_2.png"
+    ],
     "category": "adventure",
     "trip_type": "2d1n"
   },
@@ -127,8 +150,11 @@
     "time": "7:00 AM",
     "cost": 5999,
     "max": 25,
-    "img": "",
-    "images": [],
+    "img": "/outing_pic/Lepakshi/Lepakshi_1.png",
+    "images": [
+      "/outing_pic/Lepakshi/Lepakshi_1.png",
+      "/outing_pic/Lepakshi/Lepakshi_2.png"
+    ],
     "category": "festivals",
     "trip_type": "one_day"
   },
@@ -153,9 +179,593 @@
     "time": "6:00 AM",
     "cost": 11999,
     "max": 25,
-    "img": "",
-    "images": [],
+    "img": "/outing_pic/Goa/goa_1.png",
+    "images": [
+      "/outing_pic/Goa/goa_1.png",
+      "/outing_pic/Goa/goa_2.png",
+      "/outing_pic/Goa/goa_3.png"
+    ],
     "category": "beaches",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🏛️ Hassan Heritage Trail",
+    "location": "Hassan",
+    "description": "Starts from Bangalore → Hoysala temple tour at Belur & Halebidu, intricate carvings, local Malnad cuisine & scenic drive through the Western Ghats. High-end Resort + Private Cab from Bangalore. Ancient architecture meets modern vibes!",
+    "date": "2026-08-02",
+    "time": "6:00 AM",
+    "cost": 3999,
+    "max": 25,
+    "img": "/outing_pic/Hassan/Hassan_1.jpg",
+    "images": [
+      "/outing_pic/Hassan/Hassan_1.jpg"
+    ],
+    "category": "road_trips",
+    "trip_type": "one_day"
+  },
+  {
+    "title": "🏖️ Malpe Beach & St. Mary's Island",
+    "location": "Malpe",
+    "description": "Pickup from Bangalore → Ferry to St. Mary's Island with volcanic rock columns, beach vibes at Malpe, fresh seafood & sunset walk. 2-day trip with High-end Resort + Private Cab from Bangalore. Hidden coastal paradise!",
+    "date": "2026-08-09",
+    "time": "5:00 AM",
+    "cost": 8999,
+    "max": 20,
+    "img": "/outing_pic/Malpe/malpe_3.jpg",
+    "images": [
+      "/outing_pic/Malpe/malpe_3.jpg",
+      "/outing_pic/Malpe/malpe_5.jpg",
+      "/outing_pic/Malpe/malpe_9.jpg",
+      "/outing_pic/Malpe/malpe_10.jpg",
+      "/outing_pic/Malpe/malpe_11.jpg",
+      "/outing_pic/Malpe/malpe_13.jpg",
+      "/outing_pic/Malpe/malpe_15.jpg"
+    ],
+    "category": "beaches",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🌊 Shimoga Waterfalls & Nature Tour (2D/1N)",
+    "location": "Shimoga",
+    "description": "Starts from Bangalore → Jog Falls day trip, Sigandur temple boat ride, Tyavarekoppa Lion Safari & riverside camping. 2-day trip with High-end Resort + Private Cab from Bangalore. Waterfall chasing at its finest!",
+    "date": "2026-08-16",
+    "time": "5:00 AM",
+    "cost": 9999,
+    "max": 20,
+    "img": "/outing_pic/Shimoga/shimoga_7.jpg",
+    "images": [
+      "/outing_pic/Shimoga/shimoga_7.jpg",
+      "/outing_pic/Shimoga/shimoga_9.jpg",
+      "/outing_pic/Shimoga/shimoga_10.jpg",
+      "/outing_pic/Shimoga/shimoga_12.jpg",
+      "/outing_pic/Shimoga/shimoga_13.jpg",
+      "/outing_pic/Shimoga/shimoga_15.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "💧 Shivanasamudra Falls Day Trip",
+    "location": "Shivanasamudra",
+    "description": "Pickup from Bangalore → Twin waterfalls (Gaganachukki & Bharachukki), coracle ride, Talakadu sand dunes & riverside picnic. High-end Resort + Private Cab from Bangalore. Monsoon magic!",
+    "date": "2026-08-23",
+    "time": "6:00 AM",
+    "cost": 2999,
+    "max": 25,
+    "img": "/outing_pic/Shivanasamudra_Falls/Shivanasamudra_1.png",
+    "images": [
+      "/outing_pic/Shivanasamudra_Falls/Shivanasamudra_1.png"
+    ],
+    "category": "adventure",
+    "trip_type": "one_day"
+  },
+  {
+    "title": "🕉️ Shravanabelagola Jain Heritage",
+    "location": "Shravanabelagola",
+    "description": "Starts from Bangalore → Climb 614 steps to the iconic Gommateshwara Bahubali statue (57 ft monolith), explore Jain temples, local cuisine & scenic hilltop views. High-end Resort + Private Cab from Bangalore. Spiritual + aesthetic combo!",
+    "date": "2026-08-30",
+    "time": "6:00 AM",
+    "cost": 2999,
+    "max": 25,
+    "img": "/outing_pic/Shravanabelagola/shravanabelagola_1.jpg",
+    "images": [
+      "/outing_pic/Shravanabelagola/shravanabelagola_1.jpg",
+      "/outing_pic/Shravanabelagola/shravanabelagola_2.jpg",
+      "/outing_pic/Shravanabelagola/shravanabelagola_4.jpg",
+      "/outing_pic/Shravanabelagola/shravanabelagola_6.jpg",
+      "/outing_pic/Shravanabelagola/shravanabelagola_8.jpg",
+      "/outing_pic/Shravanabelagola/shravanabelagola_9.jpg",
+      "/outing_pic/Shravanabelagola/shravanabelagola_10.jpg"
+    ],
+    "category": "festivals",
+    "trip_type": "one_day"
+  },
+  {
+    "title": "⛰️ Savandurga Trek Adventure",
+    "location": "Savandurga",
+    "description": "Pickup from Bangalore → Trek Asia's largest monolith hill, panoramic views, Manchanabele dam picnic & sunset photography. High-end Resort + Private Cab from Bangalore. Weekend warrior mode ON!",
+    "date": "2026-09-06",
+    "time": "5:00 AM",
+    "cost": 1999,
+    "max": 25,
+    "img": "/outing_pic/savandurga_trek/savandurga_trek_1.png",
+    "images": [
+      "/outing_pic/savandurga_trek/savandurga_trek_1.png",
+      "/outing_pic/savandurga_trek/savandurga_trek_2.png"
+    ],
+    "category": "adventure",
+    "trip_type": "one_day"
+  },
+  {
+    "title": "🧗 Ramanagara Rock Climbing & Rappelling",
+    "location": "Ramanagara",
+    "description": "Starts from Bangalore → Rock climbing, rappelling, zip-lining at the Sholay filming location, vulture spotting & riverside lunch. High-end Resort + Private Cab from Bangalore. Adventure is calling!",
+    "date": "2026-09-13",
+    "time": "6:00 AM",
+    "cost": 2999,
+    "max": 20,
+    "img": "/outing_pic/Ramanagara/ramanagara_1.jpg",
+    "images": [
+      "/outing_pic/Ramanagara/ramanagara_1.jpg",
+      "/outing_pic/Ramanagara/ramanagara_4.jpg",
+      "/outing_pic/Ramanagara/ramanagara_7.jpg",
+      "/outing_pic/Ramanagara/ramanagara_9.jpg",
+      "/outing_pic/Ramanagara/ramanagara_13.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "one_day"
+  },
+  {
+    "title": "🦌 Biligiri Ranga Hills Wildlife Safari (2D/1N)",
+    "location": "Biligiri Ranga Hills (BR Hills)",
+    "description": "Pickup from Bangalore → Jungle safari, spot elephants & gaur, tribal village visit, Biligiri Rangaswamy temple & nature walk through the Shola forests. 2-day trip with High-end Resort + Private Cab from Bangalore. Where the Western & Eastern Ghats meet!",
+    "date": "2026-09-20",
+    "time": "5:00 AM",
+    "cost": 8999,
+    "max": 20,
+    "img": "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_1.jpg",
+    "images": [
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_1.jpg",
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_6.jpg",
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_8.jpg",
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_9.jpg",
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_10.jpg",
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_11.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🐘 Mudumalai National Park Safari (2D/1N)",
+    "location": "Mudumalai National Park",
+    "description": "Starts from Bangalore → Elephant safari, tiger reserve jeep ride, Moyar river gorge, bird watching & jungle lodge stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Into the wild!",
+    "date": "2026-09-27",
+    "time": "5:00 AM",
+    "cost": 9999,
+    "max": 20,
+    "img": "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_1.jpg",
+    "images": [
+      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_1.jpg",
+      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_2.jpg",
+      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_3.jpg",
+      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_4.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🐾 Masinagudi Jungle Escape (2D/1N)",
+    "location": "Masinagudi",
+    "description": "Pickup from Bangalore → Jungle jeep safari, Sigur Plateau wildlife spotting, night safari, tribal food & eco-lodge stay at the foothills of Nilgiris. 2-day trip with High-end Resort + Private Cab from Bangalore. Where leopards roam free!",
+    "date": "2026-10-04",
+    "time": "5:00 AM",
+    "cost": 8999,
+    "max": 20,
+    "img": "/outing_pic/Masinagudi/masinagudi_2.jpg",
+    "images": [
+      "/outing_pic/Masinagudi/masinagudi_2.jpg",
+      "/outing_pic/Masinagudi/masinagudi_4.jpg",
+      "/outing_pic/Masinagudi/masinagudi_5.jpg",
+      "/outing_pic/Masinagudi/masinagudi_6.jpg",
+      "/outing_pic/Masinagudi/masinagudi_7.jpg",
+      "/outing_pic/Masinagudi/masinagudi_8.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🌧️ Agumbe Rainforest Trek (2D/1N)",
+    "location": "Agumbe",
+    "description": "Starts from Bangalore → Sunset Point, Barkana Falls trek, King Cobra spotting zone, Someshwara wildlife sanctuary & homestay in the 'Cherrapunji of the South'. 2-day trip with High-end Resort + Private Cab from Bangalore. Monsoon heaven!",
+    "date": "2026-10-11",
+    "time": "5:00 AM",
+    "cost": 7999,
+    "max": 20,
+    "img": "/outing_pic/Agumbe/agumbe_9.jpg",
+    "images": [
+      "/outing_pic/Agumbe/agumbe_9.jpg",
+      "/outing_pic/Agumbe/agumbe_10.jpg",
+      "/outing_pic/Agumbe/agumbe_11.jpg",
+      "/outing_pic/Agumbe/agumbe_12.jpg",
+      "/outing_pic/Agumbe/agumbe_13.jpg",
+      "/outing_pic/Agumbe/agumbe_15.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🔦 Antaragange Night Trek",
+    "location": "Antaragange",
+    "description": "Pickup from Bangalore → Night trek through volcanic rock formations, cave exploration, bonfire under the stars & sunrise views. High-end Resort + Private Cab from Bangalore. The OG night trek near Bangalore!",
+    "date": "2026-10-18",
+    "time": "10:00 PM",
+    "cost": 1999,
+    "max": 25,
+    "img": "/outing_pic/Antaragange/antaragange_1.jpg",
+    "images": [
+      "/outing_pic/Antaragange/antaragange_1.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "one_day"
+  },
+  {
+    "title": "🕳️ Belum Caves Underground Adventure",
+    "location": "Belum Caves",
+    "description": "Starts from Bangalore → Explore India's longest cave system (3.5 km), stalactite formations, underground chambers, musical cave & Gandikota fort combo option. High-end Resort + Private Cab from Bangalore. Indiana Jones vibes!",
+    "date": "2026-10-25",
+    "time": "5:00 AM",
+    "cost": 5999,
+    "max": 25,
+    "img": "/outing_pic/Belum_Caves/belum_caves_1.jpg",
+    "images": [
+      "/outing_pic/Belum_Caves/belum_caves_1.jpg",
+      "/outing_pic/Belum_Caves/belum_caves_2.jpg",
+      "/outing_pic/Belum_Caves/belum_caves_3.jpg",
+      "/outing_pic/Belum_Caves/belum_caves_4.jpg",
+      "/outing_pic/Belum_Caves/belum_caves_5.jpg",
+      "/outing_pic/Belum_Caves/belum_caves_6.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "one_day"
+  },
+  {
+    "title": "⛰️ Kodachadri Monsoon Trek (2D/1N)",
+    "location": "Kodachadri",
+    "description": "Pickup from Bangalore → Trek through dense Shola forests to Kodachadri peak (1343m), Hidlumane Falls, Sarvajna Peetha & breathtaking sunset above the clouds. 2-day trip with High-end Resort + Private Cab from Bangalore. Cloud walking experience!",
+    "date": "2026-11-01",
+    "time": "5:00 AM",
+    "cost": 7999,
+    "max": 20,
+    "img": "/outing_pic/Kodachadri/kodachadri_2.jpg",
+    "images": [
+      "/outing_pic/Kodachadri/kodachadri_2.jpg",
+      "/outing_pic/Kodachadri/kodachadri_3.jpg",
+      "/outing_pic/Kodachadri/kodachadri_9.jpg",
+      "/outing_pic/Kodachadri/kodachadri_12.jpg",
+      "/outing_pic/Kodachadri/kodachadri_14.jpg",
+      "/outing_pic/Kodachadri/kodachadri_15.jpg"
+    ],
+    "category": "mountains",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🌅 Skandagiri Sunrise Night Trek",
+    "location": "Skandagiri",
+    "description": "Starts from Bangalore → Midnight trek to Skandagiri peak, walk above the clouds, epic sunrise, fort ruins exploration & breakfast with panoramic views. High-end Resort + Private Cab from Bangalore. Bucket list trek!",
+    "date": "2026-11-08",
+    "time": "11:00 PM",
+    "cost": 2499,
+    "max": 25,
+    "img": "/outing_pic/Skandagiri/skandagiri_1.jpg",
+    "images": [
+      "/outing_pic/Skandagiri/skandagiri_1.jpg",
+      "/outing_pic/Skandagiri/skandagiri_6.jpg",
+      "/outing_pic/Skandagiri/skandagiri_8.jpg",
+      "/outing_pic/Skandagiri/skandagiri_10.jpg",
+      "/outing_pic/Skandagiri/skandagiri_13.jpg"
+    ],
+    "category": "mountains",
+    "trip_type": "one_day"
+  },
+  {
+    "title": "🏙️ Bangalore City Tour",
+    "location": "Bangalore",
+    "description": "Explore Namma Bengaluru → Lalbagh, Cubbon Park, Bangalore Palace, Tipu Sultan's Palace, Commercial Street shopping, VV Puram food street & craft beer trail. Private Cab included. The perfect local staycation vibes!",
+    "date": "2026-11-15",
+    "time": "9:00 AM",
+    "cost": 1499,
+    "max": 30,
+    "img": "/outing_pic/Bangalore_City/Bangalore_Mysore_Maharaja_Palace.jpg",
+    "images": [
+      "/outing_pic/Bangalore_City/Bangalore_Mysore_Maharaja_Palace.jpg"
+    ],
+    "category": "road_trips",
+    "trip_type": "one_day"
+  },
+  {
+    "title": "🍃 Coonoor Tea Estate Retreat (2D/1N)",
+    "location": "Coonoor",
+    "description": "Pickup from Bangalore → Sim's Park, Dolphin's Nose viewpoint, Lamb's Rock, tea factory tour & heritage toy train ride through the Nilgiris. 2-day trip with High-end Resort + Private Cab from Bangalore. Cottagecore aesthetic unlocked!",
+    "date": "2026-11-22",
+    "time": "5:00 AM",
+    "cost": 8999,
+    "max": 20,
+    "img": "/outing_pic/Coonoor/coonoor_3.jpg",
+    "images": [
+      "/outing_pic/Coonoor/coonoor_3.jpg",
+      "/outing_pic/Coonoor/coonoor_4.jpg",
+      "/outing_pic/Coonoor/coonoor_7.jpg",
+      "/outing_pic/Coonoor/coonoor_9.jpg",
+      "/outing_pic/Coonoor/coonoor_15.jpg"
+    ],
+    "category": "mountains",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🌿 Yercaud Jewel of the South (2D/1N)",
+    "location": "Yercaud",
+    "description": "Starts from Bangalore → Emerald Lake, Pagoda Point, Lady's Seat, Bear Shola Falls, orange groves & coffee plantation walks. 2-day trip with High-end Resort + Private Cab from Bangalore. Underrated hill station gem!",
+    "date": "2026-11-29",
+    "time": "5:00 AM",
+    "cost": 7999,
+    "max": 20,
+    "img": "/outing_pic/Yercaud/yercaud_1.jpg",
+    "images": [
+      "/outing_pic/Yercaud/yercaud_1.jpg",
+      "/outing_pic/Yercaud/yercaud_2.jpg",
+      "/outing_pic/Yercaud/yercaud_5.jpg",
+      "/outing_pic/Yercaud/yercaud_6.jpg",
+      "/outing_pic/Yercaud/yercaud_7.jpg",
+      "/outing_pic/Yercaud/yercaud_8.jpg",
+      "/outing_pic/Yercaud/yercaud_10.jpg"
+    ],
+    "category": "mountains",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🌸 Kodaikanal Princess of Hills (2D/1N)",
+    "location": "Kodaikanal",
+    "description": "Pickup from Bangalore → Coaker's Walk, Kodai Lake boating, Pillar Rocks, Pine Forest, Dolphin's Nose & Bear Shola Falls. 2-day trip with High-end Resort + Private Cab from Bangalore. The ultimate hill station romance!",
+    "date": "2026-12-06",
+    "time": "5:00 AM",
+    "cost": 10999,
+    "max": 20,
+    "img": "/outing_pic/Kodaikanal/kodaikanal_1.jpg",
+    "images": [
+      "/outing_pic/Kodaikanal/kodaikanal_1.jpg",
+      "/outing_pic/Kodaikanal/kodaikanal_3.jpg",
+      "/outing_pic/Kodaikanal/kodaikanal_6.jpg",
+      "/outing_pic/Kodaikanal/kodaikanal_10.jpg",
+      "/outing_pic/Kodaikanal/kodaikanal_11.jpg",
+      "/outing_pic/Kodaikanal/kodaikanal_12.jpg"
+    ],
+    "category": "mountains",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🇫🇷 Puducherry French Colony Vibes (2D/1N)",
+    "location": "Puducherry",
+    "description": "Starts from Bangalore → White Town French Quarter walk, Promenade Beach sunrise, Auroville meditation, Paradise Beach, cafe hopping & night bazaar. 2-day trip with High-end Resort + Private Cab from Bangalore. European vibes without the visa!",
+    "date": "2026-12-13",
+    "time": "5:00 AM",
+    "cost": 8999,
+    "max": 25,
+    "img": "/outing_pic/Puducherry/Puducherry_1.png",
+    "images": [
+      "/outing_pic/Puducherry/Puducherry_1.png",
+      "/outing_pic/Puducherry/Puducherry_2.png",
+      "/outing_pic/Puducherry/Puducherry_3.png"
+    ],
+    "category": "beaches",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🏄 Gokarna Beach Trek (2D/1N)",
+    "location": "Gokarna",
+    "description": "Pickup from Bangalore → Beach trek from Om Beach to Paradise Beach, cliff jumping, Mahabaleshwar temple, bonfire & beach shack vibes. 2-day trip with High-end Resort + Private Cab from Bangalore. Goa's chill cousin!",
+    "date": "2026-12-20",
+    "time": "5:00 AM",
+    "cost": 7999,
+    "max": 20,
+    "img": "/outing_pic/Gokarna/gokarna_1.jpg",
+    "images": [
+      "/outing_pic/Gokarna/gokarna_1.jpg",
+      "/outing_pic/Gokarna/gokarna_2.jpg",
+      "/outing_pic/Gokarna/gokarna_4.jpg",
+      "/outing_pic/Gokarna/gokarna_5.jpg",
+      "/outing_pic/Gokarna/gokarna_9.jpg",
+      "/outing_pic/Gokarna/gokarna_10.jpg",
+      "/outing_pic/Gokarna/gokarna_11.jpg"
+    ],
+    "category": "beaches",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🏛️ Hampi Ruins & Boulder Vibes (2D/1N)",
+    "location": "Hampi",
+    "description": "Starts from Bangalore → UNESCO World Heritage Vijayanagara ruins, Virupaksha Temple, Tungabhadra coracle ride, boulder climbing, Hippie Island & sunset at Hemakuta Hill. 2-day trip with High-end Resort + Private Cab from Bangalore. Time travel to a lost empire!",
+    "date": "2026-12-27",
+    "time": "5:00 AM",
+    "cost": 8999,
+    "max": 25,
+    "img": "/outing_pic/Hampi/hampi_1.jpg",
+    "images": [
+      "/outing_pic/Hampi/hampi_1.jpg",
+      "/outing_pic/Hampi/hampi_7.jpg",
+      "/outing_pic/Hampi/hampi_8.jpg",
+      "/outing_pic/Hampi/hampi_15.jpg"
+    ],
+    "category": "road_trips",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "💦 Jog Falls Majestic Waterfall Trip",
+    "location": "Jog Falls",
+    "description": "Pickup from Bangalore → India's 2nd highest plunge waterfall, 830-step descent to the base, Linganamakki dam, Tunga river & local Malnad food. High-end Resort + Private Cab from Bangalore. Feel the mist!",
+    "date": "2027-01-03",
+    "time": "5:00 AM",
+    "cost": 5999,
+    "max": 25,
+    "img": "/outing_pic/Jog_Falls/jog_falls_1.jpg",
+    "images": [
+      "/outing_pic/Jog_Falls/jog_falls_1.jpg",
+      "/outing_pic/Jog_Falls/jog_falls_2.jpg",
+      "/outing_pic/Jog_Falls/jog_falls_3.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "one_day"
+  },
+  {
+    "title": "🐅 Kabini Jungle Safari (2D/1N)",
+    "location": "Kabini",
+    "description": "Starts from Bangalore → Kabini river boat safari, jeep safari in Nagarhole buffer zone, bird watching, coracle ride & luxury jungle lodge stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Spot the black panther!",
+    "date": "2027-01-10",
+    "time": "5:00 AM",
+    "cost": 12999,
+    "max": 20,
+    "img": "/outing_pic/Kabini/kabini_3.jpg",
+    "images": [
+      "/outing_pic/Kabini/kabini_3.jpg",
+      "/outing_pic/Kabini/kabini_5.jpg",
+      "/outing_pic/Kabini/kabini_6.jpg",
+      "/outing_pic/Kabini/kabini_8.jpg",
+      "/outing_pic/Kabini/kabini_9.jpg",
+      "/outing_pic/Kabini/kabini_10.jpg",
+      "/outing_pic/Kabini/kabini_11.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🍵 Munnar Tea Garden Bliss (2D/1N)",
+    "location": "Munnar",
+    "description": "Pickup from Bangalore → Eravikulam National Park (Nilgiri Tahr spotting), Mattupetty Dam, tea museum, Echo Point & Top Station panoramic views. 2-day trip with High-end Resort + Private Cab from Bangalore. Kerala's green paradise!",
+    "date": "2027-01-17",
+    "time": "5:00 AM",
+    "cost": 11999,
+    "max": 20,
+    "img": "/outing_pic/Munnar/munnar_1.jpg",
+    "images": [
+      "/outing_pic/Munnar/munnar_1.jpg",
+      "/outing_pic/Munnar/munnar_2.jpg",
+      "/outing_pic/Munnar/munnar_3.jpg",
+      "/outing_pic/Munnar/munnar_4.jpg",
+      "/outing_pic/Munnar/munnar_5.jpg",
+      "/outing_pic/Munnar/munnar_10.jpg"
+    ],
+    "category": "mountains",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🔱 Murudeshwar Temple & Beach",
+    "location": "Murudeshwar",
+    "description": "Starts from Bangalore → World's 2nd tallest Shiva statue, Murdeshwar temple, Netrani Island snorkeling option, beach sunset & local seafood. 2-day trip with High-end Resort + Private Cab from Bangalore. Divine meets beach vibes!",
+    "date": "2027-01-24",
+    "time": "5:00 AM",
+    "cost": 7999,
+    "max": 25,
+    "img": "/outing_pic/Murudeshwar/murudeshwar_1.jpg",
+    "images": [
+      "/outing_pic/Murudeshwar/murudeshwar_1.jpg",
+      "/outing_pic/Murudeshwar/murudeshwar_2.jpg",
+      "/outing_pic/Murudeshwar/murudeshwar_7.jpg",
+      "/outing_pic/Murudeshwar/murudeshwar_9.jpg",
+      "/outing_pic/Murudeshwar/murudeshwar_11.jpg"
+    ],
+    "category": "beaches",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🐘 Nagarhole National Park Safari (2D/1N)",
+    "location": "Nagarhole (Rajiv Gandhi National Park)",
+    "description": "Pickup from Bangalore → Jeep safari through tiger reserve, elephant herds, Kabini backwaters, tribal museum & jungle lodge stay. 2-day trip with High-end Resort + Private Cab from Bangalore. National Geographic moment IRL!",
+    "date": "2027-01-31",
+    "time": "5:00 AM",
+    "cost": 10999,
+    "max": 20,
+    "img": "/outing_pic/Nagarhole/nagarhole_2.jpg",
+    "images": [
+      "/outing_pic/Nagarhole/nagarhole_2.jpg",
+      "/outing_pic/Nagarhole/nagarhole_4.jpg",
+      "/outing_pic/Nagarhole/nagarhole_6.jpg",
+      "/outing_pic/Nagarhole/nagarhole_7.jpg",
+      "/outing_pic/Nagarhole/nagarhole_9.jpg",
+      "/outing_pic/Nagarhole/nagarhole_12.jpg",
+      "/outing_pic/Nagarhole/nagarhole_13.jpg",
+      "/outing_pic/Nagarhole/nagarhole_14.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🛕 Udupi Temple & Coastal Food Trail",
+    "location": "Udupi",
+    "description": "Starts from Bangalore → Sri Krishna Matha temple, Malpe Beach, St. Mary's Island day trip, Kaup lighthouse & legendary Udupi cuisine trail. 2-day trip with High-end Resort + Private Cab from Bangalore. Foodie paradise!",
+    "date": "2027-02-07",
+    "time": "5:00 AM",
+    "cost": 7999,
+    "max": 25,
+    "img": "/outing_pic/Udupi/udupi_1.jpg",
+    "images": [
+      "/outing_pic/Udupi/udupi_1.jpg",
+      "/outing_pic/Udupi/udupi_3.jpg",
+      "/outing_pic/Udupi/udupi_4.jpg",
+      "/outing_pic/Udupi/udupi_11.jpg"
+    ],
+    "category": "beaches",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🎢 Wonderla Amusement Park Day",
+    "location": "Wonderla (Bangalore)",
+    "description": "Pickup from Bangalore → India's top amusement park — 60+ rides, water slides, wave pool, laser show & food court feast. High-end Return Cab included. Zero stress, maximum fun!",
+    "date": "2027-02-14",
+    "time": "9:00 AM",
+    "cost": 2499,
+    "max": 30,
+    "img": "/outing_pic/Wonderla/wonderla_11.jpg",
+    "images": [
+      "/outing_pic/Wonderla/wonderla_11.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "one_day"
+  },
+  {
+    "title": "🦁 Bandipur Tiger Reserve Safari (2D/1N)",
+    "location": "Bandipur National Park",
+    "description": "Starts from Bangalore → Jeep safari in one of India's best tiger reserves, spotted deer herds, elephant corridors, Gopalaswamy Betta hilltop temple & eco-lodge stay. 2-day trip with High-end Resort + Private Cab from Bangalore. Wildlife photography dream!",
+    "date": "2027-02-21",
+    "time": "5:00 AM",
+    "cost": 9999,
+    "max": 20,
+    "img": "/outing_pic/Bandipur/bandipur_6.jpg",
+    "images": [
+      "/outing_pic/Bandipur/bandipur_6.jpg",
+      "/outing_pic/Bandipur/bandipur_7.jpg",
+      "/outing_pic/Bandipur/bandipur_8.jpg",
+      "/outing_pic/Bandipur/bandipur_9.jpg",
+      "/outing_pic/Bandipur/bandipur_10.jpg",
+      "/outing_pic/Bandipur/bandipur_11.jpg",
+      "/outing_pic/Bandipur/bandipur_12.jpg"
+    ],
+    "category": "adventure",
+    "trip_type": "2d1n"
+  },
+  {
+    "title": "🌊 Dandeli River Adventure (2D/1N)",
+    "location": "Dandeli",
+    "description": "Pickup from Bangalore → White water rafting on Kali river, kayaking, jungle trek, Syntheri Rocks, Supa Dam & riverside camping. 2-day trip with High-end Resort + Private Cab from Bangalore. Adrenaline overload!",
+    "date": "2027-02-28",
+    "time": "5:00 AM",
+    "cost": 8999,
+    "max": 20,
+    "img": "/outing_pic/Dandeli/dandeli_4.jpg",
+    "images": [
+      "/outing_pic/Dandeli/dandeli_4.jpg",
+      "/outing_pic/Dandeli/dandeli_9.jpg",
+      "/outing_pic/Dandeli/dandeli_12.jpg"
+    ],
+    "category": "adventure",
     "trip_type": "2d1n"
   }
 ]
