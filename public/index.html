@@ -300,6 +300,47 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 .toast.success{background:linear-gradient(135deg,var(--success),#34D399)}
 .toast.error{background:linear-gradient(135deg,var(--danger),#F87171)}
 
+/* DETAILED TRIP PLAN — Professional styling */
+.detailed-plan{border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-lg)}
+.dp-header{background:linear-gradient(135deg,#6C3CE1,#8B5CF6,#A855F7);color:#fff;padding:2rem 1.5rem;text-align:center;position:relative}
+.dp-header h2{font-size:1.5rem;margin-bottom:.25rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.dp-header p{opacity:.85;font-size:.9rem}
+.dp-section{background:#fff;padding:1.5rem;border-bottom:1px solid var(--border)}
+.dp-section:last-child{border-bottom:none;border-radius:0 0 var(--radius) var(--radius)}
+.dp-section-title{font-size:1.1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;color:var(--primary)}
+.dp-section-title i{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:rgba(108,60,225,.08);border-radius:8px;font-size:.8rem}
+.dp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem}
+.dp-item{background:#F8FAFC;padding:.75rem 1rem;border-radius:10px;border:1px solid #F1F5F9}
+.dp-label{display:block;font-size:.75rem;color:var(--text-light);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.2rem}
+.dp-value{font-size:.9rem;font-weight:500;color:var(--text)}
+.dp-highlight{color:var(--primary);font-weight:700;font-size:1rem}
+.dp-subsection{margin-top:1rem;padding-top:.75rem;border-top:1px solid #F1F5F9}
+.dp-subsection h4{font-size:.9rem;font-weight:600;margin-bottom:.5rem;color:var(--text)}
+.dp-table{width:100%;border-collapse:collapse;font-size:.85rem;border-radius:10px;overflow:hidden}
+.dp-table thead{background:linear-gradient(135deg,rgba(108,60,225,.06),rgba(139,92,246,.04))}
+.dp-table th{padding:.6rem .75rem;text-align:left;font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.3px;color:var(--text-light)}
+.dp-table td{padding:.6rem .75rem;border-top:1px solid #F1F5F9;color:var(--text)}
+.dp-table tbody tr:hover{background:rgba(108,60,225,.02)}
+.dp-list{padding-left:1.25rem;font-size:.88rem;color:var(--text-light);line-height:1.9}
+.dp-list li{margin-bottom:.15rem}
+.dp-tags{display:flex;flex-wrap:wrap;gap:.5rem}
+.dp-tag{background:rgba(108,60,225,.06);color:var(--primary);padding:.35rem .75rem;border-radius:999px;font-size:.8rem;font-weight:500;display:flex;align-items:center;gap:.35rem}
+.dp-tag-activity{background:rgba(6,214,160,.08);color:#059669}
+.dp-timeline-block{margin-bottom:1rem;padding-left:1rem;border-left:3px solid var(--primary-light)}
+.dp-timeline-header{font-weight:700;font-size:.95rem;color:var(--primary);margin-bottom:.35rem;padding:.25rem .5rem;background:rgba(108,60,225,.04);border-radius:6px;display:inline-block}
+.dp-timeline-list{padding-left:1.25rem;font-size:.85rem;color:var(--text-light);line-height:1.9}
+.dp-safety{background:rgba(239,68,68,.015)}
+.dp-packing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.5rem}
+.dp-packing-item{display:flex;align-items:center;gap:.5rem;font-size:.85rem;padding:.4rem .5rem;border-radius:8px;transition:background .2s}
+.dp-packing-item:hover{background:rgba(108,60,225,.03)}
+@media(max-width:600px){
+  .dp-grid{grid-template-columns:1fr}
+  .dp-packing-grid{grid-template-columns:1fr}
+  .dp-header h2{font-size:1.2rem}
+  .dp-table{font-size:.78rem}
+  .dp-table th,.dp-table td{padding:.4rem .5rem}
+}
+
 /* REVIEWS — Enhanced */
 .review-card{background:#F8FAFC;padding:1.25rem;border-radius:12px;margin-bottom:1rem;border:1px solid var(--border);transition:box-shadow .3s}
 .review-card:hover{box-shadow:var(--shadow)}
@@ -2497,7 +2538,13 @@ async function renderOutingDetail(app, outingId) {
       <div style="background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:2rem">
         <h3 style="margin-bottom:.75rem">About this Outing</h3>
         <p style="color:var(--text-light);line-height:1.8">${escapeHtml(o.description || 'No description available.')}</p>
+        <button class="btn" onclick="showDetailedPlan(${o.id})" style="margin-top:1rem;background:linear-gradient(135deg,#6C3CE1,#8B5CF6);color:#fff;display:inline-flex;align-items:center;gap:.5rem">
+          <i class="fas fa-route"></i> View Detailed Trip Plan
+        </button>
       </div>
+
+      <!-- DETAILED TRIP PLAN SECTION (loaded on demand) -->
+      <div id="detailed-plan-section-${o.id}" style="display:none;margin-bottom:2rem"></div>
 
       <!-- ACTION BUTTONS -->
       <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:2rem">
@@ -2554,6 +2601,239 @@ async function renderOutingDetail(app, outingId) {
         `).join('') : `<p style="color:var(--text-light);font-size:.9rem">No reviews yet.${canReviewBlog ? ' Be the first to review!' : ' Book and complete this outing to leave a review.'}</p>`}
       </div>
     </section>
+  `;
+}
+
+// ─── DETAILED TRIP PLAN ─────────────────────────────────────────
+async function showDetailedPlan(outingId) {
+  const section = document.getElementById('detailed-plan-section-' + outingId);
+  if (!section) return;
+  // Toggle visibility if already loaded
+  if (section.dataset.loaded === 'true') {
+    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+    return;
+  }
+  section.style.display = 'block';
+  section.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-light)"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem"></i><p style="margin-top:.5rem">Loading detailed plan...</p></div>';
+  try {
+    const data = await api('/outings/' + outingId + '/detailed-plan');
+    if (!data.success || !data.plan) {
+      section.innerHTML = '<div style="background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;color:var(--text-light)"><i class="fas fa-map" style="font-size:2rem;margin-bottom:.5rem;opacity:.3"></i><p>Detailed plan coming soon for this outing!</p></div>';
+      return;
+    }
+    section.dataset.loaded = 'true';
+    section.innerHTML = renderDetailedPlan(data.plan);
+  } catch (e) {
+    section.innerHTML = '<div style="background:#fff;padding:1rem;border-radius:var(--radius);color:var(--danger)"><i class="fas fa-exclamation-circle"></i> Could not load detailed plan.</div>';
+  }
+}
+
+function renderDetailedPlan(plan) {
+  const p = plan;
+  const ov = p.trip_overview || {};
+  const pb = p.pickup_boarding || {};
+  const itin = p.itinerary || [];
+  const trans = p.transportation || {};
+  const accom = p.accommodation;
+  const food = p.food_plan || {};
+  const acts = p.activities || {};
+  const safety = p.safety || {};
+  const cx = p.customer_experience || {};
+  const budget = p.budget_breakdown || [];
+  const packing = p.packing_list || [];
+  const cancel = p.cancellation_policy || {};
+  const coord = p.coordinator_sop || {};
+
+  return `
+    <div class="detailed-plan">
+      <div class="dp-header">
+        <h2><i class="fas fa-route"></i> Complete Trip Execution Plan</h2>
+        <p>Professional, detailed & execution-ready</p>
+        <button onclick="this.closest('.detailed-plan').parentElement.style.display='none'" style="position:absolute;top:1rem;right:1rem;background:rgba(255,255,255,.2);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem"><i class="fas fa-times"></i></button>
+      </div>
+
+      <!-- Trip Overview -->
+      <div class="dp-section">
+        <h3 class="dp-section-title"><i class="fas fa-info-circle"></i> Trip Overview</h3>
+        <div class="dp-grid">
+          <div class="dp-item"><span class="dp-label">Destination</span><span class="dp-value">${escapeHtml(ov.destination || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Trip Type</span><span class="dp-value">${escapeHtml(ov.trip_type || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Duration</span><span class="dp-value">${escapeHtml(ov.total_duration || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Difficulty</span><span class="dp-value">${escapeHtml(ov.difficulty || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Best Season</span><span class="dp-value">${escapeHtml(ov.best_season || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Group Size</span><span class="dp-value">${escapeHtml(ov.group_size || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Distance</span><span class="dp-value">${escapeHtml(ov.distance || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Altitude</span><span class="dp-value">${escapeHtml(ov.altitude || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Cost/Person</span><span class="dp-value dp-highlight">${escapeHtml(ov.cost_per_person || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Token Amount</span><span class="dp-value">${escapeHtml(ov.token_amount || '')}</span></div>
+        </div>
+      </div>
+
+      <!-- Pickup & Boarding -->
+      <div class="dp-section">
+        <h3 class="dp-section-title"><i class="fas fa-bus"></i> Pickup & Boarding</h3>
+        <div class="dp-subsection">
+          <h4>Pickup Points</h4>
+          <table class="dp-table">
+            <thead><tr><th>Pickup Point</th><th>Report Time</th><th>Departure</th></tr></thead>
+            <tbody>${(pb.pickup_points || []).map(pp => `<tr><td>${escapeHtml(pp.name)}</td><td>${escapeHtml(pp.report)}</td><td><strong>${escapeHtml(pp.time)}</strong></td></tr>`).join('')}</tbody>
+          </table>
+        </div>
+        <div class="dp-subsection">
+          <h4>Vehicle</h4>
+          <p>${escapeHtml(pb.vehicle || '')}</p>
+        </div>
+        <div class="dp-subsection">
+          <h4>Boarding Process</h4>
+          <ol class="dp-list">${(pb.boarding_process || []).map(b => `<li>${escapeHtml(b)}</li>`).join('')}</ol>
+        </div>
+        <div class="dp-subsection">
+          <h4>Luggage</h4>
+          <p>${escapeHtml(pb.luggage || '')}</p>
+        </div>
+        <div class="dp-subsection">
+          <h4>Rules</h4>
+          <ul class="dp-list">${(pb.rules || []).map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
+        </div>
+      </div>
+
+      <!-- Detailed Itinerary -->
+      <div class="dp-section">
+        <h3 class="dp-section-title"><i class="fas fa-clock"></i> Detailed Itinerary</h3>
+        ${itin.map(phase => `
+          <div class="dp-timeline-block">
+            <div class="dp-timeline-header">${escapeHtml(phase.time)}</div>
+            <ul class="dp-timeline-list">${(phase.items || []).map(item => item ? `<li>${escapeHtml(item)}</li>` : '').join('')}</ul>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Transportation -->
+      <div class="dp-section">
+        <h3 class="dp-section-title"><i class="fas fa-car"></i> Transportation Planning</h3>
+        <div class="dp-grid">
+          <div class="dp-item"><span class="dp-label">Vehicle Type</span><span class="dp-value">${escapeHtml(trans.vehicle_type || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Route</span><span class="dp-value">${escapeHtml(trans.route || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Alternate Route</span><span class="dp-value">${escapeHtml(trans.alternate_route || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Estimated Tolls</span><span class="dp-value">${escapeHtml(trans.estimated_tolls || '')}</span></div>
+        </div>
+        <p style="margin-top:.75rem;font-size:.85rem;color:var(--text-light)"><i class="fas fa-shield-alt" style="color:var(--success)"></i> ${escapeHtml(trans.driver_details || '')}</p>
+        <p style="font-size:.85rem;color:var(--text-light)"><i class="fas fa-truck" style="color:var(--warning)"></i> ${escapeHtml(trans.emergency_backup || '')}</p>
+      </div>
+
+      <!-- Accommodation (2D1N only) -->
+      ${accom ? `
+      <div class="dp-section">
+        <h3 class="dp-section-title"><i class="fas fa-hotel"></i> Accommodation</h3>
+        <div class="dp-grid">
+          <div class="dp-item"><span class="dp-label">Type</span><span class="dp-value">${escapeHtml(accom.type || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Room Allocation</span><span class="dp-value">${escapeHtml(accom.room_allocation || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Check-in</span><span class="dp-value">${escapeHtml(accom.check_in || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Check-out</span><span class="dp-value">${escapeHtml(accom.check_out || '')}</span></div>
+        </div>
+        <div class="dp-subsection">
+          <h4>Amenities</h4>
+          <div class="dp-tags">${(accom.amenities || []).map(a => `<span class="dp-tag"><i class="fas fa-check"></i> ${escapeHtml(a)}</span>`).join('')}</div>
+        </div>
+        <p style="font-size:.85rem;color:var(--text-light);margin-top:.5rem"><i class="fas fa-moon"></i> ${escapeHtml(accom.night_rules || '')}</p>
+      </div>
+      ` : ''}
+
+      <!-- Food Planning -->
+      <div class="dp-section">
+        <h3 class="dp-section-title"><i class="fas fa-utensils"></i> Food Planning</h3>
+        <table class="dp-table">
+          <thead><tr><th>Meal</th><th>Details</th></tr></thead>
+          <tbody>${(food.meals || []).map(m => `<tr><td><strong>${escapeHtml(m.meal)}</strong></td><td>${escapeHtml(m.desc)}</td></tr>`).join('')}</tbody>
+        </table>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem;font-size:.85rem;color:var(--text-light)">
+          <span><i class="fas fa-leaf" style="color:var(--success)"></i> ${escapeHtml(food.dietary || '')}</span>
+          <span><i class="fas fa-tint" style="color:#3B82F6"></i> ${escapeHtml(food.water || '')}</span>
+        </div>
+      </div>
+
+      <!-- Activities -->
+      <div class="dp-section">
+        <h3 class="dp-section-title"><i class="fas fa-hiking"></i> Activities & Attractions</h3>
+        <div class="dp-tags">${(acts.main_activities || []).map(a => `<span class="dp-tag dp-tag-activity"><i class="fas fa-map-pin"></i> ${escapeHtml(a)}</span>`).join('')}</div>
+        <div class="dp-grid" style="margin-top:1rem">
+          <div class="dp-item"><span class="dp-label">Fitness Level</span><span class="dp-value">${escapeHtml(acts.fitness_requirement || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Equipment</span><span class="dp-value">${escapeHtml(acts.equipment || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Guide</span><span class="dp-value">${escapeHtml(acts.guide || '')}</span></div>
+        </div>
+      </div>
+
+      <!-- Safety & Emergency -->
+      <div class="dp-section dp-safety">
+        <h3 class="dp-section-title"><i class="fas fa-first-aid"></i> Safety & Emergency</h3>
+        <div class="dp-subsection">
+          <h4>Emergency Contacts</h4>
+          <div class="dp-grid">
+            <div class="dp-item"><span class="dp-label">VIBES Helpline</span><span class="dp-value">${escapeHtml(safety.emergency_contacts?.vibes_helpline || '')}</span></div>
+            <div class="dp-item"><span class="dp-label">Police</span><span class="dp-value">${escapeHtml(safety.emergency_contacts?.police || '')}</span></div>
+            <div class="dp-item"><span class="dp-label">Ambulance</span><span class="dp-value">${escapeHtml(safety.emergency_contacts?.ambulance || '')}</span></div>
+          </div>
+          <div style="margin-top:.5rem">
+            <span class="dp-label">Nearest Hospitals</span>
+            <ul class="dp-list">${(safety.emergency_contacts?.nearest_hospitals || []).map(h => `<li>${escapeHtml(h)}</li>`).join('')}</ul>
+          </div>
+        </div>
+        <div class="dp-subsection">
+          <h4>First Aid</h4>
+          <ul class="dp-list">${(safety.first_aid || []).map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
+        </div>
+        <div class="dp-subsection">
+          <h4>Trip Rules</h4>
+          <ul class="dp-list">${(safety.rules || []).map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
+        </div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
+          <div style="flex:1;min-width:200px;background:rgba(245,158,11,.08);padding:.75rem;border-radius:10px;font-size:.85rem"><strong><i class="fas fa-cloud-rain"></i> Weather Backup:</strong> ${escapeHtml(safety.weather_backup || '')}</div>
+          <div style="flex:1;min-width:200px;background:rgba(239,68,68,.06);padding:.75rem;border-radius:10px;font-size:.85rem"><strong><i class="fas fa-tools"></i> Breakdown:</strong> ${escapeHtml(safety.vehicle_breakdown || '')}</div>
+        </div>
+      </div>
+
+      <!-- Customer Experience -->
+      <div class="dp-section">
+        <h3 class="dp-section-title"><i class="fas fa-heart"></i> Customer Experience</h3>
+        <div class="dp-grid">
+          <div class="dp-item"><span class="dp-label">Welcome</span><span class="dp-value">${escapeHtml(cx.welcome || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Entertainment</span><span class="dp-value">${escapeHtml(cx.entertainment || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Photography</span><span class="dp-value">${escapeHtml(cx.photography || '')}</span></div>
+          <div class="dp-item"><span class="dp-label">Surprises</span><span class="dp-value">${escapeHtml(cx.surprises || '')}</span></div>
+        </div>
+        <div class="dp-subsection">
+          <h4>Ice-Breaker Activities</h4>
+          <div class="dp-tags">${(cx.icebreakers || []).map(i => `<span class="dp-tag"><i class="fas fa-gamepad"></i> ${escapeHtml(i)}</span>`).join('')}</div>
+        </div>
+      </div>
+
+      <!-- Budget Breakdown -->
+      <div class="dp-section">
+        <h3 class="dp-section-title"><i class="fas fa-rupee-sign"></i> Budget Breakdown</h3>
+        <table class="dp-table">
+          <thead><tr><th>Item</th><th>%</th><th>Amount</th></tr></thead>
+          <tbody>${budget.map(b => `<tr><td>${escapeHtml(b.item)}</td><td>${b.pct}%</td><td><strong>₹${b.amount}</strong></td></tr>`).join('')}
+          <tr style="background:linear-gradient(135deg,rgba(108,60,225,.06),rgba(139,92,246,.06));font-weight:700"><td>Total Per Person</td><td>100%</td><td>₹${budget.reduce((s,b) => s + b.amount, 0)}</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Packing List -->
+      <div class="dp-section">
+        <h3 class="dp-section-title"><i class="fas fa-suitcase"></i> Packing & Preparation Guide</h3>
+        <div class="dp-packing-grid">${packing.map(item => `<div class="dp-packing-item"><i class="fas fa-check-circle" style="color:var(--success)"></i> ${escapeHtml(item)}</div>`).join('')}</div>
+      </div>
+
+      <!-- Cancellation Policy -->
+      <div class="dp-section">
+        <h3 class="dp-section-title"><i class="fas fa-shield-alt"></i> Cancellation Policy</h3>
+        <div class="dp-grid">
+          <div class="dp-item" style="border-left:3px solid var(--success)"><span class="dp-label">Full Refund</span><span class="dp-value">${escapeHtml(cancel.full_refund || '')}</span></div>
+          <div class="dp-item" style="border-left:3px solid var(--warning)"><span class="dp-label">Partial Refund</span><span class="dp-value">${escapeHtml(cancel.partial_refund || '')}</span></div>
+          <div class="dp-item" style="border-left:3px solid var(--danger)"><span class="dp-label">No Refund</span><span class="dp-value">${escapeHtml(cancel.no_refund || '')}</span></div>
+          <div class="dp-item" style="border-left:3px solid #3B82F6"><span class="dp-label">Weather Cancel</span><span class="dp-value">${escapeHtml(cancel.weather_cancellation || '')}</span></div>
+        </div>
+      </div>
+    </div>
   `;
 }
 

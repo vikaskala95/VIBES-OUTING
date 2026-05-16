@@ -1331,6 +1331,31 @@ app.get('/api/outings/:id', [
   else res.status(404).json({ message: 'Not found' });
 });
 
+// ─── DETAILED TRIP PLAN ─────────────────────────────────────────
+const detailedPlansData = (() => {
+  try {
+    const raw = fs.readFileSync(path.join(__dirname, 'data', 'detailed-plans.json'), 'utf8');
+    return JSON.parse(raw);
+  } catch (e) { console.warn('⚠ detailed-plans.json not found'); return {}; }
+})();
+
+app.get('/api/outings/:id/detailed-plan', [
+  param('id').isInt({ min: 1 }).withMessage('Invalid outing ID'),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  try {
+    const result = await dbQuery('SELECT * FROM outings WHERE id = $1', [req.params.id]);
+    const outing = result.rows[0];
+    if (!outing) return res.status(404).json({ message: 'Outing not found' });
+    const plan = detailedPlansData[outing.title];
+    if (!plan) return res.status(404).json({ message: 'Detailed plan not available for this outing yet' });
+    res.json({ success: true, outing_id: outing.id, outing_title: outing.title, plan });
+  } catch (error) {
+    console.error('[detailed-plan] Error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch detailed plan' });
+  }
+});
+
 // ─── WEEKEND DATE AVAILABILITY ──────────────────────────────────
 app.get('/api/outings/:id/available-dates', [
   param('id').isInt({ min: 1 }),
