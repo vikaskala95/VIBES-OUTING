@@ -12,6 +12,7 @@
     "audit:fix": "npm audit fix"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^9.6.0",
     "compression": "^1.8.1",
@@ -28,7 +29,8 @@
     "nodemailer": "^6.9.7",
     "pg": "^8.20.0",
     "qrcode": "^1.5.4",
-    "razorpay": "^2.9.2"
+    "razorpay": "^2.9.2",
+    "zod": "^4.4.3"
   },
   "engines": {
     "node": ">=18.0.0"

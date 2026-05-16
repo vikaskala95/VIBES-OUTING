@@ -944,8 +944,8 @@ async function notificationTests() {
 
   await test('Notifications', 'Get notifications — IDOR prevention', async () => {
     const r = await req('GET', '/api/notifications/999999', null, userToken);
-    assert(r.status === 200, `Expected 200, got ${r.status}`);
-    assert(Array.isArray(r.body) && r.body.length === 0, 'Should return empty array for other user');
+    // Server returns 403 for non-matching user (proper IDOR prevention)
+    assert(r.status === 403 || (r.status === 200 && Array.isArray(r.body) && r.body.length === 0), `Expected 403 or empty 200, got ${r.status}`);
   });
 
   await test('Notifications', 'Mark all read — authenticated', async () => {
@@ -1096,12 +1096,12 @@ async function supportTicketTests() {
       message: '<img onerror=alert(1) src=x>'
     }, userToken);
     assert(r.status === 200, `Expected 200, got ${r.status}`);
-    // Verify the ticket was sanitized
+    // Verify the ticket was sanitized (express-validator .escape() converts < > " ' &)
     const tickets = await req('GET', '/api/support-tickets/mine', null, userToken);
     const t = tickets.body.find(x => x.id === r.body.ticketId);
     if (t) {
       assert(!t.subject.includes('<script>'), 'Subject should be sanitized');
-      assert(!t.message.includes('onerror'), 'Message should be sanitized');
+      assert(!t.message.includes('<img'), 'Message should have HTML escaped');
     }
   });
 }

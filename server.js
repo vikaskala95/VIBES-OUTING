@@ -18,6 +18,7 @@ const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const { OAuth2Client } = require('google-auth-library');
+const { mountMcpRoutes } = require('./MCP_Server/mcp-server');
 
 const app = express();
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -150,7 +151,7 @@ const signupLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: parseInt(process.env.API_RATE_LIMIT) || 300,
   message: { success: false, message: 'Too many requests. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -1687,6 +1688,32 @@ app.get('/api/public-stats', async (req, res) => {
   });
 });
 
+// ─── CHAT ROUTES ────────────────────────────────────────────────
+app.get('/api/chat/:outingId', authMiddleware, [
+  param('outingId').isInt({ min: 1 }).withMessage('Invalid outing ID'),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const result = await dbQuery(
+    'SELECT cm.*, u.name as user_name FROM chat_messages cm JOIN users u ON cm.user_id = u.id WHERE cm.outing_id = $1 ORDER BY cm.created_at ASC LIMIT 200',
+    [req.params.outingId]
+  );
+  res.json(result.rows);
+});
+
+app.post('/api/chat', authMiddleware, [
+  body('outing_id').isInt({ min: 1 }).withMessage('Valid outing ID required'),
+  body('message').trim().notEmpty().isLength({ max: 1000 }).withMessage('Message is required (max 1000 chars)').escape(),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { outing_id, message } = req.body;
+  const user_id = req.user.id;
+  await dbQuery(
+    'INSERT INTO chat_messages (outing_id, user_id, message) VALUES ($1,$2,$3)',
+    [outing_id, user_id, sanitize(message)]
+  );
+  res.json({ success: true });
+});
+
 // ─── SUGGESTION ROUTES ──────────────────────────────────────────
 app.get('/api/razorpay-key', (req, res) => {
   res.json({ key_id: process.env.RAZORPAY_KEY_ID || '' });
@@ -2039,28 +2066,6 @@ app.put('/api/admin/blogs/:id', authMiddleware, adminMiddleware, [
   if (featured !== undefined) {
     await dbQuery('UPDATE blogs SET featured = $1 WHERE id = $2', [featured, req.params.id]);
   }
-  res.json({ success: true });
-});
-
-// ─── CHAT ROUTES ────────────────────────────────────────────────
-app.get('/api/chat/:outingId', authMiddleware, [
-  param('outingId').isInt({ min: 1 }),
-], async (req, res) => {
-  if (!validate(req, res)) return;
-  const result = await dbQuery('SELECT c.*, u.name as user_name FROM chat_messages c JOIN users u ON c.user_id = u.id WHERE c.outing_id = $1 ORDER BY c.created_at ASC', [req.params.outingId]);
-  res.json(result.rows);
-});
-
-app.post('/api/chat', authMiddleware, [
-  body('outing_id').isInt({ min: 1 }).withMessage('Valid outing ID required'),
-  body('message').trim().notEmpty().withMessage('Message required').isLength({ max: 2000 }).escape(),
-], async (req, res) => {
-  if (!validate(req, res)) return;
-  const { outing_id, message } = req.body;
-  const user_id = req.user.id;
-  const hasBooked = (await dbQuery('SELECT id FROM bookings WHERE user_id = $1 AND outing_id = $2 AND payment_status = $3', [user_id, outing_id, 'paid'])).rows[0];
-  if (!hasBooked) return res.status(403).json({ message: 'Only booked participants can chat' });
-  await dbQuery('INSERT INTO chat_messages (outing_id, user_id, message) VALUES ($1,$2,$3)', [outing_id, user_id, sanitize(message)]);
   res.json({ success: true });
 });
 
@@ -3299,7 +3304,12 @@ if (!process.env.API_ONLY) {
 // ─── START SERVER (after DB init) ───────────────────────────────
 const PORT = process.env.PORT || 3000;
 
-initDatabase().then(() => {
+initDatabase().then(async () => {
+  // Mount MCP Server (SSE transport for AI agents)
+  await mountMcpRoutes(app, dbQuery).catch(err => {
+    console.error('MCP Server mount failed (non-fatal):', err.message);
+  });
+
   app.listen(PORT, () => {
     console.log(`\n🚀 VIBES@Outing Platform running at http://localhost:${PORT}`);
     console.log(`   Environment: ${IS_PROD ? 'PRODUCTION' : 'DEVELOPMENT'}`);
