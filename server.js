@@ -2625,24 +2625,34 @@ app.get('/api/expectations/booking/:bookingId', authMiddleware, [
   param('bookingId').isInt({ min: 1 }),
 ], async (req, res) => {
   if (!validate(req, res)) return;
-  const result = await dbQuery(
-    'SELECT * FROM trip_expectations WHERE booking_id = $1 AND user_id = $2',
-    [req.params.bookingId, req.user.id]
-  );
-  res.json(result.rows[0] || null);
+  try {
+    const result = await dbQuery(
+      'SELECT * FROM trip_expectations WHERE booking_id = $1 AND user_id = $2',
+      [req.params.bookingId, req.user.id]
+    );
+    res.json(result.rows[0] || null);
+  } catch (err) {
+    console.error('Error fetching expectations for booking:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to load expectations' });
+  }
 });
 
 // Get all expectations for the current user
 app.get('/api/expectations/my', authMiddleware, async (req, res) => {
-  const result = await dbQuery(
-    `SELECT te.*, o.title as outing_title, o.location as outing_location, o.date as outing_date
-     FROM trip_expectations te
-     JOIN outings o ON te.outing_id = o.id
-     WHERE te.user_id = $1
-     ORDER BY te.created_at DESC`,
-    [req.user.id]
-  );
-  res.json(result.rows);
+  try {
+    const result = await dbQuery(
+      `SELECT te.*, o.title as outing_title, o.location as outing_location, o.date as outing_date
+       FROM trip_expectations te
+       JOIN outings o ON te.outing_id = o.id
+       WHERE te.user_id = $1
+       ORDER BY te.created_at DESC`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching user expectations:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to load expectations' });
+  }
 });
 
 // Submit or update expectations
@@ -2652,46 +2662,51 @@ app.post('/api/expectations', authMiddleware, [
   body('tags').optional().trim().isLength({ max: 500 }),
 ], async (req, res) => {
   if (!validate(req, res)) return;
-  const { booking_id, expectations, tags } = req.body;
+  try {
+    const { booking_id, expectations, tags } = req.body;
 
-  // Verify the booking belongs to this user and is paid
-  const booking = (await dbQuery(
-    'SELECT b.*, o.date as outing_date FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.id = $1 AND b.user_id = $2 AND b.payment_status = $3',
-    [booking_id, req.user.id, 'paid']
-  )).rows[0];
+    // Verify the booking belongs to this user and is paid
+    const booking = (await dbQuery(
+      'SELECT b.*, o.date as outing_date FROM bookings b JOIN outings o ON b.outing_id = o.id WHERE b.id = $1 AND b.user_id = $2 AND b.payment_status = $3',
+      [booking_id, req.user.id, 'paid']
+    )).rows[0];
 
-  if (!booking) {
-    return res.status(403).json({ success: false, message: 'No confirmed booking found' });
-  }
+    if (!booking) {
+      return res.status(403).json({ success: false, message: 'No confirmed booking found' });
+    }
 
-  // Check if outing date hasn't passed (allow editing until 24hrs before)
-  const outingDate = new Date(booking.outing_date);
-  const cutoff = new Date(outingDate.getTime() - 24 * 60 * 60 * 1000);
-  if (new Date() > cutoff) {
-    return res.status(400).json({ success: false, message: 'Cannot submit expectations within 24 hours of the outing' });
-  }
+    // Check if outing date hasn't passed (allow editing until 24hrs before)
+    const outingDate = new Date(booking.outing_date);
+    const cutoff = new Date(outingDate.getTime() - 24 * 60 * 60 * 1000);
+    if (new Date() > cutoff) {
+      return res.status(400).json({ success: false, message: 'Cannot submit expectations within 24 hours of the outing' });
+    }
 
-  const sanitizedExpectations = sanitize(expectations);
-  const sanitizedTags = sanitize(tags || '');
+    const sanitizedExpectations = sanitize(expectations);
+    const sanitizedTags = sanitize(tags || '');
 
-  // Check if already exists — update if so
-  const existing = (await dbQuery(
-    'SELECT id FROM trip_expectations WHERE booking_id = $1 AND user_id = $2',
-    [booking_id, req.user.id]
-  )).rows[0];
+    // Check if already exists — update if so
+    const existing = (await dbQuery(
+      'SELECT id FROM trip_expectations WHERE booking_id = $1 AND user_id = $2',
+      [booking_id, req.user.id]
+    )).rows[0];
 
-  if (existing) {
-    await dbQuery(
-      'UPDATE trip_expectations SET expectations = $1, tags = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-      [sanitizedExpectations, sanitizedTags, existing.id]
-    );
-    res.json({ success: true, message: 'Expectations updated successfully', updated: true });
-  } else {
-    await dbQuery(
-      'INSERT INTO trip_expectations (user_id, booking_id, outing_id, expectations, tags) VALUES ($1, $2, $3, $4, $5)',
-      [req.user.id, booking_id, booking.outing_id, sanitizedExpectations, sanitizedTags]
-    );
-    res.json({ success: true, message: 'Expectations submitted successfully', updated: false });
+    if (existing) {
+      await dbQuery(
+        'UPDATE trip_expectations SET expectations = $1, tags = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+        [sanitizedExpectations, sanitizedTags, existing.id]
+      );
+      res.json({ success: true, message: 'Expectations updated successfully', updated: true });
+    } else {
+      await dbQuery(
+        'INSERT INTO trip_expectations (user_id, booking_id, outing_id, expectations, tags) VALUES ($1, $2, $3, $4, $5)',
+        [req.user.id, booking_id, booking.outing_id, sanitizedExpectations, sanitizedTags]
+      );
+      res.json({ success: true, message: 'Expectations submitted successfully', updated: false });
+    }
+  } catch (err) {
+    console.error('Error submitting expectations:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to submit expectations. Please try again.' });
   }
 });
 
@@ -2700,50 +2715,65 @@ app.delete('/api/expectations/:id', authMiddleware, [
   param('id').isInt({ min: 1 }),
 ], async (req, res) => {
   if (!validate(req, res)) return;
-  const existing = (await dbQuery(
-    'SELECT te.*, o.date as outing_date FROM trip_expectations te JOIN outings o ON te.outing_id = o.id WHERE te.id = $1 AND te.user_id = $2',
-    [req.params.id, req.user.id]
-  )).rows[0];
-  if (!existing) return res.status(404).json({ success: false, message: 'Not found' });
+  try {
+    const existing = (await dbQuery(
+      'SELECT te.*, o.date as outing_date FROM trip_expectations te JOIN outings o ON te.outing_id = o.id WHERE te.id = $1 AND te.user_id = $2',
+      [req.params.id, req.user.id]
+    )).rows[0];
+    if (!existing) return res.status(404).json({ success: false, message: 'Not found' });
 
-  const outingDate = new Date(existing.outing_date);
-  const cutoff = new Date(outingDate.getTime() - 24 * 60 * 60 * 1000);
-  if (new Date() > cutoff) {
-    return res.status(400).json({ success: false, message: 'Cannot modify expectations within 24 hours of the outing' });
+    const outingDate = new Date(existing.outing_date);
+    const cutoff = new Date(outingDate.getTime() - 24 * 60 * 60 * 1000);
+    if (new Date() > cutoff) {
+      return res.status(400).json({ success: false, message: 'Cannot modify expectations within 24 hours of the outing' });
+    }
+
+    await dbQuery('DELETE FROM trip_expectations WHERE id = $1', [req.params.id]);
+    res.json({ success: true, message: 'Expectations removed' });
+  } catch (err) {
+    console.error('Error deleting expectation:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to remove expectations' });
   }
-
-  await dbQuery('DELETE FROM trip_expectations WHERE id = $1', [req.params.id]);
-  res.json({ success: true, message: 'Expectations removed' });
 });
 
 // Admin: View all expectations (with filters)
 app.get('/api/admin/expectations', authMiddleware, adminMiddleware, async (req, res) => {
-  const { outing_id } = req.query;
-  let sql = `SELECT te.*, u.name as user_name, u.email as user_email, o.title as outing_title, o.location as outing_location, o.date as outing_date
-     FROM trip_expectations te
-     JOIN users u ON te.user_id = u.id
-     JOIN outings o ON te.outing_id = o.id`;
-  const params = [];
-  if (outing_id) {
-    sql += ' WHERE te.outing_id = $1';
-    params.push(parseInt(outing_id));
+  try {
+    const { outing_id } = req.query;
+    let sql = `SELECT te.*, u.name as user_name, u.email as user_email, o.title as outing_title, o.location as outing_location, o.date as outing_date
+       FROM trip_expectations te
+       JOIN users u ON te.user_id = u.id
+       JOIN outings o ON te.outing_id = o.id`;
+    const params = [];
+    if (outing_id) {
+      sql += ' WHERE te.outing_id = $1';
+      params.push(parseInt(outing_id));
+    }
+    sql += ' ORDER BY te.created_at DESC';
+    const result = await dbQuery(sql, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching admin expectations:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to load expectations' });
   }
-  sql += ' ORDER BY te.created_at DESC';
-  const result = await dbQuery(sql, params);
-  res.json(result.rows);
 });
 
 // Admin: Get expectations summary per outing
 app.get('/api/admin/expectations/summary', authMiddleware, adminMiddleware, async (req, res) => {
-  const result = await dbQuery(
-    `SELECT o.id as outing_id, o.title, o.date, o.location, COUNT(te.id) as expectation_count
-     FROM outings o
-     LEFT JOIN trip_expectations te ON te.outing_id = o.id
-     WHERE o.status = 'active'
-     GROUP BY o.id, o.title, o.date, o.location
-     ORDER BY o.date ASC`
-  );
-  res.json(result.rows);
+  try {
+    const result = await dbQuery(
+      `SELECT o.id as outing_id, o.title, o.date, o.location, COUNT(te.id) as expectation_count
+       FROM outings o
+       LEFT JOIN trip_expectations te ON te.outing_id = o.id
+       WHERE o.status = 'active'
+       GROUP BY o.id, o.title, o.date, o.location
+       ORDER BY o.date ASC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching expectations summary:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to load expectations summary' });
+  }
 });
 
 // ─── PARTNER APPLICATION ROUTES ─────────────────────────────────

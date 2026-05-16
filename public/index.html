@@ -2373,20 +2373,36 @@ function toggleExpTag(btn, tag) {
   input.value = tags.join(',');
 }
 
+let _expectationsSubmitting = false;
 async function submitExpectations(e, bookingId) {
   e.preventDefault();
+  if (_expectationsSubmitting) return;
+
   const expectations = document.getElementById('expText').value.trim();
   const tags = document.getElementById('expTagsInput').value;
 
   if (!expectations) { toast('Please write your expectations', 'error'); return; }
+  if (expectations.length < 10) { toast('Please write at least 10 characters', 'error'); return; }
 
-  const data = await api('/expectations', { method: 'POST', body: { booking_id: bookingId, expectations, tags } });
-  if (data.success) {
-    closeModal();
-    toast(data.updated ? '✅ Expectations updated!' : '🎉 Expectations submitted! Have a great trip!', 'success');
-    navigate('dashboard');
-  } else {
-    toast(data.message || 'Something went wrong', 'error');
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  _expectationsSubmitting = true;
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...'; }
+
+  try {
+    const data = await api('/expectations', { method: 'POST', body: { booking_id: bookingId, expectations, tags } });
+    if (data.success) {
+      closeModal();
+      toast(data.updated ? '✅ Expectations updated!' : '🎉 Expectations submitted! Have a great trip!', 'success');
+      navigate('dashboard');
+    } else {
+      toast(data.message || 'Something went wrong. Please try again.', 'error');
+    }
+  } catch (err) {
+    console.error('Submit expectations error:', err);
+    toast('Failed to submit expectations. Please try again.', 'error');
+  } finally {
+    _expectationsSubmitting = false;
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Expectations'; }
   }
 }
 
