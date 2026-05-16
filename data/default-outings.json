@@ -166,8 +166,11 @@
     "time": "5:00 AM",
     "cost": 9999,
     "max": 20,
-    "img": "",
-    "images": [],
+    "img": "/outing_pic/Sakleshpur/Sakleshpur_1.jpg",
+    "images": [
+      "/outing_pic/Sakleshpur/Sakleshpur_1.jpg",
+      "/outing_pic/Sakleshpur/Sakleshpur_2.png"
+    ],
     "category": "adventure",
     "trip_type": "one_day"
   },
