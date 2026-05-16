@@ -468,7 +468,7 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 /* WISHLIST */
 .wishlist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem}
 .wishlist-card{position:relative}
-.wishlist-heart{position:absolute;top:12px;right:12px;z-index:5;background:rgba(255,255,255,.9);width:36px;height:36px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:all .3s;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.wishlist-heart{position:absolute;top:12px;left:12px;z-index:5;background:rgba(255,255,255,.9);width:36px;height:36px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:all .3s;box-shadow:0 2px 8px rgba(0,0,0,.1)}
 .wishlist-heart:hover{transform:scale(1.15)}
 .wishlist-heart.active{color:var(--danger);background:#fff}
 
@@ -1593,8 +1593,10 @@ function outingCard(o) {
   const slidesHtml = images.map(url => url ? `<div class="card-carousel-slide"><img src="${safeImageUrl(url)}" alt="Outing photo" loading="lazy"></div>` : `<div class="card-carousel-slide no-img"></div>`).join('');
   const dotsHtml = hasMultiple ? `<div class="carousel-dots">${images.map((_, i) => `<button class="carousel-dot${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="event.stopPropagation();slideCarousel('${carouselId}',${i})"></button>`).join('')}</div>` : '';
 
+  const isWished = wishlistItems.includes(o.id);
   return `
-    <div class="card">
+    <div class="card" style="position:relative">
+      <button class="wishlist-heart${isWished ? ' active' : ''}" data-outing-id="${o.id}" onclick="event.stopPropagation();toggleWishlist(${o.id})" title="${isWished ? 'Remove from wishlist' : 'Add to wishlist'}">${isWished ? '<i class="fas fa-heart" style="color:var(--danger)"></i>' : '<i class="far fa-heart"></i>'}</button>
       <div class="card-carousel" id="${carouselId}" data-idx="0" onclick="navigate('outing-${o.id}')" style="cursor:pointer;position:relative">
         <div class="card-carousel-inner">${slidesHtml}</div>
         ${hasMultiple ? `<button class="carousel-btn carousel-prev" onclick="event.stopPropagation();slideCarousel('${carouselId}','prev')"><i class="fas fa-chevron-left"></i></button>
@@ -2469,7 +2471,7 @@ async function renderOutingDetail(app, outingId) {
       </div>
       <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:1rem">
         <div>
-          <h1 style="font-size:1.8rem;margin-bottom:.5rem">${escapeHtml(o.title)}</h1>
+          <h1 style="font-size:1.8rem;margin-bottom:.5rem">${escapeHtml(o.title)} <button class="wishlist-heart${wishlistItems.includes(o.id) ? ' active' : ''}" data-outing-id="${o.id}" onclick="toggleWishlist(${o.id})" title="${wishlistItems.includes(o.id) ? 'Remove from wishlist' : 'Add to wishlist'}" style="vertical-align:middle;margin-left:.25rem">${wishlistItems.includes(o.id) ? '<i class="fas fa-heart" style="color:var(--danger)"></i>' : '<i class="far fa-heart"></i>'}</button></h1>
           <div class="card-meta" style="margin-bottom:.5rem">
             <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(o.location)}</span>
             <span><i class="far fa-calendar"></i> ${dateStr}</span>
