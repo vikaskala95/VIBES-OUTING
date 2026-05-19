@@ -207,10 +207,9 @@ input,textarea,select{font-family:inherit}
 .card-carousel{position:relative;height:240px;overflow:hidden;background-color:#e8e0f0;border-radius:var(--radius) var(--radius) 0 0}
 .card-carousel-inner{display:flex;width:100%;height:100%;transition:transform .4s ease}
 .card-carousel-slide{min-width:100%;width:100%;height:100%;flex-shrink:0;position:relative;overflow:hidden}
-.card-carousel-slide img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;transition:transform .5s ease,opacity .4s ease}
-.card-carousel-slide img.blur-loading{opacity:0}
+.card-carousel-slide img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;transition:transform .5s ease;position:relative;z-index:2}
 .card-carousel-slide .blur-placeholder{position:absolute;inset:0;background-size:cover;background-position:center;filter:blur(10px);transform:scale(1.1);transition:opacity .4s ease;z-index:1}
-.card-carousel-slide img.loaded+.blur-placeholder,.card-carousel-slide img.loaded~.blur-placeholder{opacity:0;pointer-events:none}
+.card-carousel-slide .blur-placeholder.fade-out{opacity:0;pointer-events:none}
 .card:hover .card-carousel-slide img{transform:scale(1.05)}
 .card-carousel-slide.no-img{background:linear-gradient(135deg,#e8e0f0 0%,#d4c5e9 50%,#c9b8e8 100%);display:flex;align-items:center;justify-content:center}
 .card-carousel-slide.no-img::after{content:'\\f03e';font-family:'Font Awesome 5 Free';font-weight:900;font-size:3rem;color:rgba(108,60,225,.25)}
@@ -1660,7 +1659,7 @@ function outingCard(o) {
     const src = safeImageUrl(url);
     const blur = getBlurDataUrl(src);
     const blurDiv = blur ? `<div class="blur-placeholder" style="background-image:url('${blur}')"></div>` : '';
-    return `<div class="card-carousel-slide"><img src="${src}" alt="Outing photo" loading="lazy" class="blur-loading" onload="this.classList.remove('blur-loading');this.classList.add('loaded')">${blurDiv}</div>`;
+    return `<div class="card-carousel-slide"><img src="${src}" alt="Outing photo" loading="lazy" onload="var b=this.parentElement.querySelector('.blur-placeholder');if(b)b.classList.add('fade-out')">${blurDiv}</div>`;
   }).join('');
   const dotsHtml = hasMultiple ? `<div class="carousel-dots">${images.map((_, i) => `<button class="carousel-dot${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="event.stopPropagation();slideCarousel('${carouselId}',${i})"></button>`).join('')}</div>` : '';
 
@@ -2536,7 +2535,7 @@ async function renderOutingDetail(app, outingId) {
           const src = safeImageUrl(url);
           const blur = getBlurDataUrl(src);
           const blurDiv = blur ? `<div class="blur-placeholder" style="background-image:url('${blur}')"></div>` : '';
-          return `<div class="card-carousel-slide"><img src="${src}" alt="Outing photo" loading="lazy" class="blur-loading" onload="this.classList.remove('blur-loading');this.classList.add('loaded')">${blurDiv}</div>`;
+          return `<div class="card-carousel-slide"><img src="${src}" alt="Outing photo" loading="lazy" onload="var b=this.parentElement.querySelector('.blur-placeholder');if(b)b.classList.add('fade-out')">${blurDiv}</div>`;
         }).join('')}</div>
         ${detailImages.length > 1 ? `
         <button class="carousel-btn carousel-prev" onclick="slideCarousel('${detailCarouselId}','prev')" style="opacity:1"><i class="fas fa-chevron-left"></i></button>

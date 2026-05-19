@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "node server.js",
     "test": "node tests/test_all.js",
-    "build": "npm install",
+    "build": "node optimize-images.js && npm install",
     "audit": "npm audit",
     "audit:fix": "npm audit fix"
   },
@@ -30,6 +30,7 @@
     "pg": "^8.20.0",
     "qrcode": "^1.5.4",
     "razorpay": "^2.9.2",
+    "sharp": "^0.34.5",
     "zod": "^4.4.3"
   },
   "engines": {
