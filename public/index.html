@@ -793,16 +793,11 @@ function escapeHtml(str) {
 }
 function safeImageUrl(url) {
   if (!url || typeof url !== 'string') return '';
-  // Allow relative paths (e.g. /outing_pic/...)
-  if (url.startsWith('/')) return toWebpUrl(url);
+  // Allow relative paths (e.g. /outing_pic/...) — server handles WebP negotiation
+  if (url.startsWith('/')) return url;
   // Only allow http/https URLs
   try { const u = new URL(url); if (u.protocol === 'http:' || u.protocol === 'https:') return url; } catch(e) {}
   return '';
-}
-// Convert local image URLs to WebP equivalents
-function toWebpUrl(url) {
-  if (/\.(png|jpe?g)$/i.test(url)) return url.replace(/\.(png|jpe?g)$/i, '.webp');
-  return url;
 }
 // Blur placeholders cache
 let _blurPlaceholders = null;
@@ -816,7 +811,10 @@ async function loadBlurPlaceholders() {
 }
 function getBlurDataUrl(imgUrl) {
   if (!_blurPlaceholders) return '';
-  return _blurPlaceholders[imgUrl] || '';
+  // Try exact match first, then try .webp variant for local images
+  if (_blurPlaceholders[imgUrl]) return _blurPlaceholders[imgUrl];
+  const webpUrl = imgUrl.replace(/\.(png|jpe?g)$/i, '.webp');
+  return _blurPlaceholders[webpUrl] || '';
 }
 // Initialize blur placeholders on load
 loadBlurPlaceholders();
