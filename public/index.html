@@ -207,7 +207,10 @@ input,textarea,select{font-family:inherit}
 .card-carousel{position:relative;height:240px;overflow:hidden;background-color:#e8e0f0;border-radius:var(--radius) var(--radius) 0 0}
 .card-carousel-inner{display:flex;width:100%;height:100%;transition:transform .4s ease}
 .card-carousel-slide{min-width:100%;width:100%;height:100%;flex-shrink:0;position:relative;overflow:hidden}
-.card-carousel-slide img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;transition:transform .5s ease}
+.card-carousel-slide img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;transition:transform .5s ease,opacity .4s ease}
+.card-carousel-slide img.blur-loading{opacity:0}
+.card-carousel-slide .blur-placeholder{position:absolute;inset:0;background-size:cover;background-position:center;filter:blur(10px);transform:scale(1.1);transition:opacity .4s ease;z-index:1}
+.card-carousel-slide img.loaded+.blur-placeholder,.card-carousel-slide img.loaded~.blur-placeholder{opacity:0;pointer-events:none}
 .card:hover .card-carousel-slide img{transform:scale(1.05)}
 .card-carousel-slide.no-img{background:linear-gradient(135deg,#e8e0f0 0%,#d4c5e9 50%,#c9b8e8 100%);display:flex;align-items:center;justify-content:center}
 .card-carousel-slide.no-img::after{content:'\\f03e';font-family:'Font Awesome 5 Free';font-weight:900;font-size:3rem;color:rgba(108,60,225,.25)}
@@ -792,11 +795,32 @@ function escapeHtml(str) {
 function safeImageUrl(url) {
   if (!url || typeof url !== 'string') return '';
   // Allow relative paths (e.g. /outing_pic/...)
-  if (url.startsWith('/')) return url;
+  if (url.startsWith('/')) return toWebpUrl(url);
   // Only allow http/https URLs
   try { const u = new URL(url); if (u.protocol === 'http:' || u.protocol === 'https:') return url; } catch(e) {}
   return '';
 }
+// Convert local image URLs to WebP equivalents
+function toWebpUrl(url) {
+  if (/\.(png|jpe?g)$/i.test(url)) return url.replace(/\.(png|jpe?g)$/i, '.webp');
+  return url;
+}
+// Blur placeholders cache
+let _blurPlaceholders = null;
+async function loadBlurPlaceholders() {
+  if (_blurPlaceholders) return _blurPlaceholders;
+  try {
+    const res = await fetch('/blur-placeholders.json');
+    _blurPlaceholders = await res.json();
+  } catch(e) { _blurPlaceholders = {}; }
+  return _blurPlaceholders;
+}
+function getBlurDataUrl(imgUrl) {
+  if (!_blurPlaceholders) return '';
+  return _blurPlaceholders[imgUrl] || '';
+}
+// Initialize blur placeholders on load
+loadBlurPlaceholders();
 
 // ─── CARD IMAGE CAROUSEL ────────────────────────────────────────
 function slideCarousel(carouselId, target) {
@@ -1631,7 +1655,13 @@ function outingCard(o) {
   const carouselId = 'carousel-' + o.id;
   const hasMultiple = images.length > 1;
 
-  const slidesHtml = images.map(url => url ? `<div class="card-carousel-slide"><img src="${safeImageUrl(url)}" alt="Outing photo" loading="lazy"></div>` : `<div class="card-carousel-slide no-img"></div>`).join('');
+  const slidesHtml = images.map(url => {
+    if (!url) return `<div class="card-carousel-slide no-img"></div>`;
+    const src = safeImageUrl(url);
+    const blur = getBlurDataUrl(src);
+    const blurDiv = blur ? `<div class="blur-placeholder" style="background-image:url('${blur}')"></div>` : '';
+    return `<div class="card-carousel-slide"><img src="${src}" alt="Outing photo" loading="lazy" class="blur-loading" onload="this.classList.remove('blur-loading');this.classList.add('loaded')">${blurDiv}</div>`;
+  }).join('');
   const dotsHtml = hasMultiple ? `<div class="carousel-dots">${images.map((_, i) => `<button class="carousel-dot${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="event.stopPropagation();slideCarousel('${carouselId}',${i})"></button>`).join('')}</div>` : '';
 
   const isWished = wishlistItems.includes(o.id);
@@ -2501,7 +2531,13 @@ async function renderOutingDetail(app, outingId) {
     <section class="section" style="max-width:800px">
       <div style="margin-bottom:1rem"><a href="#" onclick="navigate('outings')" style="color:var(--primary);font-size:.9rem"><i class="fas fa-arrow-left"></i> Back to Outings</a></div>
       <div class="card-carousel" id="${detailCarouselId}" data-idx="0" style="border-radius:var(--radius);height:350px;margin-bottom:1.5rem">
-        <div class="card-carousel-inner">${detailImages.map(url => url ? `<div class="card-carousel-slide"><img src="${safeImageUrl(url)}" alt="Outing photo" loading="lazy"></div>` : `<div class="card-carousel-slide no-img"></div>`).join('')}</div>
+        <div class="card-carousel-inner">${detailImages.map(url => {
+          if (!url) return `<div class="card-carousel-slide no-img"></div>`;
+          const src = safeImageUrl(url);
+          const blur = getBlurDataUrl(src);
+          const blurDiv = blur ? `<div class="blur-placeholder" style="background-image:url('${blur}')"></div>` : '';
+          return `<div class="card-carousel-slide"><img src="${src}" alt="Outing photo" loading="lazy" class="blur-loading" onload="this.classList.remove('blur-loading');this.classList.add('loaded')">${blurDiv}</div>`;
+        }).join('')}</div>
         ${detailImages.length > 1 ? `
         <button class="carousel-btn carousel-prev" onclick="slideCarousel('${detailCarouselId}','prev')" style="opacity:1"><i class="fas fa-chevron-left"></i></button>
         <button class="carousel-btn carousel-next" onclick="slideCarousel('${detailCarouselId}','next')" style="opacity:1"><i class="fas fa-chevron-right"></i></button>
