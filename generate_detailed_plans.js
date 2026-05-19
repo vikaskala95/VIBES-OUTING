@@ -793,7 +793,7 @@ function generateSafety(outing, loc) {
   return {
     emergency_contacts: {
       trip_coordinator: "+91-XXXXXXXXXX (shared 24hrs before trip)",
-      vibes_helpline: "+91-9999999999",
+      vibes_helpline: "+91-9571583107",
       police: loc.police,
       nearest_hospitals: loc.hospitals,
       ambulance: "108 (Govt) / 1298 (Private)"
