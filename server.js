@@ -199,16 +199,14 @@ if (!process.env.API_ONLY) {
     maxAge: IS_PROD ? '1d' : 0,
   }));
 }
-// ─── IMAGE OPTIMIZATION: Serve WebP when available and browser supports it ─
+// ─── IMAGE OPTIMIZATION: Redirect legacy .png/.jpg requests to .webp ─
 app.use('/outing_pic', (req, res, next) => {
-  const acceptsWebp = req.headers.accept && req.headers.accept.includes('image/webp');
-  if (acceptsWebp && /\.(png|jpe?g)$/i.test(req.path)) {
+  if (/\.(png|jpe?g)$/i.test(req.path)) {
     const webpPath = req.path.replace(/\.(png|jpe?g)$/i, '.webp');
     const fullWebpPath = path.join(__dirname, 'public', 'outing_pic', webpPath);
     if (fs.existsSync(fullWebpPath)) {
       req.url = webpPath;
       res.setHeader('Content-Type', 'image/webp');
-      res.setHeader('Vary', 'Accept');
     }
   }
   next();

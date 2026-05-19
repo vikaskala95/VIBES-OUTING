@@ -7,12 +7,12 @@
     "time": "4:00 AM",
     "cost": 1500,
     "max": 25,
-    "img": "/outing_pic/Nandi_hills/Gemini_Nandi_hills_1.png",
+    "img": "/outing_pic/Nandi_hills/Gemini_Nandi_hills_1.webp",
     "images": [
-      "/outing_pic/Nandi_hills/Gemini_Nandi_hills_1.png",
-      "/outing_pic/Nandi_hills/Gemini_Nandi_hills_2.png",
-      "/outing_pic/Adiyogi_Shiva/Adiyogi_Shiva_Statue_1.png",
-      "/outing_pic/Adiyogi_Shiva/Adiyogi_Shiva_Statue_2.png"
+      "/outing_pic/Nandi_hills/Gemini_Nandi_hills_1.webp",
+      "/outing_pic/Nandi_hills/Gemini_Nandi_hills_2.webp",
+      "/outing_pic/Adiyogi_Shiva/Adiyogi_Shiva_Statue_1.webp",
+      "/outing_pic/Adiyogi_Shiva/Adiyogi_Shiva_Statue_2.webp"
     ],
     "category": "mountains",
     "trip_type": "one_day"
@@ -25,12 +25,12 @@
     "time": "6:00 AM",
     "cost": 4999,
     "max": 20,
-    "img": "/outing_pic/Bhima/Bhima_1.png",
+    "img": "/outing_pic/Bhima/Bhima_1.webp",
     "images": [
-      "/outing_pic/Bhima/Bhima_1.png",
-      "/outing_pic/Bhima/Bhima_2.png",
-      "/outing_pic/Bhima/Bhima_3.png",
-      "/outing_pic/Bhima/Bhima_4.png"
+      "/outing_pic/Bhima/Bhima_1.webp",
+      "/outing_pic/Bhima/Bhima_2.webp",
+      "/outing_pic/Bhima/Bhima_3.webp",
+      "/outing_pic/Bhima/Bhima_4.webp"
     ],
     "category": "adventure",
     "trip_type": "one_day"
@@ -43,13 +43,13 @@
     "time": "6:00 AM",
     "cost": 12999,
     "max": 20,
-    "img": "/outing_pic/Chikmagalur/Chikmagalur_2.png",
+    "img": "/outing_pic/Chikmagalur/Chikmagalur_2.webp",
     "images": [
-      "/outing_pic/Chikmagalur/Chikmagalur_1.png.png",
-      "/outing_pic/Chikmagalur/Chikmagalur_2.png",
-      "/outing_pic/Chikmagalur/Chikmagalur_3.png",
-      "/outing_pic/Chikmagalur/Chikmagalur_4.png",
-      "/outing_pic/Chikmagalur/Chikmagalur_5.png"
+      "/outing_pic/Chikmagalur/Chikmagalur_1.png.webp",
+      "/outing_pic/Chikmagalur/Chikmagalur_2.webp",
+      "/outing_pic/Chikmagalur/Chikmagalur_3.webp",
+      "/outing_pic/Chikmagalur/Chikmagalur_4.webp",
+      "/outing_pic/Chikmagalur/Chikmagalur_5.webp"
     ],
     "category": "mountains",
     "trip_type": "2d1n"
@@ -62,12 +62,12 @@
     "time": "7:00 AM",
     "cost": 1999,
     "max": 30,
-    "img": "/outing_pic/Mysore/Mysore_1.png",
+    "img": "/outing_pic/Mysore/Mysore_1.webp",
     "images": [
-      "/outing_pic/Mysore/Mysore_1.png",
-      "/outing_pic/Mysore/Mysore_2.png",
-      "/outing_pic/Mysore/Mysore_3.png",
-      "/outing_pic/Mysore/Mysore_4.png"
+      "/outing_pic/Mysore/Mysore_1.webp",
+      "/outing_pic/Mysore/Mysore_2.webp",
+      "/outing_pic/Mysore/Mysore_3.webp",
+      "/outing_pic/Mysore/Mysore_4.webp"
     ],
     "category": "road_trips",
     "trip_type": "one_day"
@@ -80,11 +80,11 @@
     "time": "5:00 AM",
     "cost": 9999,
     "max": 20,
-    "img": "/outing_pic/Ooty/ooty_1.png",
+    "img": "/outing_pic/Ooty/ooty_1.webp",
     "images": [
-      "/outing_pic/Ooty/ooty_1.png",
-      "/outing_pic/Ooty/ooty_2.png",
-      "/outing_pic/Ooty/ooty_3.png"
+      "/outing_pic/Ooty/ooty_1.webp",
+      "/outing_pic/Ooty/ooty_2.webp",
+      "/outing_pic/Ooty/ooty_3.webp"
     ],
     "category": "mountains",
     "trip_type": "2d1n"
@@ -97,11 +97,11 @@
     "time": "6:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "/outing_pic/Coorg/Coorg_1.png",
+    "img": "/outing_pic/Coorg/Coorg_1.webp",
     "images": [
-      "/outing_pic/Coorg/Coorg_1.png",
-      "/outing_pic/Coorg/Coorg_2.png",
-      "/outing_pic/Coorg/Coorg_3.png"
+      "/outing_pic/Coorg/Coorg_1.webp",
+      "/outing_pic/Coorg/Coorg_2.webp",
+      "/outing_pic/Coorg/Coorg_3.webp"
     ],
     "category": "road_trips",
     "trip_type": "2d1n"
@@ -114,14 +114,14 @@
     "time": "5:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "/outing_pic/Wayanad/wayanad_1.jpg",
+    "img": "/outing_pic/Wayanad/wayanad_1.webp",
     "images": [
-      "/outing_pic/Wayanad/wayanad_1.jpg",
-      "/outing_pic/Wayanad/wayanad_2.jpg",
-      "/outing_pic/Wayanad/wayanad_3.jpg",
-      "/outing_pic/Wayanad/wayanad_6.jpg",
-      "/outing_pic/Wayanad/wayanad_12.jpg",
-      "/outing_pic/Wayanad/wayanad_13.jpg"
+      "/outing_pic/Wayanad/wayanad_1.webp",
+      "/outing_pic/Wayanad/wayanad_2.webp",
+      "/outing_pic/Wayanad/wayanad_3.webp",
+      "/outing_pic/Wayanad/wayanad_6.webp",
+      "/outing_pic/Wayanad/wayanad_12.webp",
+      "/outing_pic/Wayanad/wayanad_13.webp"
     ],
     "category": "adventure",
     "trip_type": "2d1n"
@@ -134,10 +134,10 @@
     "time": "5:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "/outing_pic/Gandikota/Gandikota_1.png",
+    "img": "/outing_pic/Gandikota/Gandikota_1.webp",
     "images": [
-      "/outing_pic/Gandikota/Gandikota_1.png",
-      "/outing_pic/Gandikota/Gandikota_2.png"
+      "/outing_pic/Gandikota/Gandikota_1.webp",
+      "/outing_pic/Gandikota/Gandikota_2.webp"
     ],
     "category": "adventure",
     "trip_type": "2d1n"
@@ -150,10 +150,10 @@
     "time": "7:00 AM",
     "cost": 5999,
     "max": 25,
-    "img": "/outing_pic/Lepakshi/Lepakshi_1.png",
+    "img": "/outing_pic/Lepakshi/Lepakshi_1.webp",
     "images": [
-      "/outing_pic/Lepakshi/Lepakshi_1.png",
-      "/outing_pic/Lepakshi/Lepakshi_2.png"
+      "/outing_pic/Lepakshi/Lepakshi_1.webp",
+      "/outing_pic/Lepakshi/Lepakshi_2.webp"
     ],
     "category": "festivals",
     "trip_type": "one_day"
@@ -166,10 +166,10 @@
     "time": "5:00 AM",
     "cost": 9999,
     "max": 20,
-    "img": "/outing_pic/Sakleshpur/Sakleshpur_1.jpg",
+    "img": "/outing_pic/Sakleshpur/Sakleshpur_1.webp",
     "images": [
-      "/outing_pic/Sakleshpur/Sakleshpur_1.jpg",
-      "/outing_pic/Sakleshpur/Sakleshpur_2.png"
+      "/outing_pic/Sakleshpur/Sakleshpur_1.webp",
+      "/outing_pic/Sakleshpur/Sakleshpur_2.webp"
     ],
     "category": "adventure",
     "trip_type": "one_day"
@@ -182,11 +182,11 @@
     "time": "6:00 AM",
     "cost": 11999,
     "max": 25,
-    "img": "/outing_pic/Goa/goa_1.png",
+    "img": "/outing_pic/Goa/goa_1.webp",
     "images": [
-      "/outing_pic/Goa/goa_1.png",
-      "/outing_pic/Goa/goa_2.png",
-      "/outing_pic/Goa/goa_3.png"
+      "/outing_pic/Goa/goa_1.webp",
+      "/outing_pic/Goa/goa_2.webp",
+      "/outing_pic/Goa/goa_3.webp"
     ],
     "category": "beaches",
     "trip_type": "2d1n"
@@ -199,9 +199,9 @@
     "time": "6:00 AM",
     "cost": 3999,
     "max": 25,
-    "img": "/outing_pic/Hassan/Hassan_1.jpg",
+    "img": "/outing_pic/Hassan/Hassan_1.webp",
     "images": [
-      "/outing_pic/Hassan/Hassan_1.jpg"
+      "/outing_pic/Hassan/Hassan_1.webp"
     ],
     "category": "road_trips",
     "trip_type": "one_day"
@@ -214,15 +214,15 @@
     "time": "5:00 AM",
     "cost": 8999,
     "max": 20,
-    "img": "/outing_pic/Malpe/malpe_3.jpg",
+    "img": "/outing_pic/Malpe/malpe_3.webp",
     "images": [
-      "/outing_pic/Malpe/malpe_3.jpg",
-      "/outing_pic/Malpe/malpe_5.jpg",
-      "/outing_pic/Malpe/malpe_9.jpg",
-      "/outing_pic/Malpe/malpe_10.jpg",
-      "/outing_pic/Malpe/malpe_11.jpg",
-      "/outing_pic/Malpe/malpe_13.jpg",
-      "/outing_pic/Malpe/malpe_15.jpg"
+      "/outing_pic/Malpe/malpe_3.webp",
+      "/outing_pic/Malpe/malpe_5.webp",
+      "/outing_pic/Malpe/malpe_9.webp",
+      "/outing_pic/Malpe/malpe_10.webp",
+      "/outing_pic/Malpe/malpe_11.webp",
+      "/outing_pic/Malpe/malpe_13.webp",
+      "/outing_pic/Malpe/malpe_15.webp"
     ],
     "category": "beaches",
     "trip_type": "2d1n"
@@ -235,14 +235,14 @@
     "time": "5:00 AM",
     "cost": 9999,
     "max": 20,
-    "img": "/outing_pic/Shimoga/shimoga_7.jpg",
+    "img": "/outing_pic/Shimoga/shimoga_7.webp",
     "images": [
-      "/outing_pic/Shimoga/shimoga_7.jpg",
-      "/outing_pic/Shimoga/shimoga_9.jpg",
-      "/outing_pic/Shimoga/shimoga_10.jpg",
-      "/outing_pic/Shimoga/shimoga_12.jpg",
-      "/outing_pic/Shimoga/shimoga_13.jpg",
-      "/outing_pic/Shimoga/shimoga_15.jpg"
+      "/outing_pic/Shimoga/shimoga_7.webp",
+      "/outing_pic/Shimoga/shimoga_9.webp",
+      "/outing_pic/Shimoga/shimoga_10.webp",
+      "/outing_pic/Shimoga/shimoga_12.webp",
+      "/outing_pic/Shimoga/shimoga_13.webp",
+      "/outing_pic/Shimoga/shimoga_15.webp"
     ],
     "category": "adventure",
     "trip_type": "2d1n"
@@ -255,9 +255,9 @@
     "time": "6:00 AM",
     "cost": 2999,
     "max": 25,
-    "img": "/outing_pic/Shivanasamudra_Falls/Shivanasamudra_1.png",
+    "img": "/outing_pic/Shivanasamudra_Falls/Shivanasamudra_1.webp",
     "images": [
-      "/outing_pic/Shivanasamudra_Falls/Shivanasamudra_1.png"
+      "/outing_pic/Shivanasamudra_Falls/Shivanasamudra_1.webp"
     ],
     "category": "adventure",
     "trip_type": "one_day"
@@ -270,15 +270,15 @@
     "time": "6:00 AM",
     "cost": 2999,
     "max": 25,
-    "img": "/outing_pic/Shravanabelagola/shravanabelagola_1.jpg",
+    "img": "/outing_pic/Shravanabelagola/shravanabelagola_1.webp",
     "images": [
-      "/outing_pic/Shravanabelagola/shravanabelagola_1.jpg",
-      "/outing_pic/Shravanabelagola/shravanabelagola_2.jpg",
-      "/outing_pic/Shravanabelagola/shravanabelagola_4.jpg",
-      "/outing_pic/Shravanabelagola/shravanabelagola_6.jpg",
-      "/outing_pic/Shravanabelagola/shravanabelagola_8.jpg",
-      "/outing_pic/Shravanabelagola/shravanabelagola_9.jpg",
-      "/outing_pic/Shravanabelagola/shravanabelagola_10.jpg"
+      "/outing_pic/Shravanabelagola/shravanabelagola_1.webp",
+      "/outing_pic/Shravanabelagola/shravanabelagola_2.webp",
+      "/outing_pic/Shravanabelagola/shravanabelagola_4.webp",
+      "/outing_pic/Shravanabelagola/shravanabelagola_6.webp",
+      "/outing_pic/Shravanabelagola/shravanabelagola_8.webp",
+      "/outing_pic/Shravanabelagola/shravanabelagola_9.webp",
+      "/outing_pic/Shravanabelagola/shravanabelagola_10.webp"
     ],
     "category": "festivals",
     "trip_type": "one_day"
@@ -291,10 +291,10 @@
     "time": "5:00 AM",
     "cost": 1999,
     "max": 25,
-    "img": "/outing_pic/savandurga_trek/savandurga_trek_1.png",
+    "img": "/outing_pic/savandurga_trek/savandurga_trek_1.webp",
     "images": [
-      "/outing_pic/savandurga_trek/savandurga_trek_1.png",
-      "/outing_pic/savandurga_trek/savandurga_trek_2.png"
+      "/outing_pic/savandurga_trek/savandurga_trek_1.webp",
+      "/outing_pic/savandurga_trek/savandurga_trek_2.webp"
     ],
     "category": "adventure",
     "trip_type": "one_day"
@@ -307,13 +307,13 @@
     "time": "6:00 AM",
     "cost": 2999,
     "max": 20,
-    "img": "/outing_pic/Ramanagara/ramanagara_1.jpg",
+    "img": "/outing_pic/Ramanagara/ramanagara_1.webp",
     "images": [
-      "/outing_pic/Ramanagara/ramanagara_1.jpg",
-      "/outing_pic/Ramanagara/ramanagara_4.jpg",
-      "/outing_pic/Ramanagara/ramanagara_7.jpg",
-      "/outing_pic/Ramanagara/ramanagara_9.jpg",
-      "/outing_pic/Ramanagara/ramanagara_13.jpg"
+      "/outing_pic/Ramanagara/ramanagara_1.webp",
+      "/outing_pic/Ramanagara/ramanagara_4.webp",
+      "/outing_pic/Ramanagara/ramanagara_7.webp",
+      "/outing_pic/Ramanagara/ramanagara_9.webp",
+      "/outing_pic/Ramanagara/ramanagara_13.webp"
     ],
     "category": "adventure",
     "trip_type": "one_day"
@@ -326,14 +326,14 @@
     "time": "5:00 AM",
     "cost": 8999,
     "max": 20,
-    "img": "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_1.jpg",
+    "img": "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_1.webp",
     "images": [
-      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_1.jpg",
-      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_6.jpg",
-      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_8.jpg",
-      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_9.jpg",
-      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_10.jpg",
-      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_11.jpg"
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_1.webp",
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_6.webp",
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_8.webp",
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_9.webp",
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_10.webp",
+      "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_11.webp"
     ],
     "category": "adventure",
     "trip_type": "2d1n"
@@ -346,12 +346,12 @@
     "time": "5:00 AM",
     "cost": 9999,
     "max": 20,
-    "img": "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_1.jpg",
+    "img": "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_1.webp",
     "images": [
-      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_1.jpg",
-      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_2.jpg",
-      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_3.jpg",
-      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_4.jpg"
+      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_1.webp",
+      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_2.webp",
+      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_3.webp",
+      "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_4.webp"
     ],
     "category": "adventure",
     "trip_type": "2d1n"
@@ -364,14 +364,14 @@
     "time": "5:00 AM",
     "cost": 8999,
     "max": 20,
-    "img": "/outing_pic/Masinagudi/masinagudi_2.jpg",
+    "img": "/outing_pic/Masinagudi/masinagudi_2.webp",
     "images": [
-      "/outing_pic/Masinagudi/masinagudi_2.jpg",
-      "/outing_pic/Masinagudi/masinagudi_4.jpg",
-      "/outing_pic/Masinagudi/masinagudi_5.jpg",
-      "/outing_pic/Masinagudi/masinagudi_6.jpg",
-      "/outing_pic/Masinagudi/masinagudi_7.jpg",
-      "/outing_pic/Masinagudi/masinagudi_8.jpg"
+      "/outing_pic/Masinagudi/masinagudi_2.webp",
+      "/outing_pic/Masinagudi/masinagudi_4.webp",
+      "/outing_pic/Masinagudi/masinagudi_5.webp",
+      "/outing_pic/Masinagudi/masinagudi_6.webp",
+      "/outing_pic/Masinagudi/masinagudi_7.webp",
+      "/outing_pic/Masinagudi/masinagudi_8.webp"
     ],
     "category": "adventure",
     "trip_type": "2d1n"
@@ -384,14 +384,14 @@
     "time": "5:00 AM",
     "cost": 7999,
     "max": 20,
-    "img": "/outing_pic/Agumbe/agumbe_9.jpg",
+    "img": "/outing_pic/Agumbe/agumbe_9.webp",
     "images": [
-      "/outing_pic/Agumbe/agumbe_9.jpg",
-      "/outing_pic/Agumbe/agumbe_10.jpg",
-      "/outing_pic/Agumbe/agumbe_11.jpg",
-      "/outing_pic/Agumbe/agumbe_12.jpg",
-      "/outing_pic/Agumbe/agumbe_13.jpg",
-      "/outing_pic/Agumbe/agumbe_15.jpg"
+      "/outing_pic/Agumbe/agumbe_9.webp",
+      "/outing_pic/Agumbe/agumbe_10.webp",
+      "/outing_pic/Agumbe/agumbe_11.webp",
+      "/outing_pic/Agumbe/agumbe_12.webp",
+      "/outing_pic/Agumbe/agumbe_13.webp",
+      "/outing_pic/Agumbe/agumbe_15.webp"
     ],
     "category": "adventure",
     "trip_type": "2d1n"
@@ -404,9 +404,9 @@
     "time": "10:00 PM",
     "cost": 1999,
     "max": 25,
-    "img": "/outing_pic/Antaragange/antaragange_1.jpg",
+    "img": "/outing_pic/Antaragange/antaragange_1.webp",
     "images": [
-      "/outing_pic/Antaragange/antaragange_1.jpg"
+      "/outing_pic/Antaragange/antaragange_1.webp"
     ],
     "category": "adventure",
     "trip_type": "one_day"
@@ -419,14 +419,14 @@
     "time": "5:00 AM",
     "cost": 5999,
     "max": 25,
-    "img": "/outing_pic/Belum_Caves/belum_caves_1.jpg",
+    "img": "/outing_pic/Belum_Caves/belum_caves_1.webp",
     "images": [
-      "/outing_pic/Belum_Caves/belum_caves_1.jpg",
-      "/outing_pic/Belum_Caves/belum_caves_2.jpg",
-      "/outing_pic/Belum_Caves/belum_caves_3.jpg",
-      "/outing_pic/Belum_Caves/belum_caves_4.jpg",
-      "/outing_pic/Belum_Caves/belum_caves_5.jpg",
-      "/outing_pic/Belum_Caves/belum_caves_6.jpg"
+      "/outing_pic/Belum_Caves/belum_caves_1.webp",
+      "/outing_pic/Belum_Caves/belum_caves_2.webp",
+      "/outing_pic/Belum_Caves/belum_caves_3.webp",
+      "/outing_pic/Belum_Caves/belum_caves_4.webp",
+      "/outing_pic/Belum_Caves/belum_caves_5.webp",
+      "/outing_pic/Belum_Caves/belum_caves_6.webp"
     ],
     "category": "adventure",
     "trip_type": "one_day"
@@ -439,14 +439,14 @@
     "time": "5:00 AM",
     "cost": 7999,
     "max": 20,
-    "img": "/outing_pic/Kodachadri/kodachadri_2.jpg",
+    "img": "/outing_pic/Kodachadri/kodachadri_2.webp",
     "images": [
-      "/outing_pic/Kodachadri/kodachadri_2.jpg",
-      "/outing_pic/Kodachadri/kodachadri_3.jpg",
-      "/outing_pic/Kodachadri/kodachadri_9.jpg",
-      "/outing_pic/Kodachadri/kodachadri_12.jpg",
-      "/outing_pic/Kodachadri/kodachadri_14.jpg",
-      "/outing_pic/Kodachadri/kodachadri_15.jpg"
+      "/outing_pic/Kodachadri/kodachadri_2.webp",
+      "/outing_pic/Kodachadri/kodachadri_3.webp",
+      "/outing_pic/Kodachadri/kodachadri_9.webp",
+      "/outing_pic/Kodachadri/kodachadri_12.webp",
+      "/outing_pic/Kodachadri/kodachadri_14.webp",
+      "/outing_pic/Kodachadri/kodachadri_15.webp"
     ],
     "category": "mountains",
     "trip_type": "2d1n"
@@ -459,13 +459,13 @@
     "time": "11:00 PM",
     "cost": 2499,
     "max": 25,
-    "img": "/outing_pic/Skandagiri/skandagiri_1.jpg",
+    "img": "/outing_pic/Skandagiri/skandagiri_1.webp",
     "images": [
-      "/outing_pic/Skandagiri/skandagiri_1.jpg",
-      "/outing_pic/Skandagiri/skandagiri_6.jpg",
-      "/outing_pic/Skandagiri/skandagiri_8.jpg",
-      "/outing_pic/Skandagiri/skandagiri_10.jpg",
-      "/outing_pic/Skandagiri/skandagiri_13.jpg"
+      "/outing_pic/Skandagiri/skandagiri_1.webp",
+      "/outing_pic/Skandagiri/skandagiri_6.webp",
+      "/outing_pic/Skandagiri/skandagiri_8.webp",
+      "/outing_pic/Skandagiri/skandagiri_10.webp",
+      "/outing_pic/Skandagiri/skandagiri_13.webp"
     ],
     "category": "mountains",
     "trip_type": "one_day"
@@ -478,9 +478,9 @@
     "time": "9:00 AM",
     "cost": 1499,
     "max": 30,
-    "img": "/outing_pic/Bangalore_City/Bangalore_Mysore_Maharaja_Palace.jpg",
+    "img": "/outing_pic/Bangalore_City/Bangalore_Mysore_Maharaja_Palace.webp",
     "images": [
-      "/outing_pic/Bangalore_City/Bangalore_Mysore_Maharaja_Palace.jpg"
+      "/outing_pic/Bangalore_City/Bangalore_Mysore_Maharaja_Palace.webp"
     ],
     "category": "road_trips",
     "trip_type": "one_day"
@@ -493,13 +493,13 @@
     "time": "5:00 AM",
     "cost": 8999,
     "max": 20,
-    "img": "/outing_pic/Coonoor/coonoor_3.jpg",
+    "img": "/outing_pic/Coonoor/coonoor_3.webp",
     "images": [
-      "/outing_pic/Coonoor/coonoor_3.jpg",
-      "/outing_pic/Coonoor/coonoor_4.jpg",
-      "/outing_pic/Coonoor/coonoor_7.jpg",
-      "/outing_pic/Coonoor/coonoor_9.jpg",
-      "/outing_pic/Coonoor/coonoor_15.jpg"
+      "/outing_pic/Coonoor/coonoor_3.webp",
+      "/outing_pic/Coonoor/coonoor_4.webp",
+      "/outing_pic/Coonoor/coonoor_7.webp",
+      "/outing_pic/Coonoor/coonoor_9.webp",
+      "/outing_pic/Coonoor/coonoor_15.webp"
     ],
     "category": "mountains",
     "trip_type": "2d1n"
@@ -512,15 +512,15 @@
     "time": "5:00 AM",
     "cost": 7999,
     "max": 20,
-    "img": "/outing_pic/Yercaud/yercaud_1.jpg",
+    "img": "/outing_pic/Yercaud/yercaud_1.webp",
     "images": [
-      "/outing_pic/Yercaud/yercaud_1.jpg",
-      "/outing_pic/Yercaud/yercaud_2.jpg",
-      "/outing_pic/Yercaud/yercaud_5.jpg",
-      "/outing_pic/Yercaud/yercaud_6.jpg",
-      "/outing_pic/Yercaud/yercaud_7.jpg",
-      "/outing_pic/Yercaud/yercaud_8.jpg",
-      "/outing_pic/Yercaud/yercaud_10.jpg"
+      "/outing_pic/Yercaud/yercaud_1.webp",
+      "/outing_pic/Yercaud/yercaud_2.webp",
+      "/outing_pic/Yercaud/yercaud_5.webp",
+      "/outing_pic/Yercaud/yercaud_6.webp",
+      "/outing_pic/Yercaud/yercaud_7.webp",
+      "/outing_pic/Yercaud/yercaud_8.webp",
+      "/outing_pic/Yercaud/yercaud_10.webp"
     ],
     "category": "mountains",
     "trip_type": "2d1n"
@@ -533,14 +533,14 @@
     "time": "5:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "/outing_pic/Kodaikanal/kodaikanal_1.jpg",
+    "img": "/outing_pic/Kodaikanal/kodaikanal_1.webp",
     "images": [
-      "/outing_pic/Kodaikanal/kodaikanal_1.jpg",
-      "/outing_pic/Kodaikanal/kodaikanal_3.jpg",
-      "/outing_pic/Kodaikanal/kodaikanal_6.jpg",
-      "/outing_pic/Kodaikanal/kodaikanal_10.jpg",
-      "/outing_pic/Kodaikanal/kodaikanal_11.jpg",
-      "/outing_pic/Kodaikanal/kodaikanal_12.jpg"
+      "/outing_pic/Kodaikanal/kodaikanal_1.webp",
+      "/outing_pic/Kodaikanal/kodaikanal_3.webp",
+      "/outing_pic/Kodaikanal/kodaikanal_6.webp",
+      "/outing_pic/Kodaikanal/kodaikanal_10.webp",
+      "/outing_pic/Kodaikanal/kodaikanal_11.webp",
+      "/outing_pic/Kodaikanal/kodaikanal_12.webp"
     ],
     "category": "mountains",
     "trip_type": "2d1n"
@@ -553,11 +553,11 @@
     "time": "5:00 AM",
     "cost": 8999,
     "max": 25,
-    "img": "/outing_pic/Puducherry/Puducherry_1.png",
+    "img": "/outing_pic/Puducherry/Puducherry_1.webp",
     "images": [
-      "/outing_pic/Puducherry/Puducherry_1.png",
-      "/outing_pic/Puducherry/Puducherry_2.png",
-      "/outing_pic/Puducherry/Puducherry_3.png"
+      "/outing_pic/Puducherry/Puducherry_1.webp",
+      "/outing_pic/Puducherry/Puducherry_2.webp",
+      "/outing_pic/Puducherry/Puducherry_3.webp"
     ],
     "category": "beaches",
     "trip_type": "2d1n"
@@ -570,15 +570,15 @@
     "time": "5:00 AM",
     "cost": 7999,
     "max": 20,
-    "img": "/outing_pic/Gokarna/gokarna_1.jpg",
+    "img": "/outing_pic/Gokarna/gokarna_1.webp",
     "images": [
-      "/outing_pic/Gokarna/gokarna_1.jpg",
-      "/outing_pic/Gokarna/gokarna_2.jpg",
-      "/outing_pic/Gokarna/gokarna_4.jpg",
-      "/outing_pic/Gokarna/gokarna_5.jpg",
-      "/outing_pic/Gokarna/gokarna_9.jpg",
-      "/outing_pic/Gokarna/gokarna_10.jpg",
-      "/outing_pic/Gokarna/gokarna_11.jpg"
+      "/outing_pic/Gokarna/gokarna_1.webp",
+      "/outing_pic/Gokarna/gokarna_2.webp",
+      "/outing_pic/Gokarna/gokarna_4.webp",
+      "/outing_pic/Gokarna/gokarna_5.webp",
+      "/outing_pic/Gokarna/gokarna_9.webp",
+      "/outing_pic/Gokarna/gokarna_10.webp",
+      "/outing_pic/Gokarna/gokarna_11.webp"
     ],
     "category": "beaches",
     "trip_type": "2d1n"
@@ -591,12 +591,12 @@
     "time": "5:00 AM",
     "cost": 8999,
     "max": 25,
-    "img": "/outing_pic/Hampi/hampi_1.jpg",
+    "img": "/outing_pic/Hampi/hampi_1.webp",
     "images": [
-      "/outing_pic/Hampi/hampi_1.jpg",
-      "/outing_pic/Hampi/hampi_7.jpg",
-      "/outing_pic/Hampi/hampi_8.jpg",
-      "/outing_pic/Hampi/hampi_15.jpg"
+      "/outing_pic/Hampi/hampi_1.webp",
+      "/outing_pic/Hampi/hampi_7.webp",
+      "/outing_pic/Hampi/hampi_8.webp",
+      "/outing_pic/Hampi/hampi_15.webp"
     ],
     "category": "road_trips",
     "trip_type": "2d1n"
@@ -609,11 +609,11 @@
     "time": "5:00 AM",
     "cost": 5999,
     "max": 25,
-    "img": "/outing_pic/Jog_Falls/jog_falls_1.jpg",
+    "img": "/outing_pic/Jog_Falls/jog_falls_1.webp",
     "images": [
-      "/outing_pic/Jog_Falls/jog_falls_1.jpg",
-      "/outing_pic/Jog_Falls/jog_falls_2.jpg",
-      "/outing_pic/Jog_Falls/jog_falls_3.jpg"
+      "/outing_pic/Jog_Falls/jog_falls_1.webp",
+      "/outing_pic/Jog_Falls/jog_falls_2.webp",
+      "/outing_pic/Jog_Falls/jog_falls_3.webp"
     ],
     "category": "adventure",
     "trip_type": "one_day"
@@ -626,15 +626,15 @@
     "time": "5:00 AM",
     "cost": 12999,
     "max": 20,
-    "img": "/outing_pic/Kabini/kabini_3.jpg",
+    "img": "/outing_pic/Kabini/kabini_3.webp",
     "images": [
-      "/outing_pic/Kabini/kabini_3.jpg",
-      "/outing_pic/Kabini/kabini_5.jpg",
-      "/outing_pic/Kabini/kabini_6.jpg",
-      "/outing_pic/Kabini/kabini_8.jpg",
-      "/outing_pic/Kabini/kabini_9.jpg",
-      "/outing_pic/Kabini/kabini_10.jpg",
-      "/outing_pic/Kabini/kabini_11.jpg"
+      "/outing_pic/Kabini/kabini_3.webp",
+      "/outing_pic/Kabini/kabini_5.webp",
+      "/outing_pic/Kabini/kabini_6.webp",
+      "/outing_pic/Kabini/kabini_8.webp",
+      "/outing_pic/Kabini/kabini_9.webp",
+      "/outing_pic/Kabini/kabini_10.webp",
+      "/outing_pic/Kabini/kabini_11.webp"
     ],
     "category": "adventure",
     "trip_type": "2d1n"
@@ -647,14 +647,14 @@
     "time": "5:00 AM",
     "cost": 11999,
     "max": 20,
-    "img": "/outing_pic/Munnar/munnar_1.jpg",
+    "img": "/outing_pic/Munnar/munnar_1.webp",
     "images": [
-      "/outing_pic/Munnar/munnar_1.jpg",
-      "/outing_pic/Munnar/munnar_2.jpg",
-      "/outing_pic/Munnar/munnar_3.jpg",
-      "/outing_pic/Munnar/munnar_4.jpg",
-      "/outing_pic/Munnar/munnar_5.jpg",
-      "/outing_pic/Munnar/munnar_10.jpg"
+      "/outing_pic/Munnar/munnar_1.webp",
+      "/outing_pic/Munnar/munnar_2.webp",
+      "/outing_pic/Munnar/munnar_3.webp",
+      "/outing_pic/Munnar/munnar_4.webp",
+      "/outing_pic/Munnar/munnar_5.webp",
+      "/outing_pic/Munnar/munnar_10.webp"
     ],
     "category": "mountains",
     "trip_type": "2d1n"
@@ -667,13 +667,13 @@
     "time": "5:00 AM",
     "cost": 7999,
     "max": 25,
-    "img": "/outing_pic/Murudeshwar/murudeshwar_1.jpg",
+    "img": "/outing_pic/Murudeshwar/murudeshwar_1.webp",
     "images": [
-      "/outing_pic/Murudeshwar/murudeshwar_1.jpg",
-      "/outing_pic/Murudeshwar/murudeshwar_2.jpg",
-      "/outing_pic/Murudeshwar/murudeshwar_7.jpg",
-      "/outing_pic/Murudeshwar/murudeshwar_9.jpg",
-      "/outing_pic/Murudeshwar/murudeshwar_11.jpg"
+      "/outing_pic/Murudeshwar/murudeshwar_1.webp",
+      "/outing_pic/Murudeshwar/murudeshwar_2.webp",
+      "/outing_pic/Murudeshwar/murudeshwar_7.webp",
+      "/outing_pic/Murudeshwar/murudeshwar_9.webp",
+      "/outing_pic/Murudeshwar/murudeshwar_11.webp"
     ],
     "category": "beaches",
     "trip_type": "2d1n"
@@ -686,16 +686,16 @@
     "time": "5:00 AM",
     "cost": 10999,
     "max": 20,
-    "img": "/outing_pic/Nagarhole/nagarhole_2.jpg",
+    "img": "/outing_pic/Nagarhole/nagarhole_2.webp",
     "images": [
-      "/outing_pic/Nagarhole/nagarhole_2.jpg",
-      "/outing_pic/Nagarhole/nagarhole_4.jpg",
-      "/outing_pic/Nagarhole/nagarhole_6.jpg",
-      "/outing_pic/Nagarhole/nagarhole_7.jpg",
-      "/outing_pic/Nagarhole/nagarhole_9.jpg",
-      "/outing_pic/Nagarhole/nagarhole_12.jpg",
-      "/outing_pic/Nagarhole/nagarhole_13.jpg",
-      "/outing_pic/Nagarhole/nagarhole_14.jpg"
+      "/outing_pic/Nagarhole/nagarhole_2.webp",
+      "/outing_pic/Nagarhole/nagarhole_4.webp",
+      "/outing_pic/Nagarhole/nagarhole_6.webp",
+      "/outing_pic/Nagarhole/nagarhole_7.webp",
+      "/outing_pic/Nagarhole/nagarhole_9.webp",
+      "/outing_pic/Nagarhole/nagarhole_12.webp",
+      "/outing_pic/Nagarhole/nagarhole_13.webp",
+      "/outing_pic/Nagarhole/nagarhole_14.webp"
     ],
     "category": "adventure",
     "trip_type": "2d1n"
@@ -708,12 +708,12 @@
     "time": "5:00 AM",
     "cost": 7999,
     "max": 25,
-    "img": "/outing_pic/Udupi/udupi_1.jpg",
+    "img": "/outing_pic/Udupi/udupi_1.webp",
     "images": [
-      "/outing_pic/Udupi/udupi_1.jpg",
-      "/outing_pic/Udupi/udupi_3.jpg",
-      "/outing_pic/Udupi/udupi_4.jpg",
-      "/outing_pic/Udupi/udupi_11.jpg"
+      "/outing_pic/Udupi/udupi_1.webp",
+      "/outing_pic/Udupi/udupi_3.webp",
+      "/outing_pic/Udupi/udupi_4.webp",
+      "/outing_pic/Udupi/udupi_11.webp"
     ],
     "category": "beaches",
     "trip_type": "2d1n"
@@ -726,9 +726,9 @@
     "time": "9:00 AM",
     "cost": 2499,
     "max": 30,
-    "img": "/outing_pic/Wonderla/wonderla_11.jpg",
+    "img": "/outing_pic/Wonderla/wonderla_11.webp",
     "images": [
-      "/outing_pic/Wonderla/wonderla_11.jpg"
+      "/outing_pic/Wonderla/wonderla_11.webp"
     ],
     "category": "adventure",
     "trip_type": "one_day"
@@ -741,15 +741,15 @@
     "time": "5:00 AM",
     "cost": 9999,
     "max": 20,
-    "img": "/outing_pic/Bandipur/bandipur_6.jpg",
+    "img": "/outing_pic/Bandipur/bandipur_6.webp",
     "images": [
-      "/outing_pic/Bandipur/bandipur_6.jpg",
-      "/outing_pic/Bandipur/bandipur_7.jpg",
-      "/outing_pic/Bandipur/bandipur_8.jpg",
-      "/outing_pic/Bandipur/bandipur_9.jpg",
-      "/outing_pic/Bandipur/bandipur_10.jpg",
-      "/outing_pic/Bandipur/bandipur_11.jpg",
-      "/outing_pic/Bandipur/bandipur_12.jpg"
+      "/outing_pic/Bandipur/bandipur_6.webp",
+      "/outing_pic/Bandipur/bandipur_7.webp",
+      "/outing_pic/Bandipur/bandipur_8.webp",
+      "/outing_pic/Bandipur/bandipur_9.webp",
+      "/outing_pic/Bandipur/bandipur_10.webp",
+      "/outing_pic/Bandipur/bandipur_11.webp",
+      "/outing_pic/Bandipur/bandipur_12.webp"
     ],
     "category": "adventure",
     "trip_type": "2d1n"
@@ -762,11 +762,11 @@
     "time": "5:00 AM",
     "cost": 8999,
     "max": 20,
-    "img": "/outing_pic/Dandeli/dandeli_4.jpg",
+    "img": "/outing_pic/Dandeli/dandeli_4.webp",
     "images": [
-      "/outing_pic/Dandeli/dandeli_4.jpg",
-      "/outing_pic/Dandeli/dandeli_9.jpg",
-      "/outing_pic/Dandeli/dandeli_12.jpg"
+      "/outing_pic/Dandeli/dandeli_4.webp",
+      "/outing_pic/Dandeli/dandeli_9.webp",
+      "/outing_pic/Dandeli/dandeli_12.webp"
     ],
     "category": "adventure",
     "trip_type": "2d1n"
