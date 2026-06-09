@@ -11,9 +11,9 @@
       "departure_city": "Bangalore",
       "distance": "65 km (one way)",
       "altitude": "1478m",
-      "cost_per_person": "₹1500",
-      "token_amount": "₹300 (20% at booking)",
-      "remaining_amount": "₹1200 (due 24hrs before trip)"
+      "cost_per_person": "₹999",
+      "token_amount": "₹200 (20% at booking)",
+      "remaining_amount": "₹799 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -261,9 +261,9 @@
       "departure_city": "Bangalore",
       "distance": "105 km (one way)",
       "altitude": "400m",
-      "cost_per_person": "₹4999",
-      "token_amount": "₹1000 (20% at booking)",
-      "remaining_amount": "₹3999 (due 24hrs before trip)"
+      "cost_per_person": "₹1999",
+      "token_amount": "₹400 (20% at booking)",
+      "remaining_amount": "₹1599 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -508,9 +508,9 @@
       "departure_city": "Bangalore",
       "distance": "250 km (one way)",
       "altitude": "1090m",
-      "cost_per_person": "₹12999",
-      "token_amount": "₹2600 (20% at booking)",
-      "remaining_amount": "₹10399 (due 24hrs before trip)"
+      "cost_per_person": "₹5999",
+      "token_amount": "₹1200 (20% at booking)",
+      "remaining_amount": "₹4799 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -1043,9 +1043,9 @@
       "departure_city": "Bangalore",
       "distance": "280 km (one way)",
       "altitude": "2240m",
-      "cost_per_person": "₹9999",
-      "token_amount": "₹2000 (20% at booking)",
-      "remaining_amount": "₹7999 (due 24hrs before trip)"
+      "cost_per_person": "₹6999",
+      "token_amount": "₹1400 (20% at booking)",
+      "remaining_amount": "₹5599 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -1328,9 +1328,9 @@
       "departure_city": "Bangalore",
       "distance": "265 km (one way)",
       "altitude": "1100m",
-      "cost_per_person": "₹10999",
-      "token_amount": "₹2200 (20% at booking)",
-      "remaining_amount": "₹8799 (due 24hrs before trip)"
+      "cost_per_person": "₹7999",
+      "token_amount": "₹1600 (20% at booking)",
+      "remaining_amount": "₹6399 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -1614,9 +1614,9 @@
       "departure_city": "Bangalore",
       "distance": "280 km (one way)",
       "altitude": "700-2100m",
-      "cost_per_person": "₹10999",
-      "token_amount": "₹2200 (20% at booking)",
-      "remaining_amount": "₹8799 (due 24hrs before trip)"
+      "cost_per_person": "₹9999",
+      "token_amount": "₹2000 (20% at booking)",
+      "remaining_amount": "₹7999 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -1899,9 +1899,9 @@
       "departure_city": "Bangalore",
       "distance": "310 km (one way)",
       "altitude": "300m",
-      "cost_per_person": "₹10999",
-      "token_amount": "₹2200 (20% at booking)",
-      "remaining_amount": "₹8799 (due 24hrs before trip)"
+      "cost_per_person": "₹7999",
+      "token_amount": "₹1600 (20% at booking)",
+      "remaining_amount": "₹6399 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -2181,9 +2181,9 @@
       "departure_city": "Bangalore",
       "distance": "120 km (one way)",
       "altitude": "500m",
-      "cost_per_person": "₹5999",
-      "token_amount": "₹1200 (20% at booking)",
-      "remaining_amount": "₹4799 (due 24hrs before trip)"
+      "cost_per_person": "₹1999",
+      "token_amount": "₹400 (20% at booking)",
+      "remaining_amount": "₹1599 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -2428,9 +2428,9 @@
       "departure_city": "Bangalore",
       "distance": "220 km (one way)",
       "altitude": "950m",
-      "cost_per_person": "₹9999",
-      "token_amount": "₹2000 (20% at booking)",
-      "remaining_amount": "₹7999 (due 24hrs before trip)"
+      "cost_per_person": "₹6999",
+      "token_amount": "₹1400 (20% at booking)",
+      "remaining_amount": "₹5599 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -2680,9 +2680,9 @@
       "departure_city": "Bangalore",
       "distance": "560 km (one way)",
       "altitude": "0-100m",
-      "cost_per_person": "₹11999",
-      "token_amount": "₹2400 (20% at booking)",
-      "remaining_amount": "₹9599 (due 24hrs before trip)"
+      "cost_per_person": "₹9999",
+      "token_amount": "₹2000 (20% at booking)",
+      "remaining_amount": "₹7999 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -2962,9 +2962,9 @@
       "departure_city": "Bangalore",
       "distance": "190 km (one way)",
       "altitude": "980m",
-      "cost_per_person": "₹3999",
-      "token_amount": "₹800 (20% at booking)",
-      "remaining_amount": "₹3199 (due 24hrs before trip)"
+      "cost_per_person": "₹2999",
+      "token_amount": "₹600 (20% at booking)",
+      "remaining_amount": "₹2399 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -3202,9 +3202,9 @@
       "departure_city": "Bangalore",
       "distance": "400 km (one way)",
       "altitude": "0m",
-      "cost_per_person": "₹8999",
-      "token_amount": "₹1800 (20% at booking)",
-      "remaining_amount": "₹7199 (due 24hrs before trip)"
+      "cost_per_person": "₹6999",
+      "token_amount": "₹1400 (20% at booking)",
+      "remaining_amount": "₹5599 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -3487,9 +3487,9 @@
       "departure_city": "Bangalore",
       "distance": "300 km (one way)",
       "altitude": "600m",
-      "cost_per_person": "₹9999",
-      "token_amount": "₹2000 (20% at booking)",
-      "remaining_amount": "₹7999 (due 24hrs before trip)"
+      "cost_per_person": "₹6999",
+      "token_amount": "₹1400 (20% at booking)",
+      "remaining_amount": "₹5599 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -4515,9 +4515,9 @@
       "departure_city": "Bangalore",
       "distance": "50 km (one way)",
       "altitude": "700m",
-      "cost_per_person": "₹2999",
-      "token_amount": "₹600 (20% at booking)",
-      "remaining_amount": "₹2399 (due 24hrs before trip)"
+      "cost_per_person": "₹2199",
+      "token_amount": "₹440 (20% at booking)",
+      "remaining_amount": "₹1759 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -4759,9 +4759,9 @@
       "departure_city": "Bangalore",
       "distance": "220 km (one way)",
       "altitude": "1800m",
-      "cost_per_person": "₹8999",
-      "token_amount": "₹1800 (20% at booking)",
-      "remaining_amount": "₹7199 (due 24hrs before trip)"
+      "cost_per_person": "₹7999",
+      "token_amount": "₹1600 (20% at booking)",
+      "remaining_amount": "₹6399 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -5044,9 +5044,9 @@
       "departure_city": "Bangalore",
       "distance": "260 km (one way)",
       "altitude": "1000m",
-      "cost_per_person": "₹9999",
-      "token_amount": "₹2000 (20% at booking)",
-      "remaining_amount": "₹7999 (due 24hrs before trip)"
+      "cost_per_person": "₹7999",
+      "token_amount": "₹1600 (20% at booking)",
+      "remaining_amount": "₹6399 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -5329,9 +5329,9 @@
       "departure_city": "Bangalore",
       "distance": "240 km (one way)",
       "altitude": "500m",
-      "cost_per_person": "₹8999",
-      "token_amount": "₹1800 (20% at booking)",
-      "remaining_amount": "₹7199 (due 24hrs before trip)"
+      "cost_per_person": "₹7999",
+      "token_amount": "₹1600 (20% at booking)",
+      "remaining_amount": "₹6399 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -7748,9 +7748,9 @@
       "departure_city": "Bangalore",
       "distance": "470 km (one way)",
       "altitude": "2133m",
-      "cost_per_person": "₹10999",
-      "token_amount": "₹2200 (20% at booking)",
-      "remaining_amount": "₹8799 (due 24hrs before trip)"
+      "cost_per_person": "₹7999",
+      "token_amount": "₹1600 (20% at booking)",
+      "remaining_amount": "₹6399 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -9142,9 +9142,9 @@
       "departure_city": "Bangalore",
       "distance": "220 km (one way)",
       "altitude": "700m",
-      "cost_per_person": "₹12999",
-      "token_amount": "₹2600 (20% at booking)",
-      "remaining_amount": "₹10399 (due 24hrs before trip)"
+      "cost_per_person": "₹9999",
+      "token_amount": "₹2000 (20% at booking)",
+      "remaining_amount": "₹7999 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -9427,9 +9427,9 @@
       "departure_city": "Bangalore",
       "distance": "480 km (one way)",
       "altitude": "1532m",
-      "cost_per_person": "₹11999",
-      "token_amount": "₹2400 (20% at booking)",
-      "remaining_amount": "₹9599 (due 24hrs before trip)"
+      "cost_per_person": "₹7999",
+      "token_amount": "₹1600 (20% at booking)",
+      "remaining_amount": "₹6399 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
@@ -9994,9 +9994,9 @@
       "departure_city": "Bangalore",
       "distance": "230 km (one way)",
       "altitude": "700m",
-      "cost_per_person": "₹10999",
-      "token_amount": "₹2200 (20% at booking)",
-      "remaining_amount": "₹8799 (due 24hrs before trip)"
+      "cost_per_person": "₹9999",
+      "token_amount": "₹2000 (20% at booking)",
+      "remaining_amount": "₹7999 (due 24hrs before trip)"
     },
     "pickup_boarding": {
       "pickup_points": [
