@@ -1138,7 +1138,20 @@ const api = async (url, opts = {}, _retryCount = 0) => {
     });
     clearTimeout(timeoutId);
 
-    if (res.status === 401) { logout(); toast('Session expired. Please login again.', 'error'); return { success: false }; }
+    if (res.status === 401) {
+      // Background/non-critical calls (e.g. notification polling) must never tear
+      // down the session or trigger any navigation.
+      if (opts.background) return { success: false, sessionExpired: true };
+      // For primary calls: clear auth state + refresh the nav, but DO NOT force a
+      // redirect. The user stays on their current route. This fixes the bug where
+      // clicking a page (Wallet/Dashboard/etc.) bounced back to Home after 1–2s
+      // because a single 401 ran logout() → navigate('home').
+      if (currentUser || authToken) {
+        clearSession();
+        toast('Session expired. Please login again.', 'error');
+      }
+      return { success: false, sessionExpired: true };
+    }
 
     if (res.status === 429) {
       const msg = 'Too many requests. Please wait a moment and try again.';
@@ -1367,7 +1380,9 @@ async function handleSignup(e) {
     sessionStorage.removeItem('vibes_offer_intent');
     trackEvent('sign_up', { method: 'email', from_offer: fromOffer });
     if (fromOffer) trackEvent('offer_signup', { placement: 'new_user_reward' });
-    currentUser = data.user; authToken = data.token; sessionStorage.setItem('vibes_user', JSON.stringify(data.user)); sessionStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate('home'); toast('🎉 Account created! Book any trip to earn ₹100 Vibes Wallet credit!', 'success');
+    currentUser = data.user; authToken = data.token; sessionStorage.setItem('vibes_user', JSON.stringify(data.user)); sessionStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate('home');
+    if (data.bonusGranted) { trackEvent('welcome_bonus_credited', { method: 'email', amount: data.bonusAmount }); toast('🎉 Welcome to Vibes Outing! ₹' + (data.bonusAmount || 100) + ' has been added to your wallet.', 'success'); }
+    else toast('🎉 Account created! Welcome to Vibes Outing!', 'success');
   }
   else toast(data.message, 'error');
 }
@@ -1440,7 +1455,8 @@ async function handleGoogleCredential(response) {
       closeModal();
       renderNav();
       navigate('home');
-      toast('Successfully signed in with Google!', 'success');
+      if (data.bonusGranted) { trackEvent('welcome_bonus_credited', { method: 'google', amount: data.bonusAmount }); toast('🎉 Welcome to Vibes Outing! ₹' + (data.bonusAmount || 100) + ' has been added to your wallet.', 'success'); }
+      else toast('Successfully signed in with Google!', 'success');
     } else {
       if (modalContent) modalContent.innerHTML = prevHtml;
       toast(data.message || 'Google sign-in failed', 'error');
@@ -1452,7 +1468,18 @@ async function handleGoogleCredential(response) {
   }
 }
 
-function logout() { currentUser = null; authToken = null; sessionStorage.removeItem('vibes_user'); sessionStorage.removeItem('vibes_token'); fetch((API_BASE || '') + '/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {}); renderNav(); navigate('home'); toast('Logged out'); }
+// Clears auth state WITHOUT navigating — used for silent session-expiry handling
+// so an expired/invalid token never forces the user off their current page.
+function clearSession() {
+  currentUser = null;
+  authToken = null;
+  sessionStorage.removeItem('vibes_user');
+  sessionStorage.removeItem('vibes_token');
+  renderNav();
+}
+
+// Explicit, user-initiated logout — clears the session and returns to Home.
+function logout() { clearSession(); fetch((API_BASE || '') + '/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {}); navigate('home'); toast('Logged out'); }
 
 function showResetPassword(token) {
   // Render full-page reset form instead of a modal for better UX from email links
@@ -5153,8 +5180,10 @@ let notifications = [];
 let notifPanelOpen = false;
 
 async function fetchNotifications() {
-  if (!currentUser) return;
-  const data = await api('/notifications/' + currentUser.id);
+  if (!currentUser || !authToken) return;
+  // Background poll: a 401 here must not log the user out or redirect them.
+  const data = await api('/notifications/' + currentUser.id, { showToast: false, background: true });
+  if (data && data.sessionExpired) return;
   notifications = Array.isArray(data) ? data : [];
   updateNotifBadge();
 }

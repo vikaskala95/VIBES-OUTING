@@ -675,6 +675,70 @@ function clearLoginAttempts(identifier) {
 const WALLET_REWARD_AMOUNT = parseInt(process.env.WALLET_REWARD_AMOUNT, 10) || 100;
 const REWARD_DESC_PREFIX = 'New User Reward';
 
+// New-user welcome bonus (credited once at first registration — manual or Google)
+const WELCOME_BONUS_AMOUNT = parseInt(process.env.WELCOME_BONUS_AMOUNT, 10) || 100;
+const WELCOME_BONUS_DESC = 'Welcome Bonus';
+
+// Run a set of DB operations inside a single atomic transaction.
+// The callback receives a `q(sql, params)` function bound to the transaction.
+async function withTransaction(fn) {
+  if (USE_PG) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const q = async (sql, params = []) => {
+        const r = await client.query(sql, params);
+        return { rows: r.rows };
+      };
+      const result = await fn(q);
+      await client.query('COMMIT');
+      return result;
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+  // SQLite (better-sqlite3) — synchronous engine; reuse dbQuery on the shared connection
+  sqliteDb.exec('BEGIN');
+  try {
+    const result = await fn(dbQuery);
+    sqliteDb.exec('COMMIT');
+    return result;
+  } catch (err) {
+    try { sqliteDb.exec('ROLLBACK'); } catch (_) {}
+    throw err;
+  }
+}
+
+// Grant the one-time welcome bonus to a user inside an existing transaction.
+// Idempotent & concurrency-safe: row is locked (PG) and the welcome_bonus_granted
+// flag guarantees the ₹bonus is credited at most once per account.
+// Returns true if the bonus was granted on this call, false if already granted.
+async function grantWelcomeBonusTx(q, userId) {
+  const lockClause = USE_PG ? ' FOR UPDATE' : '';
+  const row = (await q(`SELECT welcome_bonus_granted FROM users WHERE id = $1${lockClause}`, [userId])).rows[0];
+  if (!row) return false;
+  const alreadyGranted = USE_PG ? row.welcome_bonus_granted === true : !!row.welcome_bonus_granted;
+  if (alreadyGranted) return false;
+  await q(
+    'INSERT INTO wallet_transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
+    [userId, 'credit', WELCOME_BONUS_AMOUNT, WELCOME_BONUS_DESC]
+  );
+  await q(
+    USE_PG
+      ? 'UPDATE users SET welcome_bonus_granted = TRUE WHERE id = $1'
+      : 'UPDATE users SET welcome_bonus_granted = 1 WHERE id = $1',
+    [userId]
+  );
+  await q('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+    [userId, 'wallet', `🎉 ₹${WELCOME_BONUS_AMOUNT} Welcome Bonus!`, `Welcome to Vibes Outing! ₹${WELCOME_BONUS_AMOUNT} has been added to your Vibes Wallet.`]
+  ).catch(() => {});
+  securityLog('WELCOME_BONUS_CREDITED', { userId, amount: WELCOME_BONUS_AMOUNT });
+  return true;
+}
+
 function normalizePhone(phone) {
   const digits = String(phone || '').replace(/\D/g, '');
   return digits.length > 10 ? digits.slice(-10) : digits;
@@ -758,6 +822,7 @@ async function initDatabase() {
         interests TEXT DEFAULT '',
         role TEXT DEFAULT 'user',
         must_change_password INTEGER DEFAULT 0,
+        welcome_bonus_granted BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`);
     await dbQuery(`CREATE TABLE IF NOT EXISTS outings (
@@ -1020,7 +1085,7 @@ async function initDatabase() {
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_boarding_logs_pass_id ON boarding_logs(pass_id)').catch(() => {});
   } else {
     // SQLite: tables one at a time (exec doesn't support multi-statement in all versions)
-    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password TEXT NOT NULL, interests TEXT DEFAULT '', role TEXT DEFAULT 'user', must_change_password INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password TEXT NOT NULL, interests TEXT DEFAULT '', role TEXT DEFAULT 'user', must_change_password INTEGER DEFAULT 0, welcome_bonus_granted INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS outings (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, slug TEXT DEFAULT '', location TEXT NOT NULL, description TEXT, image_url TEXT DEFAULT '', images TEXT DEFAULT '[]', date TEXT NOT NULL, time TEXT DEFAULT '10:00 AM', cost INTEGER NOT NULL, max_participants INTEGER DEFAULT 20, current_participants INTEGER DEFAULT 0, status TEXT DEFAULT 'active', category TEXT DEFAULT '', trip_type TEXT DEFAULT 'one_day', created_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, participants INTEGER DEFAULT 1, participant_names TEXT DEFAULT '', total_amount INTEGER NOT NULL, token_amount INTEGER DEFAULT 0, remaining_amount INTEGER DEFAULT 0, payment_status TEXT DEFAULT 'pending', remaining_payment_status TEXT DEFAULT 'pending', payment_id TEXT, remaining_payment_id TEXT, selected_date TEXT DEFAULT '', departure_time TEXT DEFAULT '', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (outing_id) REFERENCES outings(id))`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS suggestions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, location TEXT NOT NULL, description TEXT, budget TEXT, status TEXT DEFAULT 'pending', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
@@ -1145,6 +1210,13 @@ async function initDatabase() {
   await dbQuery("ALTER TABLE users ALTER COLUMN password DROP NOT NULL").catch(() => {
     // SQLite doesn't support ALTER COLUMN — password is already nullable for Google-only users
   });
+
+  // Migration: add one-time welcome bonus flag to users if missing
+  if (USE_PG) {
+    await dbQuery("ALTER TABLE users ADD COLUMN IF NOT EXISTS welcome_bonus_granted BOOLEAN DEFAULT FALSE").catch(() => {});
+  } else {
+    await dbQuery("ALTER TABLE users ADD COLUMN welcome_bonus_granted INTEGER DEFAULT 0").catch(() => {});
+  }
 
   // Migration: add images column to outings if missing
   await dbQuery("ALTER TABLE outings ADD COLUMN images TEXT DEFAULT '[]'").catch(() => {});
@@ -1295,15 +1367,21 @@ app.post('/api/auth/signup', [
   const { name, email, phone, password, interests } = req.body;
   try {
     const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const result = await dbQuery(
-      'INSERT INTO users (name, email, phone, password, interests) VALUES ($1,$2,$3,$4,$5) RETURNING id',
-      [sanitize(name), email, sanitize(phone || ''), hashedPassword, sanitize(interests || '')]
-    );
-    const user = (await dbQuery('SELECT id, name, email, role FROM users WHERE id = $1', [result.rows[0].id])).rows[0];
+    // Atomic: create user + credit one-time ₹welcome bonus + flag — all-or-nothing
+    const { user, bonusGranted } = await withTransaction(async (q) => {
+      const result = await q(
+        'INSERT INTO users (name, email, phone, password, interests) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+        [sanitize(name), email, sanitize(phone || ''), hashedPassword, sanitize(interests || '')]
+      );
+      const userId = result.rows[0].id;
+      const granted = await grantWelcomeBonusTx(q, userId);
+      const created = (await q('SELECT id, name, email, role FROM users WHERE id = $1', [userId])).rows[0];
+      return { user: created, bonusGranted: granted };
+    });
     const token = generateToken(user);
     setAuthCookie(res, token);
     securityLog('SIGNUP', { userId: user.id, email, ip: req.ip });
-    res.json({ success: true, user, token });
+    res.json({ success: true, user, token, bonusGranted, bonusAmount: bonusGranted ? WELCOME_BONUS_AMOUNT : 0 });
   } catch (e) {
     res.status(400).json({ success: false, message: 'Email already exists' });
   }
@@ -1378,30 +1456,38 @@ app.post('/api/auth/google', [
   try {
     // Check if user exists by google_id or email
     let user = (await dbQuery('SELECT id, name, email, role, google_id, avatar_url FROM users WHERE google_id = $1', [googleId])).rows[0];
+    let bonusGranted = false;
 
     if (!user) {
       // Check by email — link Google account to existing email user
       user = (await dbQuery('SELECT id, name, email, role, google_id, avatar_url FROM users WHERE email = $1', [email])).rows[0];
 
       if (user) {
-        // Link Google account to existing user
+        // Link Google account to existing user — NO welcome bonus (account already registered)
         await dbQuery('UPDATE users SET google_id = $1, avatar_url = $2 WHERE id = $3', [googleId, picture || '', user.id]);
         user.google_id = googleId;
         user.avatar_url = picture || '';
         securityLog('GOOGLE_ACCOUNT_LINKED', { userId: user.id, email, ip: req.ip });
       } else {
-        // Create new user (no password needed for Google-only accounts)
+        // First-time Google registration — create user + credit ₹welcome bonus atomically
         const randomPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
-        const result = await dbQuery(
-          'INSERT INTO users (name, email, password, google_id, avatar_url) VALUES ($1,$2,$3,$4,$5) RETURNING id',
-          [name, email, randomPassword, googleId, picture || '']
-        );
-        user = (await dbQuery('SELECT id, name, email, role FROM users WHERE id = $1', [result.rows[0].id])).rows[0];
+        const { created, granted } = await withTransaction(async (q) => {
+          const result = await q(
+            'INSERT INTO users (name, email, password, google_id, avatar_url) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+            [name, email, randomPassword, googleId, picture || '']
+          );
+          const userId = result.rows[0].id;
+          const g = await grantWelcomeBonusTx(q, userId);
+          const row = (await q('SELECT id, name, email, role FROM users WHERE id = $1', [userId])).rows[0];
+          return { created: row, granted: g };
+        });
+        user = created;
         user.avatar_url = picture || '';
+        bonusGranted = granted;
         securityLog('GOOGLE_SIGNUP', { userId: user.id, email, ip: req.ip });
       }
     } else {
-      // Update avatar if changed
+      // Returning Google user — update avatar if changed, NO welcome bonus
       if (picture && picture !== user.avatar_url) {
         await dbQuery('UPDATE users SET avatar_url = $1 WHERE id = $2', [picture, user.id]);
         user.avatar_url = picture;
@@ -1415,7 +1501,8 @@ app.post('/api/auth/google', [
       success: true,
       user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar_url: user.avatar_url || '' },
       token,
-      isNewUser: !user.google_id || user.google_id === googleId,
+      bonusGranted,
+      bonusAmount: bonusGranted ? WELCOME_BONUS_AMOUNT : 0,
     });
   } catch (err) {
     console.error('[GOOGLE_AUTH] Database error:', err.message);

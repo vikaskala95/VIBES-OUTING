@@ -130,6 +130,8 @@ async function authTests() {
     assert(r.status === 200 && r.body.success, `Signup failed: ${JSON.stringify(r.body)}`);
     assert(r.body.token, 'No token returned');
     assert(r.body.user && r.body.user.id, 'No user returned');
+    assert(r.body.bonusGranted === true, 'Expected welcome bonus to be granted on new signup');
+    assert(r.body.bonusAmount === 100, `Expected welcome bonus of 100, got ${r.body.bonusAmount}`);
     userToken = r.body.token;
     testUserId = r.body.user.id;
   });
@@ -990,6 +992,25 @@ async function walletTests() {
   await test('Wallet', 'Invalid user ID — validation', async () => {
     const r = await req('GET', '/api/wallet/abc', null, userToken);
     assert(r.status === 400 || r.status === 422, `Expected 400/422, got ${r.status}`);
+  });
+
+  // --- Welcome bonus: ₹100 credited exactly once at registration ---
+  await test('Wallet', 'Welcome Bonus — ₹100 credited at signup', async () => {
+    const w = await req('GET', `/api/wallet/${testUserId}`, null, userToken);
+    assert(w.status === 200, `Expected 200, got ${w.status}`);
+    const bonusTxns = (w.body.transactions || []).filter(t => t.type === 'credit' && /Welcome Bonus/i.test(t.description || ''));
+    assert(bonusTxns.length === 1, `Expected exactly 1 Welcome Bonus txn, got ${bonusTxns.length}`);
+    assert(bonusTxns[0].amount === 100, `Expected bonus of 100, got ${bonusTxns[0].amount}`);
+    assert(w.body.balance >= 100, `Expected balance >= 100, got ${w.body.balance}`);
+  });
+
+  await test('Wallet', 'Welcome Bonus — not re-credited on login', async () => {
+    const login = await req('POST', '/api/auth/login', { email: TEST_EMAIL, password: TEST_PASS });
+    assert(login.status === 200, `Login failed: ${login.status}`);
+    assert(login.body.bonusGranted !== true, 'Login must not grant a welcome bonus');
+    const w = await req('GET', `/api/wallet/${testUserId}`, null, login.body.token);
+    const bonusTxns = (w.body.transactions || []).filter(t => t.type === 'credit' && /Welcome Bonus/i.test(t.description || ''));
+    assert(bonusTxns.length === 1, `Expected still exactly 1 Welcome Bonus txn, got ${bonusTxns.length}`);
   });
 
   // --- New-user reward: ₹100 credited after a successful (demo) booking ---
