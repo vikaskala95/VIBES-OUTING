@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title>VIBES@Outing — GenZ Group Outings | Discover, Join & Explore</title>
-<meta name="description" content="VIBES@Outing — Discover & book premium group outings with friends. High-end resorts, private cabs, zero planning. Bangalore's #1 GenZ outing platform.">
-<meta name="keywords" content="group outings, team outing, weekend trips, Bangalore outings, GenZ travel, adventure trips, Goa trips, trekking">
+<meta name="description" content="VIBES@Outing — Discover & book premium group outings with friends. Get ₹100 Vibes Wallet credit on every booking. Weekend trips from Bangalore, travel rewards & trip cashback. Bangalore's #1 GenZ outing platform.">
+<meta name="keywords" content="group outings, team outing, weekend trips from Bangalore, Bangalore outings, GenZ travel, adventure trips, Goa trips, trekking, travel rewards, trip cashback, budget travel deals, VibesOuting offers">
 <meta name="author" content="VIBES@Outing">
 <link rel="canonical" href="https://vibesouting.in/">
 <meta property="og:title" content="VIBES@Outing — GenZ Group Outings">
@@ -85,6 +85,53 @@ input,textarea,select{font-family:inherit}
 .nav-links a:hover,.nav-links button:hover{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(108,60,225,.2)}
 .nav-links .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;box-shadow:0 4px 12px rgba(108,60,225,.2)}
 .nav-links .user-badge{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:.45rem 1rem;border-radius:999px;font-size:.8rem;font-weight:600;box-shadow:0 2px 8px rgba(108,60,225,.2)}
+
+/* ─── VIBES OFFER: Sticky announcement bar ───────────────────── */
+.offer-bar{position:sticky;top:0;z-index:120;background:linear-gradient(90deg,#6C3CE1 0%,#8B5CF6 40%,#F97316 100%);color:#fff;display:flex;align-items:center;justify-content:center;gap:.85rem;padding:.55rem 2.75rem .55rem 1rem;font-size:.9rem;font-weight:600;text-align:center;box-shadow:0 2px 10px rgba(108,60,225,.25);background-size:200% 100%;animation:offerShimmer 6s linear infinite}
+@keyframes offerShimmer{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+.offer-bar .offer-gift{font-size:1.15rem;animation:offerWiggle 2.5s ease-in-out infinite;display:inline-block}
+@keyframes offerWiggle{0%,100%{transform:rotate(0) scale(1)}10%{transform:rotate(-12deg) scale(1.15)}20%{transform:rotate(12deg) scale(1.15)}30%{transform:rotate(-8deg)}40%{transform:rotate(8deg)}50%{transform:rotate(0)}}
+.offer-bar .offer-text{line-height:1.3}
+.offer-bar .offer-text strong{font-weight:800}
+.offer-bar .offer-cta{background:#fff;color:var(--primary);padding:.3rem .85rem;border-radius:999px;font-size:.8rem;font-weight:700;white-space:nowrap;border:none;transition:transform .2s,box-shadow .2s;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.offer-bar .offer-cta:hover{transform:translateY(-1px) scale(1.04);box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.offer-bar .offer-close{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;width:24px;height:24px;border-radius:50%;font-size:.9rem;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.offer-bar .offer-close:hover{background:rgba(255,255,255,.35)}
+@media(max-width:640px){.offer-bar{font-size:.78rem;gap:.5rem;padding:.5rem 2.25rem .5rem .65rem;flex-wrap:wrap}.offer-bar .offer-cta{font-size:.72rem;padding:.28rem .7rem}}
+
+/* ─── VIBES OFFER: Hero promo pill ───────────────────────────── */
+.hero-offer-pill{display:inline-flex;align-items:center;gap:.5rem;background:rgba(255,255,255,.16);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.35);color:#fff;padding:.45rem 1rem;border-radius:999px;font-size:.85rem;font-weight:700;margin-bottom:1.1rem;box-shadow:0 4px 18px rgba(0,0,0,.18);animation:fadeInDown .8s ease}
+.hero-offer-pill .pill-amt{background:#fff;color:var(--primary);padding:.1rem .5rem;border-radius:999px;font-weight:800}
+
+/* ─── VIBES OFFER: Welcome bonus section ─────────────────────── */
+.welcome-bonus{max-width:1100px;margin:3rem auto;padding:0 1.25rem}
+.welcome-bonus-card{position:relative;overflow:hidden;background:linear-gradient(135deg,#5521C5 0%,#6C3CE1 45%,#8B5CF6 100%);color:#fff;border-radius:24px;padding:2.5rem 2rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap;box-shadow:0 18px 48px rgba(108,60,225,.32)}
+.welcome-bonus-card::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;background:radial-gradient(circle,rgba(249,115,22,.45),transparent 70%);border-radius:50%}
+.welcome-bonus-icon{font-size:3.4rem;flex-shrink:0;filter:drop-shadow(0 6px 14px rgba(0,0,0,.25));animation:float 3.5s ease-in-out infinite}
+.welcome-bonus-body{flex:1;min-width:260px;position:relative;z-index:1}
+.welcome-bonus-body h2{font-size:1.7rem;font-weight:800;margin-bottom:.6rem}
+.welcome-bonus-body p{font-size:1rem;opacity:.92;max-width:560px;line-height:1.6}
+.welcome-bonus-amt{display:inline-flex;flex-direction:column;align-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:18px;padding:1.1rem 1.4rem;position:relative;z-index:1}
+.welcome-bonus-amt .amt{font-size:2.4rem;font-weight:900;line-height:1}
+.welcome-bonus-amt .amt-label{font-size:.72rem;text-transform:uppercase;letter-spacing:1px;opacity:.85;margin-top:.25rem}
+.welcome-bonus-cta{margin-top:1.1rem;display:inline-flex;align-items:center;gap:.5rem;background:#fff;color:var(--primary);padding:.7rem 1.5rem;border-radius:999px;font-weight:800;border:none;font-size:.95rem;box-shadow:0 6px 18px rgba(0,0,0,.2);transition:transform .2s}
+.welcome-bonus-cta:hover{transform:translateY(-2px) scale(1.03)}
+@media(max-width:640px){.welcome-bonus-card{padding:1.75rem 1.25rem;text-align:center;justify-content:center}.welcome-bonus-body h2{font-size:1.35rem}}
+
+/* ─── VIBES OFFER: Trust badge + booking wallet toggle ───────── */
+.reward-trust-badge{display:flex;align-items:center;gap:.5rem;background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(6,214,160,.12));border:1px solid rgba(16,185,129,.35);color:#047857;padding:.6rem .9rem;border-radius:12px;font-size:.85rem;font-weight:600;margin-bottom:1rem}
+.reward-trust-badge i{color:var(--success)}
+.wallet-toggle-box{display:flex;align-items:center;justify-content:space-between;gap:.75rem;background:rgba(108,60,225,.06);border:1px dashed rgba(108,60,225,.35);padding:.75rem 1rem;border-radius:12px;margin-bottom:1rem}
+.wallet-toggle-box .wt-info{font-size:.85rem}
+.wallet-toggle-box .wt-info b{color:var(--primary)}
+.wallet-switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0}
+.wallet-switch input{opacity:0;width:0;height:0}
+.wallet-switch .slider{position:absolute;cursor:pointer;inset:0;background:#CBD5E1;transition:.3s;border-radius:999px}
+.wallet-switch .slider:before{position:absolute;content:"";height:20px;width:20px;left:3px;bottom:3px;background:#fff;transition:.3s;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.wallet-switch input:checked+.slider{background:linear-gradient(135deg,var(--primary),var(--primary-light))}
+.wallet-switch input:checked+.slider:before{transform:translateX(20px)}
+.auth-offer-banner{display:flex;align-items:center;gap:.6rem;background:linear-gradient(135deg,rgba(108,60,225,.08),rgba(249,115,22,.08));border:1px solid rgba(108,60,225,.25);border-radius:12px;padding:.7rem .85rem;margin-bottom:1.1rem;font-size:.82rem;font-weight:600;color:var(--primary)}
+.auth-offer-banner .ao-gift{font-size:1.3rem;flex-shrink:0}
 
 /* HERO — Premium Airbnb/Expedia Style Slider */
 .hero{position:relative;color:#fff;padding:0;text-align:center;overflow:hidden;height:92vh;min-height:600px;max-height:1000px;display:flex;align-items:center;justify-content:center;flex-direction:column;margin:0 auto;border-radius:0 0 28px 28px}
@@ -761,6 +808,14 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 <body>
 
 <!-- NAV -->
+<!-- VIBES NEW-USER OFFER: Sticky top announcement bar -->
+<div class="offer-bar" id="offerBar" role="region" aria-label="New user offer" style="display:none">
+  <span class="offer-gift" aria-hidden="true">🎁</span>
+  <span class="offer-text"><strong>New User Offer!</strong> Get <strong>₹100 Vibes Wallet Credit</strong> on every booking. Sign up today &amp; start saving on your trips!</span>
+  <button class="offer-cta" id="offerBarCta" onclick="offerBarCTA()">Sign Up &amp; Claim ₹100</button>
+  <button class="offer-close" aria-label="Dismiss offer" onclick="dismissOfferBar()">&times;</button>
+</div>
+
 <nav class="nav" id="navbar" role="navigation" aria-label="Main navigation">
   <a href="#" class="nav-logo" onclick="navigate('home')" aria-label="VIBES@Outing Home"><i class="fas fa-compass"></i><span style="display:flex;flex-direction:column;line-height:1.2">VIBES@Outing<span style="font-size:.65rem;font-weight:400;color:var(--text-light);font-style:italic;letter-spacing:.3px">Less planning, more feeling — enjoy the moment ✨</span></span></a>
   <div class="nav-links" id="navLinks"></div>
@@ -785,6 +840,52 @@ let authToken = sessionStorage.getItem('vibes_token') || null;
 let outings = [];
 let currentPage = 'home';
 let selectedVibe = null;
+let bookingWalletBalance = 0;
+const SITE_NAME = 'VIBES@Outing';
+const SITE_ORIGIN = window.location.origin;
+const DEFAULT_SEO = {
+  title: 'VIBES@Outing - GenZ Group Outings | Discover, Join & Explore',
+  description: 'VIBES@Outing - Book premium group outings & weekend trips from Bangalore. Earn ₹100 Vibes Wallet credit on every booking — travel rewards, trip cashback & budget travel deals.',
+};
+
+// ─── ANALYTICS: lightweight event tracking (Google Analytics + dataLayer) ──
+function trackEvent(name, params = {}) {
+  try {
+    if (typeof gtag === 'function') gtag('event', name, params);
+    else if (window.dataLayer) window.dataLayer.push({ event: name, ...params });
+  } catch (e) { /* analytics must never break the app */ }
+}
+
+// ─── VIBES NEW-USER OFFER: sticky announcement bar ─────────────
+function initOfferBar() {
+  const bar = document.getElementById('offerBar');
+  if (!bar) return;
+  if (sessionStorage.getItem('vibes_offer_dismissed') === '1') { bar.style.display = 'none'; return; }
+  // Logged-in users see "Book Now"; guests see the sign-up claim CTA
+  const cta = document.getElementById('offerBarCta');
+  if (cta) cta.textContent = currentUser ? 'Book Now' : 'Sign Up & Claim ₹100';
+  bar.style.display = 'flex';
+  trackEvent('offer_banner_view', { placement: 'announcement_bar', logged_in: !!currentUser });
+}
+
+function offerBarCTA() {
+  trackEvent('offer_banner_click', { placement: 'announcement_bar', logged_in: !!currentUser });
+  if (currentUser) navigate('outings');
+  else { sessionStorage.setItem('vibes_offer_intent', '1'); showSignup(); }
+}
+
+function dismissOfferBar() {
+  sessionStorage.setItem('vibes_offer_dismissed', '1');
+  const bar = document.getElementById('offerBar');
+  if (bar) bar.style.display = 'none';
+}
+
+function claimWelcomeBonus() {
+  trackEvent('offer_banner_click', { placement: 'welcome_bonus_section', logged_in: !!currentUser });
+  if (currentUser) navigate('outings');
+  else { sessionStorage.setItem('vibes_offer_intent', '1'); showSignup(); }
+}
+
 
 // ─── SECURITY: Client-side HTML escaping (defense-in-depth) ─────
 function escapeHtml(str) {
@@ -798,6 +899,165 @@ function safeImageUrl(url) {
   // Only allow http/https URLs
   try { const u = new URL(url); if (u.protocol === 'http:' || u.protocol === 'https:') return url; } catch(e) {}
   return '';
+}
+
+function normalizeSlug(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function buildOutingPath(slug) {
+  return '/outings/' + encodeURIComponent(normalizeSlug(slug));
+}
+
+function upsertMetaTag(selector, attr, key, value) {
+  if (!value) return;
+  let el = document.head.querySelector(selector);
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute(attr, key);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('content', value);
+}
+
+function upsertCanonical(url) {
+  let canonical = document.head.querySelector('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement('link');
+    canonical.setAttribute('rel', 'canonical');
+    document.head.appendChild(canonical);
+  }
+  canonical.setAttribute('href', url);
+}
+
+function setSeoMeta({ title, description, url, image }) {
+  const metaTitle = title || DEFAULT_SEO.title;
+  const metaDescription = description || DEFAULT_SEO.description;
+  const metaUrl = url || (SITE_ORIGIN + window.location.pathname);
+  const metaImage = image || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80';
+
+  document.title = metaTitle;
+  upsertMetaTag('meta[name="description"]', 'name', 'description', metaDescription);
+  upsertMetaTag('meta[property="og:title"]', 'property', 'og:title', metaTitle);
+  upsertMetaTag('meta[property="og:description"]', 'property', 'og:description', metaDescription);
+  upsertMetaTag('meta[property="og:url"]', 'property', 'og:url', metaUrl);
+  upsertMetaTag('meta[property="og:image"]', 'property', 'og:image', metaImage);
+  upsertMetaTag('meta[name="twitter:title"]', 'name', 'twitter:title', metaTitle);
+  upsertMetaTag('meta[name="twitter:description"]', 'name', 'twitter:description', metaDescription);
+  upsertMetaTag('meta[name="twitter:image"]', 'name', 'twitter:image', metaImage);
+  upsertCanonical(metaUrl);
+}
+
+function clearOutingStructuredData() {
+  const old = document.getElementById('outing-jsonld');
+  if (old) old.remove();
+}
+
+function setOutingStructuredData(outing) {
+  clearOutingStructuredData();
+  const slug = outing.slug || normalizeSlug(outing.title);
+  const url = SITE_ORIGIN + buildOutingPath(slug);
+  let images = [];
+  try { images = typeof outing.images === 'string' ? JSON.parse(outing.images) : (outing.images || []); } catch (e) { images = []; }
+  const safeImages = images.filter(Boolean).map(u => u.startsWith('http') ? u : (SITE_ORIGIN + u));
+  const primaryImage = outing.image_url ? (outing.image_url.startsWith('http') ? outing.image_url : (SITE_ORIGIN + outing.image_url)) : '';
+  if (primaryImage && !safeImages.includes(primaryImage)) safeImages.unshift(primaryImage);
+
+  const payload = {
+    '@context': 'https://schema.org',
+    '@type': 'TouristTrip',
+    name: outing.title,
+    description: outing.description || DEFAULT_SEO.description,
+    image: safeImages,
+    touristType: 'Group Travelers',
+    itinerary: outing.location,
+    provider: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: SITE_ORIGIN,
+    },
+    offers: {
+      '@type': 'Offer',
+      url,
+      priceCurrency: 'INR',
+      price: String(Math.ceil((outing.cost || 0) * 0.20)),
+      availability: (outing.max_participants - outing.current_participants) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut',
+    },
+  };
+
+  const script = document.createElement('script');
+  script.id = 'outing-jsonld';
+  script.type = 'application/ld+json';
+  script.textContent = JSON.stringify(payload);
+  document.head.appendChild(script);
+}
+
+function setOutingSeo(outing) {
+  const slug = outing.slug || normalizeSlug(outing.title);
+  const path = buildOutingPath(slug);
+  const url = SITE_ORIGIN + path;
+  const image = outing.image_url ? (outing.image_url.startsWith('http') ? outing.image_url : SITE_ORIGIN + outing.image_url) : undefined;
+  setSeoMeta({
+    title: `${outing.title} | ${SITE_NAME}`,
+    description: (outing.description || DEFAULT_SEO.description).slice(0, 160),
+    url,
+    image,
+  });
+  setOutingStructuredData(outing);
+}
+
+function setDefaultSeo(pathname) {
+  clearOutingStructuredData();
+  setSeoMeta({ url: SITE_ORIGIN + pathname });
+}
+
+function resolvePageFromUrl() {
+  const cleanPath = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
+  if (cleanPath === '/') {
+    const hashPage = (window.location.hash || '').replace(/^#/, '');
+    return hashPage || 'home';
+  }
+  if (cleanPath === '/outings') return 'outings';
+  if (cleanPath.startsWith('/outings/')) {
+    const slug = normalizeSlug(decodeURIComponent(cleanPath.replace('/outings/', '')));
+    if (slug) return 'outing-slug:' + slug;
+    return 'outings';
+  }
+  return 'home';
+}
+
+async function migrateLegacyOutingHashRoute() {
+  const hash = (window.location.hash || '').replace(/^#/, '');
+  if (!/^outing-\d+$/.test(hash)) return null;
+  const legacyId = parseInt(hash.split('-')[1], 10);
+  if (!legacyId) return null;
+  const legacyOuting = await api('/outings/' + legacyId, { showToast: false });
+  if (!legacyOuting || !legacyOuting.slug) return null;
+  const nextPage = 'outing-slug:' + legacyOuting.slug;
+  history.replaceState({ page: nextPage }, '', buildOutingPath(legacyOuting.slug));
+  return nextPage;
+}
+
+async function navigateToOuting(outingRef, skipHistory) {
+  if (typeof outingRef === 'string' && !/^\d+$/.test(outingRef)) {
+    const slug = normalizeSlug(outingRef);
+    if (!slug) return;
+    return navigate('outing-slug:' + slug, !!skipHistory);
+  }
+
+  const outingId = parseInt(outingRef, 10);
+  if (!outingId) return;
+  const outing = await api('/outings/' + outingId, { showToast: false });
+  if (!outing || !outing.slug) {
+    toast('Outing not found', 'error');
+    return navigate('outings', !!skipHistory);
+  }
+  return navigate('outing-slug:' + outing.slug, !!skipHistory);
 }
 // Blur placeholders cache
 let _blurPlaceholders = null;
@@ -837,7 +1097,9 @@ function slideCarousel(carouselId, target) {
 
 // ─── BROWSER HISTORY ────────────────────────────────────────────
 window.addEventListener('popstate', (e) => {
-  if (e.state && e.state.page) { currentPage = e.state.page; navigate(e.state.page, true); }
+  const page = (e.state && e.state.page) ? e.state.page : resolvePageFromUrl();
+  currentPage = page;
+  navigate(page, true);
 });
 
 // ─── API ────────────────────────────────────────────────────────
@@ -991,6 +1253,9 @@ function renderNav() {
       <button onclick="showSignup()" class="btn btn-sm btn-outline-white" style="border-color:var(--primary);color:var(--primary)">Sign Up</button>
     `;
   }
+  // Keep the offer-bar CTA in sync with auth state
+  const offerCta = document.getElementById('offerBarCta');
+  if (offerCta) offerCta.textContent = currentUser ? 'Book Now' : 'Sign Up & Claim ₹100';
 }
 
 // ─── AUTH ────────────────────────────────────────────────────────
@@ -998,6 +1263,7 @@ function showLogin() {
   openModal(`
     <button class="close" onclick="closeModal()">&times;</button>
     <h2><i class="fas fa-sign-in-alt" style="color:var(--primary)"></i> Welcome Back</h2>
+    <div class="auth-offer-banner"><span class="ao-gift">🎁</span><span>New here? Get <b>₹100 Vibes Wallet Credit</b> on every booking — <a href="#" onclick="closeModal();showSignup();return false" style="color:var(--primary);text-decoration:underline">sign up &amp; claim</a></span></div>
     <form onsubmit="handleLogin(event)">
       <div class="form-group"><label>Email</label><input type="email" id="loginEmail" required placeholder="you@email.com"></div>
       <div class="form-group"><label>Password</label><input type="password" id="loginPass" required placeholder="••••••••"></div>
@@ -1063,6 +1329,7 @@ function showSignup() {
   openModal(`
     <button class="close" onclick="closeModal()">&times;</button>
     <h2><i class="fas fa-user-plus" style="color:var(--primary)"></i> Create Account</h2>
+    <div class="auth-offer-banner"><span class="ao-gift">🎉</span><span><b>New User Offer!</b> Get <b>₹100 Vibes Wallet Credit</b> on every booking. Sign up today &amp; start saving on your trips!</span></div>
     <button class="btn btn-block google-signin-btn" onclick="handleGoogleSignIn()" type="button" style="margin-bottom:1rem">
       <svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:8px;flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Sign up with Google
@@ -1095,7 +1362,13 @@ async function handleLogin(e) {
 async function handleSignup(e) {
   e.preventDefault();
   const data = await api('/auth/signup', { method: 'POST', body: { name: document.getElementById('signName').value, email: document.getElementById('signEmail').value, phone: document.getElementById('signPhone').value, password: document.getElementById('signPass').value, interests: document.getElementById('signInterests').value } });
-  if (data.success) { currentUser = data.user; authToken = data.token; sessionStorage.setItem('vibes_user', JSON.stringify(data.user)); sessionStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate('home'); toast('Account created! Welcome!', 'success'); }
+  if (data.success) {
+    const fromOffer = sessionStorage.getItem('vibes_offer_intent') === '1';
+    sessionStorage.removeItem('vibes_offer_intent');
+    trackEvent('sign_up', { method: 'email', from_offer: fromOffer });
+    if (fromOffer) trackEvent('offer_signup', { placement: 'new_user_reward' });
+    currentUser = data.user; authToken = data.token; sessionStorage.setItem('vibes_user', JSON.stringify(data.user)); sessionStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate('home'); toast('🎉 Account created! Book any trip to earn ₹100 Vibes Wallet credit!', 'success');
+  }
   else toast(data.message, 'error');
 }
 
@@ -1310,13 +1583,24 @@ let _pendingPasswordReset = false;
 
 // ─── PAGES ──────────────────────────────────────────────────────
 async function navigate(page, skipHistory) {
+  if (page && /^outing-\d+$/.test(page)) {
+    const legacyId = parseInt(page.split('-')[1], 10);
+    if (legacyId) {
+      await navigateToOuting(legacyId, skipHistory);
+      return;
+    }
+  }
+
   currentPage = page;
   const app = document.getElementById('app');
   cleanupHeroSlider();
 
   // Browser history support
   if (!skipHistory) {
-    history.pushState({ page }, '', '#' + page);
+    if (page === 'home') history.pushState({ page }, '', '/');
+    else if (page === 'outings') history.pushState({ page }, '', '/outings');
+    else if (page && page.startsWith('outing-slug:')) history.pushState({ page }, '', buildOutingPath(page.substring(12)));
+    else history.pushState({ page }, '', '#' + page);
   }
 
   // Show loading spinner
@@ -1332,7 +1616,7 @@ async function navigate(page, skipHistory) {
   else if (page === 'recommendations') await renderRecommendations(app);
   else if (page === 'blogs') await renderBlogList(app);
   else if (page.startsWith('blog-')) await renderBlogDetail(app, page.substring(5));
-  else if (page.startsWith('outing-')) await renderOutingDetail(app, parseInt(page.split('-')[1]));
+  else if (page.startsWith('outing-slug:')) await renderOutingDetailBySlug(app, page.substring(12));
 
   // Footer pages
   else if (page === 'about') renderAbout(app);
@@ -1351,7 +1635,54 @@ async function navigate(page, skipHistory) {
   else if (page === 'wishlist') await renderWishlist(app);
   else if (page === 'wallet') await renderWallet(app);
   else if (page === 'notifications') await renderNotificationsPage(app);
+
+  if (page === 'home') setDefaultSeo('/');
+  else if (page === 'outings') setDefaultSeo('/outings');
+  else if (!page.startsWith('outing-slug:')) setDefaultSeo(window.location.pathname || '/');
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function renderOutingDetailBySlug(app, slug) {
+  const safeSlug = normalizeSlug(slug);
+  if (!safeSlug) {
+    renderOutingNotFound(app);
+    return;
+  }
+
+  const outing = await api('/outings/by-slug/' + encodeURIComponent(safeSlug), { showToast: false });
+  if (!outing || !outing.id) {
+    renderOutingNotFound(app);
+    return;
+  }
+
+  if (outing.slug && outing.slug !== safeSlug) {
+    const correctedPage = 'outing-slug:' + outing.slug;
+    currentPage = correctedPage;
+    history.replaceState({ page: correctedPage }, '', buildOutingPath(outing.slug));
+  }
+
+  await renderOutingDetail(app, outing.id, outing);
+}
+
+function renderOutingNotFound(app) {
+  clearOutingStructuredData();
+  setSeoMeta({
+    title: `Outing Not Found | ${SITE_NAME}`,
+    description: 'The outing you are trying to access does not exist or is no longer available.',
+    url: SITE_ORIGIN + window.location.pathname,
+  });
+
+  app.innerHTML = `
+    <section class="section" style="max-width:720px;text-align:center">
+      <div style="background:#fff;padding:2.5rem;border-radius:var(--radius);box-shadow:var(--shadow)">
+        <i class="fas fa-map-signs" style="font-size:2.5rem;color:var(--primary);margin-bottom:1rem"></i>
+        <h2 style="margin-bottom:.5rem">Outing Not Found</h2>
+        <p style="color:var(--text-light);margin-bottom:1.25rem">This outing link is invalid or the trip is unavailable.</p>
+        <button class="btn btn-primary" onclick="navigate('outings')"><i class="fas fa-compass"></i> Browse Outings</button>
+      </div>
+    </section>
+  `;
 }
 
 // ─── HOME PAGE ──────────────────────────────────────────────────
@@ -1390,6 +1721,7 @@ async function renderHome(app) {
 
       <!-- Content -->
       <div class="hero-content" id="heroContent">
+        <div class="hero-offer-pill" onclick="${currentUser ? "navigate('outings')" : 'showSignup()'}" style="cursor:pointer">🎁 New User Offer — <span class="pill-amt">₹100</span> Vibes Wallet Credit on every booking!</div>
         <h1>Travel With People Who Match Your Vibe</h1>
         <p class="hero-tagline">Join curated group outings with like-minded travellers — or bring your own squad for unforgettable experiences.</p>
         <div class="hero-search" id="heroSearch">
@@ -1431,6 +1763,24 @@ async function renderHome(app) {
       <div class="stat-item"><div class="num">${stats.destinations}+</div><div class="label">Destinations</div></div>
       <div class="stat-item"><div class="num">${stats.avgRating}★</div><div class="label">Avg Vibe Check</div></div>
     </div>
+
+    <!-- WELCOME BONUS — New traveller reward -->
+    <section class="welcome-bonus" id="welcomeBonus">
+      <div class="welcome-bonus-card">
+        <div class="welcome-bonus-icon">🎁</div>
+        <div class="welcome-bonus-body">
+          <h2>Welcome Bonus for New Travelers</h2>
+          <p>Join VibesOuting and earn ₹100 wallet credit on every booking. Use your rewards for future adventures and save more every time you travel with us — your go-to for weekend trips from Bangalore, travel rewards &amp; trip cashback.</p>
+          <button class="welcome-bonus-cta" onclick="${currentUser ? "navigate('outings')" : 'claimWelcomeBonus()'}">
+            <i class="fas fa-${currentUser ? 'compass' : 'gift'}"></i> ${currentUser ? 'Book Now & Earn ₹100' : 'Sign Up & Claim ₹100'}
+          </button>
+        </div>
+        <div class="welcome-bonus-amt">
+          <span class="amt">₹100</span>
+          <span class="amt-label">Wallet Credit</span>
+        </div>
+      </div>
+    </section>
 
     <!-- CATEGORY SECTION -->
     <section class="categories-section">
@@ -1662,10 +2012,11 @@ function outingCard(o) {
   const dotsHtml = hasMultiple ? `<div class="carousel-dots">${images.map((_, i) => `<button class="carousel-dot${i === 0 ? ' active' : ''}" data-idx="${i}" onclick="event.stopPropagation();slideCarousel('${carouselId}',${i})"></button>`).join('')}</div>` : '';
 
   const isWished = wishlistItems.includes(o.id);
+  const outingNavArg = o.slug ? `'${escapeHtml(o.slug)}'` : o.id;
   return `
     <div class="card" style="position:relative">
       <button class="wishlist-heart${isWished ? ' active' : ''}" data-outing-id="${o.id}" onclick="event.stopPropagation();toggleWishlist(${o.id})" title="${isWished ? 'Remove from wishlist' : 'Add to wishlist'}">${isWished ? '<i class="fas fa-heart" style="color:var(--danger)"></i>' : '<i class="far fa-heart"></i>'}</button>
-      <div class="card-carousel" id="${carouselId}" data-idx="0" onclick="navigate('outing-${o.id}')" style="cursor:pointer;position:relative">
+      <div class="card-carousel" id="${carouselId}" data-idx="0" onclick="navigateToOuting(${outingNavArg})" style="cursor:pointer;position:relative">
         <div class="card-carousel-inner">${slidesHtml}</div>
         ${hasMultiple ? `<button class="carousel-btn carousel-prev" onclick="event.stopPropagation();slideCarousel('${carouselId}','prev')"><i class="fas fa-chevron-left"></i></button>
         <button class="carousel-btn carousel-next" onclick="event.stopPropagation();slideCarousel('${carouselId}','next')"><i class="fas fa-chevron-right"></i></button>` : ''}
@@ -1673,7 +2024,7 @@ function outingCard(o) {
         <span class="trip-type-badge ${tripBadgeClass}" style="position:absolute;top:14px;right:14px;z-index:2">${tripLabel}</span>
       </div>
       <div class="card-body">
-        <h3 style="cursor:pointer" onclick="navigate('outing-${o.id}')">${title}</h3>
+        <h3 style="cursor:pointer" onclick="navigateToOuting(${outingNavArg})">${title}</h3>
         <div class="card-meta">
           <span><i class="far fa-calendar"></i> ${dateStr}</span>
           <span><i class="far fa-clock"></i> ${escapeHtml(departureTime)}</span>
@@ -1694,7 +2045,7 @@ function outingCard(o) {
             <br>₹${Math.ceil(o.cost * 0.20)} <small>/person token</small>
           </div>
           <div style="display:flex;gap:.5rem">
-            <button class="btn btn-sm" style="background:#F1F5F9;color:var(--text)" onclick="navigate('outing-${o.id}')"><i class="fas fa-info-circle"></i></button>
+            <button class="btn btn-sm" style="background:#F1F5F9;color:var(--text)" onclick="navigateToOuting(${outingNavArg})"><i class="fas fa-info-circle"></i></button>
             ${isSoldOut
               ? `<button class="btn btn-sm" style="background:#EF4444;color:#fff" disabled><i class="fas fa-ban"></i> Sold Out</button>`
               : `<button class="btn btn-primary btn-sm" onclick="bookOuting(${o.id})"><i class="fas fa-bolt"></i> Book</button>`
@@ -1775,9 +2126,11 @@ function filterOutings() {
 // ─── BOOKING ────────────────────────────────────────────────────
 async function bookOuting(id) {
   if (!currentUser) return showLogin();
-  const [o, dateInfo] = await Promise.all([api('/outings/' + id), api('/outings/' + id + '/available-dates')]);
+  const [o, dateInfo, walletData] = await Promise.all([api('/outings/' + id), api('/outings/' + id + '/available-dates'), api('/wallet/' + currentUser.id)]);
   const spotsLeft = o.max_participants - o.current_participants;
   if (spotsLeft <= 0) { toast('This trip is sold out!', 'error'); return; }
+  bookingWalletBalance = Math.max(0, (walletData && walletData.balance) || 0);
+  trackEvent('offer_banner_view', { placement: 'booking_modal', logged_in: true });
 
   const tripType = dateInfo.trip_type || 'one_day';
   const tripLabel = tripType === '2d1n' ? '2D/1N Trip' : 'One Day Trip';
@@ -1820,10 +2173,20 @@ async function bookOuting(id) {
     <form onsubmit="confirmBooking(event, ${o.id}, ${o.cost})">
       <div class="form-group"><label>Number of Participants</label><input type="number" id="bookParticipants" min="1" max="${spotsLeft}" value="1" required onchange="updateTotal(${o.cost})"></div>
       <div class="form-group"><label>Participant Names (comma separated)</label><input type="text" id="bookNames" placeholder="${escapeHtml(currentUser.name)}" value="${escapeHtml(currentUser.name)}"></div>
+      <div class="reward-trust-badge"><i class="fas fa-check-circle"></i> Earn ₹100 Reward Credit on This Booking</div>
+      ${bookingWalletBalance > 0 ? `
+      <div class="wallet-toggle-box">
+        <div class="wt-info"><i class="fas fa-wallet" style="color:var(--primary)"></i> Use Vibes Wallet credit<br><b>₹${bookingWalletBalance.toLocaleString()}</b> available</div>
+        <label class="wallet-switch"><input type="checkbox" id="useWalletToggle" onchange="updateTotal(${o.cost})"><span class="slider"></span></label>
+      </div>` : ''}
       <div style="background:rgba(108,60,225,.06);padding:1rem;border-radius:10px;margin-bottom:1rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
           <span style="font-weight:600">Total Trip Cost</span>
           <span style="font-size:1.2rem;font-weight:700;color:var(--text-light);text-decoration:line-through" id="bookTotal">₹${o.cost}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;display:none" id="bookDiscountRow">
+          <span style="font-weight:600;color:var(--success)">🎁 Wallet Discount</span>
+          <span style="font-size:1rem;font-weight:700;color:var(--success)" id="bookDiscount">-₹0</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
           <span style="font-weight:700;color:var(--primary)">🔒 Pay Now (20% Token)</span>
@@ -1856,9 +2219,18 @@ function selectWeekendDate(el, dateStr) {
 function updateTotal(cost) {
   const p = parseInt(document.getElementById('bookParticipants').value) || 1;
   const total = cost * p;
-  const token = Math.ceil(total * 0.20);
-  const remaining = total - token;
+  const useWallet = !!(document.getElementById('useWalletToggle') && document.getElementById('useWalletToggle').checked);
+  const discount = useWallet ? Math.max(0, Math.min(bookingWalletBalance, Math.floor(total * 0.9))) : 0;
+  const payable = total - discount;
+  const token = Math.ceil(payable * 0.20);
+  const remaining = payable - token;
   document.getElementById('bookTotal').textContent = '₹' + total;
+  const discRow = document.getElementById('bookDiscountRow');
+  if (discRow) {
+    discRow.style.display = discount > 0 ? 'flex' : 'none';
+    const discEl = document.getElementById('bookDiscount');
+    if (discEl) discEl.textContent = '-₹' + discount;
+  }
   document.getElementById('bookToken').textContent = '₹' + token;
   document.getElementById('bookRemaining').textContent = '₹' + remaining;
   document.getElementById('bookTokenBtn').textContent = token;
@@ -1869,21 +2241,29 @@ async function confirmBooking(e, outingId, cost) {
   const participants = parseInt(document.getElementById('bookParticipants').value);
   const participantNames = document.getElementById('bookNames').value;
   const totalAmount = cost * participants;
-  const tokenAmount = Math.ceil(totalAmount * 0.20);
+  const useWallet = !!(document.getElementById('useWalletToggle') && document.getElementById('useWalletToggle').checked);
   const selectedDate = document.getElementById('selectedWeekendDate') ? document.getElementById('selectedWeekendDate').value : '';
   const departureTime = document.getElementById('selectedDepartureTime') ? document.getElementById('selectedDepartureTime').value : '';
 
   if (!selectedDate) { toast('Please select a weekend date', 'error'); return; }
+  if (useWallet) trackEvent('reward_redeem_attempt', { placement: 'booking_modal' });
 
-  // Step 1: Create Razorpay order on server (20% token)
+  // Step 1: Create Razorpay order on server (20% token, minus any wallet discount)
   const orderRes = await api('/bookings/create-order', { method: 'POST', body: {
-    outing_id: outingId, participants, participant_names: participantNames, selected_date: selectedDate, departure_time: departureTime
+    outing_id: outingId, participants, participant_names: participantNames, selected_date: selectedDate, departure_time: departureTime, use_wallet: useWallet
   }});
 
   if (!orderRes.success) {
     if (orderRes.message && orderRes.message.includes('API keys')) {
-      const fallback = await api('/bookings', { method: 'POST', body: { outing_id: outingId, participants, participant_names: participantNames, total_amount: totalAmount, selected_date: selectedDate, departure_time: departureTime } });
-      if (fallback.success) { closeModal(); toast('🎉 Token booking confirmed (demo)! Paid ₹' + fallback.token_amount + ' | Remaining ₹' + fallback.remaining_amount, 'success'); navigate(currentPage); }
+      const fallback = await api('/bookings', { method: 'POST', body: { outing_id: outingId, participants, participant_names: participantNames, total_amount: totalAmount, selected_date: selectedDate, departure_time: departureTime, use_wallet: useWallet } });
+      if (fallback.success) {
+        closeModal();
+        if (fallback.wallet_discount > 0) trackEvent('reward_redeemed', { amount: fallback.wallet_discount });
+        if (fallback.reward_credited > 0) trackEvent('reward_credited', { amount: fallback.reward_credited });
+        const rewardMsg = fallback.reward_credited > 0 ? ' | 🎁 ₹' + fallback.reward_credited + ' wallet credit earned!' : '';
+        toast('🎉 Token booking confirmed (demo)! Paid ₹' + fallback.token_amount + ' | Remaining ₹' + fallback.remaining_amount + rewardMsg, 'success');
+        navigate(currentPage);
+      }
       else toast(fallback.message, 'error');
       return;
     }
@@ -1893,10 +2273,10 @@ async function confirmBooking(e, outingId, cost) {
 
   closeModal();
 
-  // Step 2: Open Razorpay Checkout popup (20% token only)
+  // Step 2: Open Razorpay Checkout popup (server-computed token amount)
   const options = {
     key: orderRes.key_id,
-    amount: tokenAmount * 100,
+    amount: orderRes.amount * 100,
     currency: 'INR',
     name: 'VIBES@Outing',
     description: '20% Token — ' + participants + ' participant(s) | Remaining due 24hrs before trip',
@@ -1910,6 +2290,8 @@ async function confirmBooking(e, outingId, cost) {
         booking_id: orderRes.booking_id
       }});
       if (verifyRes.success) {
+        if (verifyRes.wallet_discount > 0) trackEvent('reward_redeemed', { amount: verifyRes.wallet_discount });
+        if (verifyRes.reward_credited > 0) trackEvent('reward_credited', { amount: verifyRes.reward_credited });
         toast('🎉 Token payment of ₹' + orderRes.amount + ' successful!', 'success');
         setTimeout(() => {
           openModal(`
@@ -1921,8 +2303,10 @@ async function confirmBooking(e, outingId, cost) {
               <div style="background:#F8FAFC;padding:1rem;border-radius:10px;margin:1rem 0;text-align:left">
                 <p style="margin:.25rem 0"><strong>🔒 Token Paid:</strong> <span style="color:var(--success);font-weight:700">₹${orderRes.amount}</span></p>
                 <p style="margin:.25rem 0"><strong>⏰ Remaining:</strong> <span style="color:var(--secondary);font-weight:700">₹${orderRes.remaining_amount}</span></p>
+                ${verifyRes.wallet_discount > 0 ? `<p style="margin:.25rem 0"><strong>🎁 Wallet Discount:</strong> <span style="color:var(--success);font-weight:700">-₹${verifyRes.wallet_discount}</span></p>` : ''}
                 <p style="margin:.25rem 0;font-size:.85rem;color:var(--text-light)">💡 Complete remaining payment 24 hours before the trip date</p>
               </div>
+              ${verifyRes.reward_credited > 0 ? `<div style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);padding:.85rem 1rem;border-radius:10px;margin:1rem 0;border:1px solid #6EE7B7;text-align:center"><span style="font-weight:700;color:#047857">🎁 ₹${verifyRes.reward_credited} added to your Vibes Wallet!</span><br><span style="font-size:.8rem;color:#059669">Use it as a discount on your next trip.</span></div>` : ''}
               <div style="background:linear-gradient(135deg,#EEF2FF,#F0F9FF);padding:1rem;border-radius:10px;margin:1rem 0;border:1px solid #C7D2FE">
                 <p style="font-weight:600;margin-bottom:.5rem;color:var(--primary)">✨ Share Your Trip Expectations!</p>
                 <p style="font-size:.85rem;color:var(--text-light);margin-bottom:.75rem">Tell us what you're looking forward to — activities, food, comfort, photography & more.</p>
@@ -1988,14 +2372,15 @@ async function submitSuggestion(e) {
 // ─── USER DASHBOARD ─────────────────────────────────────────────
 async function renderUserDashboard(app) {
   if (!currentUser) { showLogin(); return; }
-  const [bookings, verification, myReviews, myBlogs, myGalleries, myExpectations, myPasses] = await Promise.all([
+  const [bookings, verification, myReviews, myBlogs, myGalleries, myExpectations, myPasses, walletData] = await Promise.all([
     api('/bookings/' + currentUser.id),
     api('/verify-id/' + currentUser.id),
     api('/my-reviews'),
     api('/my-blogs'),
     api('/user/galleries'),
     api('/expectations/my'),
-    api('/digital-passes/my')
+    api('/digital-passes/my'),
+    api('/wallet/' + currentUser.id)
   ]);
   const verStatus = verification.status || 'none';
   const reviewsList = Array.isArray(myReviews) ? myReviews : [];
@@ -2004,6 +2389,7 @@ async function renderUserDashboard(app) {
   const passesList = Array.isArray(myPasses) ? myPasses : [];
   const pendingBlogs = blogsList.filter(b => b.status === 'pending');
   const publishedBlogs = blogsList.filter(b => b.status === 'approved');
+  const walletBalance = (walletData && walletData.balance) || 0;
 
   app.innerHTML = `
     <section class="section">
@@ -2012,6 +2398,7 @@ async function renderUserDashboard(app) {
       <div class="dash-stats">
         <div class="dash-stat"><div class="icon" style="background:rgba(108,60,225,.1);color:var(--primary)"><i class="fas fa-ticket-alt"></i></div><h4>Total Bookings</h4><div class="value">${bookings.length}</div></div>
         <div class="dash-stat"><div class="icon" style="background:rgba(16,185,129,.1);color:var(--success)"><i class="fas fa-rupee-sign"></i></div><h4>Total Spent</h4><div class="value">₹${bookings.reduce((s,b) => s + b.total_amount, 0)}</div></div>
+        <div class="dash-stat" style="cursor:pointer" onclick="navigate('wallet')"><div class="icon" style="background:linear-gradient(135deg,rgba(108,60,225,.12),rgba(249,115,22,.12));color:var(--primary)"><i class="fas fa-wallet"></i></div><h4>🎁 Vibes Wallet</h4><div class="value">₹${walletBalance.toLocaleString()}</div></div>
         <div class="dash-stat"><div class="icon" style="background:rgba(245,158,11,.1);color:#F59E0B"><i class="fas fa-star"></i></div><h4>My Reviews</h4><div class="value">${reviewsList.length}</div></div>
         <div class="dash-stat"><div class="icon" style="background:rgba(6,214,160,.1);color:var(--accent)"><i class="fas fa-pen-fancy"></i></div><h4>My Blogs</h4><div class="value">${blogsList.length}</div></div>
         <div class="dash-stat">
@@ -2045,7 +2432,7 @@ async function renderUserDashboard(app) {
           <td><span class="status status-${b.payment_status}">${b.payment_status}</span></td>
           <td>
             ${b.payment_status === 'paid' ? `
-              <button class="btn btn-sm" style="background:#F1F5F9" onclick="navigate('outing-${b.outing_id}')"><i class="fas fa-eye"></i></button>
+              <button class="btn btn-sm" style="background:#F1F5F9" onclick="navigateToOuting(${b.outing_id})"><i class="fas fa-eye"></i></button>
               ${payBtn}
             ` : '-'}
           </td>
@@ -2085,7 +2472,7 @@ async function renderUserDashboard(app) {
       <!-- MY REVIEWS SECTION -->
       <h3 style="margin-top:2.5rem;margin-bottom:1rem">⭐ My Reviews</h3>
       ${reviewsList.length ? `<div style="display:grid;gap:1rem">${reviewsList.map(r => `
-        <div class="review-card" style="cursor:pointer" onclick="navigate('outing-${r.outing_id}')">
+        <div class="review-card" style="cursor:pointer" onclick="navigateToOuting(${r.outing_id})">
           <div style="display:flex;gap:1rem;align-items:start">
             ${r.image_url ? `<div style="width:80px;height:60px;border-radius:8px;background:url('${escapeHtml(r.image_url)}') center/cover;flex-shrink:0"></div>` : ''}
             <div style="flex:1">
@@ -2488,8 +2875,13 @@ async function deleteExpectation(expId) {
 }
 
 // ─── OUTING DETAIL PAGE (Reviews + Chat access) ────────────────
-async function renderOutingDetail(app, outingId) {
-  const o = await api('/outings/' + outingId);
+async function renderOutingDetail(app, outingId, prefetchedOuting) {
+  const o = prefetchedOuting || await api('/outings/' + outingId, { showToast: false });
+  if (!o || !o.id) {
+    renderOutingNotFound(app);
+    return;
+  }
+  setOutingSeo(o);
   const reviewData = await api('/reviews/' + outingId);
   const spotsLeft = o.max_participants - o.current_participants;
   const dateStr = new Date(o.date).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
@@ -2913,7 +3305,7 @@ async function submitReview(outingId) {
     comment: document.getElementById('reviewComment').value,
     recommend: recommend ? recommend.value === 'yes' : true
   }});
-  if (data.success) { closeModal(); toast('⭐ Review submitted!', 'success'); navigate('outing-' + outingId); }
+  if (data.success) { closeModal(); toast('⭐ Review submitted!', 'success'); navigateToOuting(outingId); }
   else toast(data.message, 'error');
 }
 
@@ -2976,7 +3368,7 @@ async function submitBlog(outingId) {
     category: document.getElementById('blogCategory').value,
     tags: document.getElementById('blogTags').value.trim()
   }});
-  if (data.success) { closeModal(); toast('✍️ Blog submitted for review!', 'success'); navigate('outing-' + outingId); }
+  if (data.success) { closeModal(); toast('✍️ Blog submitted for review!', 'success'); navigateToOuting(outingId); }
   else toast(data.message, 'error');
 }
 
@@ -3082,7 +3474,7 @@ async function renderBlogDetail(app, slug) {
           <strong>This story is from: ${escapeHtml(blog.outing_title)}</strong>
           <p style="color:var(--text-light);font-size:.85rem;margin-top:.25rem">${escapeHtml(blog.outing_location)} • ${new Date(blog.outing_date).toLocaleDateString('en-IN', {day:'numeric',month:'long',year:'numeric'})}</p>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="navigate('outing-${blog.outing_id}')" style="margin-left:auto"><i class="fas fa-eye"></i> View Outing</button>
+        <button class="btn btn-primary btn-sm" onclick="navigateToOuting(${blog.outing_id})" style="margin-left:auto"><i class="fas fa-eye"></i> View Outing</button>
       </div>
     </section>
   `;
@@ -4731,11 +5123,11 @@ async function renderWishlist(app) {
       ${saved.length ? `<div class="wishlist-grid">${saved.map(o => `
         <div class="card wishlist-card">
           <button class="wishlist-heart active" data-outing-id="${o.id}" onclick="toggleWishlist(${o.id});if(!wishlistItems.includes(${o.id}))this.closest('.wishlist-card').remove()"><i class="fas fa-heart" style="color:var(--danger)"></i></button>
-          <div class="card-img" style="background-image:url('${safeImageUrl(o.image_url)}');cursor:pointer" onclick="navigate('outing-${o.id}')">
+          <div class="card-img" style="background-image:url('${safeImageUrl(o.image_url)}');cursor:pointer" onclick="navigateToOuting(${o.id})">
             <span class="badge">${escapeHtml(o.location)}</span>
           </div>
           <div class="card-body">
-            <h3 onclick="navigate('outing-${o.id}')" style="cursor:pointer">${escapeHtml(o.title)}</h3>
+            <h3 onclick="navigateToOuting(${o.id})" style="cursor:pointer">${escapeHtml(o.title)}</h3>
             <div class="card-meta"><span><i class="far fa-calendar"></i> ${new Date(o.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span><span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(o.location)}</span></div>
             <div class="card-footer" style="margin-top:.75rem">
               <div class="price">₹${Math.ceil(o.cost * 0.20)} <small>/person token</small></div>
@@ -4871,6 +5263,7 @@ async function renderWallet(app) {
   app.innerHTML = `
     <section class="section" style="max-width:800px">
       <h2 class="section-title">💳 Wallet & Payments</h2>
+      <div class="auth-offer-banner" style="font-size:.9rem"><span class="ao-gift">🎁</span><span>Earn <b>₹100 Vibes Wallet Credit</b> on every booking — redeem it as a discount on future trips!</span></div>
       <div class="wallet-card">
         <h4>Available Balance</h4>
         <div class="balance">₹${balance.toLocaleString()}</div>
@@ -5334,9 +5727,13 @@ function downloadCurrentMedia() {
 
 // ─── INIT ───────────────────────────────────────────────────────
 renderNav();
-if (!_pendingPasswordReset) {
-  navigate('home');
-}
+initOfferBar();
+(async () => {
+  if (_pendingPasswordReset) return;
+  const migratedPage = await migrateLegacyOutingHashRoute();
+  const initialPage = migratedPage || resolvePageFromUrl();
+  await navigate(initialPage, true);
+})();
 </script>
 </body>
 </html>

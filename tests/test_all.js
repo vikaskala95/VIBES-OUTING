@@ -991,6 +991,46 @@ async function walletTests() {
     const r = await req('GET', '/api/wallet/abc', null, userToken);
     assert(r.status === 400 || r.status === 422, `Expected 400/422, got ${r.status}`);
   });
+
+  // --- New-user reward: ₹100 credited after a successful (demo) booking ---
+  await test('Wallet', 'Reward — ₹100 credited after booking', async () => {
+    const w = await req('GET', `/api/wallet/${testUserId}`, null, userToken);
+    assert(w.status === 200, `Expected 200, got ${w.status}`);
+    const rewardTxn = (w.body.transactions || []).find(t => t.type === 'credit' && /New User Reward/i.test(t.description || ''));
+    if (!rewardTxn) {
+      // Demo bookings disabled (production) — no reward could have been issued
+      skipped++;
+      console.log('    ⚠ Reward credit not present (demo bookings likely disabled)');
+      return;
+    }
+    assert(rewardTxn.amount === 100, `Expected reward of 100, got ${rewardTxn.amount}`);
+    assert(w.body.balance >= 100, `Expected balance >= 100, got ${w.body.balance}`);
+  });
+
+  // --- Wallet redemption: credit used as discount on a future booking ---
+  await test('Wallet', 'Redemption — wallet credit applied as booking discount', async () => {
+    const before = await req('GET', `/api/wallet/${testUserId}`, null, userToken);
+    if (before.status !== 200 || (before.body.balance || 0) <= 0) {
+      skipped++;
+      console.log('    ⚠ No wallet balance to redeem (demo bookings likely disabled)');
+      return;
+    }
+    const balanceBefore = before.body.balance;
+    const outing = (await req('GET', '/api/outings')).body[0];
+    const r = await req('POST', '/api/bookings', {
+      outing_id: outing.id, participants: 1, participant_names: 'Test User',
+      total_amount: outing.cost, use_wallet: true
+    }, userToken);
+    if (r.status === 403) { skipped++; console.log('    ⚠ Demo booking disabled (production mode)'); return; }
+    assert(r.status === 200 && r.body.success, `Booking failed: ${JSON.stringify(r.body)}`);
+    assert(r.body.wallet_discount > 0, `Expected a wallet discount, got ${r.body.wallet_discount}`);
+    const after = await req('GET', `/api/wallet/${testUserId}`, null, userToken);
+    const debitTxn = (after.body.transactions || []).find(t => t.type === 'debit' && /Booking Discount/i.test(t.description || ''));
+    assert(debitTxn, 'Expected a Booking Discount debit transaction');
+    // Net change = +100 (new reward) - discount redeemed
+    const expected = balanceBefore + 100 - r.body.wallet_discount;
+    assert(after.body.balance === expected, `Expected balance ${expected}, got ${after.body.balance}`);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════

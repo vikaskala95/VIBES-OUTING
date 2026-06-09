@@ -28,6 +28,31 @@ function envFlag(value, defaultValue = false) {
   return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
 }
 
+function slugifyOutingTitle(title) {
+  const cleaned = String(title || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s-]/g, ' ')
+    .toLowerCase()
+    .trim()
+    .replace(/[_\s-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return cleaned || 'outing';
+}
+
+function makeUniqueOutingSlug(title, id, used) {
+  const base = slugifyOutingTitle(title);
+  let slug = base;
+  if (used.has(slug)) slug = `${base}-${id}`;
+  let counter = 2;
+  while (used.has(slug)) {
+    slug = `${base}-${id}-${counter}`;
+    counter += 1;
+  }
+  used.add(slug);
+  return slug;
+}
+
 // ─── SECURITY: Trust proxy (for reverse proxies) ────────────────
 app.set('trust proxy', 1);
 
@@ -646,6 +671,80 @@ function clearLoginAttempts(identifier) {
   loginAttempts.delete(identifier);
 }
 
+// ─── VIBES WALLET: New-user reward constants & helpers ──────────
+const WALLET_REWARD_AMOUNT = parseInt(process.env.WALLET_REWARD_AMOUNT, 10) || 100;
+const REWARD_DESC_PREFIX = 'New User Reward';
+
+function normalizePhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
+// Current wallet balance for a user (credits - debits)
+async function getWalletBalance(userId) {
+  const txns = (await dbQuery('SELECT type, amount FROM wallet_transactions WHERE user_id = $1', [userId])).rows;
+  const credits = txns.filter(t => t.type === 'credit').reduce((s, t) => s + Number(t.amount), 0);
+  const debits = txns.filter(t => t.type === 'debit').reduce((s, t) => s + Number(t.amount), 0);
+  return credits - debits;
+}
+
+// Anti-abuse: block reward if a different account sharing this user's email/phone already earned one
+async function isRewardBlockedByDuplicate(user) {
+  const phone = normalizePhone(user.phone);
+  const candidates = (await dbQuery('SELECT id, email, phone FROM users WHERE id <> $1', [user.id])).rows;
+  const siblingIds = candidates.filter(c => {
+    const sameEmail = user.email && c.email && String(c.email).toLowerCase() === String(user.email).toLowerCase();
+    const samePhone = phone && phone.length === 10 && normalizePhone(c.phone) === phone;
+    return sameEmail || samePhone;
+  }).map(c => c.id);
+  if (!siblingIds.length) return false;
+  const placeholders = siblingIds.map((_, i) => '$' + (i + 1)).join(',');
+  const rewarded = (await dbQuery(
+    `SELECT 1 FROM wallet_transactions WHERE user_id IN (${placeholders}) AND type = 'credit' AND description LIKE '${REWARD_DESC_PREFIX}%' LIMIT 1`,
+    siblingIds
+  )).rows;
+  return rewarded.length > 0;
+}
+
+// Credit the new-user reward for a successful booking (idempotent per booking)
+async function creditBookingReward(booking) {
+  if (!booking || booking.reward_credited) return 0;
+  const user = (await dbQuery('SELECT id, name, email, phone FROM users WHERE id = $1', [booking.user_id])).rows[0];
+  if (!user) return 0;
+  // Mark first to avoid double-credit on retries / concurrent verifications
+  await dbQuery('UPDATE bookings SET reward_credited = 1 WHERE id = $1', [booking.id]);
+  if (await isRewardBlockedByDuplicate(user)) {
+    securityLog('WALLET_REWARD_BLOCKED_DUPLICATE', { userId: user.id, bookingId: booking.id });
+    return 0;
+  }
+  await dbQuery(
+    'INSERT INTO wallet_transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
+    [user.id, 'credit', WALLET_REWARD_AMOUNT, `${REWARD_DESC_PREFIX} — Booking #${booking.id}`]
+  );
+  await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+    [user.id, 'wallet', `🎁 ₹${WALLET_REWARD_AMOUNT} Vibes Wallet Credit!`, `You earned ₹${WALLET_REWARD_AMOUNT} reward credit on your booking. Use it as a discount on your next adventure!`]).catch(() => {});
+  securityLog('WALLET_REWARD_CREDITED', { userId: user.id, bookingId: booking.id, amount: WALLET_REWARD_AMOUNT });
+  return WALLET_REWARD_AMOUNT;
+}
+
+// Cap how much wallet credit can be redeemed against a booking (keeps a small payable amount)
+function walletRedeemCap(totalAmount) {
+  return Math.max(0, Math.floor(Number(totalAmount) * 0.9));
+}
+
+// Redeem wallet credit as a booking discount (records a debit transaction)
+async function redeemWalletDiscount(userId, bookingId, requestedAmount) {
+  const balance = await getWalletBalance(userId);
+  const redeem = Math.max(0, Math.min(balance, Number(requestedAmount) || 0));
+  if (redeem <= 0) return 0;
+  await dbQuery(
+    'INSERT INTO wallet_transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
+    [userId, 'debit', redeem, `Booking Discount — Booking #${bookingId}`]
+  );
+  securityLog('WALLET_DISCOUNT_REDEEMED', { userId, bookingId, amount: redeem });
+  return redeem;
+}
+
 // ─── DATABASE INITIALIZATION (async) ────────────────────────────
 async function initDatabase() {
   if (USE_PG) {
@@ -664,6 +763,7 @@ async function initDatabase() {
     await dbQuery(`CREATE TABLE IF NOT EXISTS outings (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
+      slug TEXT DEFAULT '',
         location TEXT NOT NULL,
         description TEXT,
         image_url TEXT DEFAULT '',
@@ -779,6 +879,7 @@ async function initDatabase() {
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_blogs_user_id ON blogs(user_id)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_blogs_status ON blogs(status)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_outings_slug ON outings(slug)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_chat_outing_id ON chat_messages(outing_id)').catch(() => {});
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_security_logs_created ON security_logs(created_at)').catch(() => {});
 
@@ -920,7 +1021,7 @@ async function initDatabase() {
   } else {
     // SQLite: tables one at a time (exec doesn't support multi-statement in all versions)
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password TEXT NOT NULL, interests TEXT DEFAULT '', role TEXT DEFAULT 'user', must_change_password INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
-    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS outings (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, location TEXT NOT NULL, description TEXT, image_url TEXT DEFAULT '', images TEXT DEFAULT '[]', date TEXT NOT NULL, time TEXT DEFAULT '10:00 AM', cost INTEGER NOT NULL, max_participants INTEGER DEFAULT 20, current_participants INTEGER DEFAULT 0, status TEXT DEFAULT 'active', category TEXT DEFAULT '', trip_type TEXT DEFAULT 'one_day', created_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS outings (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, slug TEXT DEFAULT '', location TEXT NOT NULL, description TEXT, image_url TEXT DEFAULT '', images TEXT DEFAULT '[]', date TEXT NOT NULL, time TEXT DEFAULT '10:00 AM', cost INTEGER NOT NULL, max_participants INTEGER DEFAULT 20, current_participants INTEGER DEFAULT 0, status TEXT DEFAULT 'active', category TEXT DEFAULT '', trip_type TEXT DEFAULT 'one_day', created_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, participants INTEGER DEFAULT 1, participant_names TEXT DEFAULT '', total_amount INTEGER NOT NULL, token_amount INTEGER DEFAULT 0, remaining_amount INTEGER DEFAULT 0, payment_status TEXT DEFAULT 'pending', remaining_payment_status TEXT DEFAULT 'pending', payment_id TEXT, remaining_payment_id TEXT, selected_date TEXT DEFAULT '', departure_time TEXT DEFAULT '', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (outing_id) REFERENCES outings(id))`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS suggestions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, location TEXT NOT NULL, description TEXT, budget TEXT, status TEXT DEFAULT 'pending', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, booking_id INTEGER, rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5), title TEXT DEFAULT '', comment TEXT DEFAULT '', images TEXT DEFAULT '', recommend INTEGER DEFAULT 1, approved INTEGER DEFAULT 1, helpful_count INTEGER DEFAULT 0, admin_reply TEXT DEFAULT '', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (outing_id) REFERENCES outings(id), FOREIGN KEY (booking_id) REFERENCES bookings(id))`);
@@ -937,6 +1038,7 @@ async function initDatabase() {
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_blogs_user_id ON blogs(user_id)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_blogs_status ON blogs(status)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_outings_slug ON outings(slug)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_chat_outing_id ON chat_messages(outing_id)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_security_logs_created ON security_logs(created_at)`); } catch(e) {}
 
@@ -1010,8 +1112,8 @@ async function initDatabase() {
     const sampleOutings = loadDefaultOutings();
     for (const o of sampleOutings) {
       await dbQuery(
-        'INSERT INTO outings (title, location, description, date, time, cost, max_participants, image_url, images, category, trip_type, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1)',
-        [o.title, o.location, o.description, o.date, o.time, o.cost, o.max, o.img, JSON.stringify(o.images || []), o.category || '', o.trip_type || 'one_day']
+        'INSERT INTO outings (title, slug, location, description, date, time, cost, max_participants, image_url, images, category, trip_type, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1)',
+        [o.title, o.slug || slugifyOutingTitle(o.title), o.location, o.description, o.date, o.time, o.cost, o.max, o.img, JSON.stringify(o.images || []), o.category || '', o.trip_type || 'one_day']
       );
     }
   }
@@ -1032,6 +1134,10 @@ async function initDatabase() {
 
   // Migration: add category column to outings if missing
   await dbQuery("ALTER TABLE outings ADD COLUMN category TEXT DEFAULT ''").catch(() => {});
+
+  // Migration: add outing slug column if missing
+  await dbQuery("ALTER TABLE outings ADD COLUMN slug TEXT DEFAULT ''").catch(() => {});
+  await dbQuery('CREATE INDEX IF NOT EXISTS idx_outings_slug ON outings(slug)').catch(() => {});
 
   // Migration: add Google OAuth columns to users if missing
   await dbQuery("ALTER TABLE users ADD COLUMN google_id TEXT").catch(() => {});
@@ -1082,10 +1188,20 @@ async function initDatabase() {
     const exists = existingTitles.some(t => t && t.includes(titleCore));
     if (!exists) {
       await dbQuery(
-        'INSERT INTO outings (title, location, description, date, time, cost, max_participants, image_url, images, category, trip_type, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,1)',
-        [o.title, o.location, o.description, o.date, o.time, o.cost, o.max, o.img, JSON.stringify(o.images || []), o.category || '', o.trip_type || 'one_day']
+        'INSERT INTO outings (title, slug, location, description, date, time, cost, max_participants, image_url, images, category, trip_type, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1)',
+        [o.title, o.slug || slugifyOutingTitle(o.title), o.location, o.description, o.date, o.time, o.cost, o.max, o.img, JSON.stringify(o.images || []), o.category || '', o.trip_type || 'one_day']
       );
       console.log(`📌 Seeded new outing: ${o.title}`);
+    }
+  }
+
+  // Migration: ensure every outing has a unique SEO slug derived from title
+  const outingsForSlug = (await dbQuery('SELECT id, title, slug FROM outings ORDER BY id ASC')).rows;
+  const usedSlugs = new Set();
+  for (const row of outingsForSlug) {
+    const nextSlug = makeUniqueOutingSlug(row.title, row.id, usedSlugs);
+    if ((row.slug || '') !== nextSlug) {
+      await dbQuery('UPDATE outings SET slug = $1 WHERE id = $2', [nextSlug, row.id]);
     }
   }
 
@@ -1120,6 +1236,10 @@ async function initDatabase() {
   // Migration: add selected_date and departure_time columns to bookings if missing
   await dbQuery("ALTER TABLE bookings ADD COLUMN selected_date TEXT DEFAULT ''").catch(() => {});
   await dbQuery("ALTER TABLE bookings ADD COLUMN departure_time TEXT DEFAULT ''").catch(() => {});
+
+  // Migration: Vibes Wallet rewards — track per-booking discount & reward issuance
+  await dbQuery("ALTER TABLE bookings ADD COLUMN wallet_discount INTEGER DEFAULT 0").catch(() => {});
+  await dbQuery("ALTER TABLE bookings ADD COLUMN reward_credited INTEGER DEFAULT 0").catch(() => {});
 
   // Migration: auto-detect trip_type for existing outings (also fixes wrongly defaulted 'one_day')
   const allOutings = (await dbQuery("SELECT id, title, description FROM outings")).rows;
@@ -1343,6 +1463,15 @@ app.get('/api/outings/:id', [
   else res.status(404).json({ message: 'Not found' });
 });
 
+app.get('/api/outings/by-slug/:slug', [
+  param('slug').matches(/^[a-z0-9-]+$/).withMessage('Invalid outing slug'),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const result = await dbQuery('SELECT * FROM outings WHERE slug = $1', [req.params.slug]);
+  if (result.rows[0]) res.json(result.rows[0]);
+  else res.status(404).json({ message: 'Not found' });
+});
+
 // ─── DETAILED TRIP PLAN ─────────────────────────────────────────
 const detailedPlansData = (() => {
   try {
@@ -1442,12 +1571,19 @@ app.post('/api/outings', authMiddleware, adminMiddleware, [
 ], async (req, res) => {
   if (!validate(req, res)) return;
   const { title, location, description, date, time, cost, max_participants, image_url, images, category, trip_type } = req.body;
+  const baseSlug = slugifyOutingTitle(title);
   const imagesJson = Array.isArray(images) ? JSON.stringify(images) : (images || '[]');
   const result = await dbQuery(
-    'INSERT INTO outings (title, location, description, date, time, cost, max_participants, image_url, images, category, trip_type, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id',
-    [sanitize(title), sanitize(location), sanitize(description || ''), date, sanitize(time || '10:00 AM'), cost, max_participants || 20, image_url || '', imagesJson, sanitize(category || ''), sanitize(trip_type || 'one_day'), req.user.id]
+    'INSERT INTO outings (title, slug, location, description, date, time, cost, max_participants, image_url, images, category, trip_type, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id',
+    [sanitize(title), baseSlug, sanitize(location), sanitize(description || ''), date, sanitize(time || '10:00 AM'), cost, max_participants || 20, image_url || '', imagesJson, sanitize(category || ''), sanitize(trip_type || 'one_day'), req.user.id]
   );
-  res.json({ success: true, id: result.rows[0].id });
+  const outingId = result.rows[0].id;
+  const slugConflict = (await dbQuery('SELECT id FROM outings WHERE slug = $1 AND id <> $2 LIMIT 1', [baseSlug, outingId])).rows[0];
+  const finalSlug = slugConflict ? `${baseSlug}-${outingId}` : baseSlug;
+  if (finalSlug !== baseSlug) {
+    await dbQuery('UPDATE outings SET slug = $1 WHERE id = $2', [finalSlug, outingId]);
+  }
+  res.json({ success: true, id: outingId, slug: finalSlug });
 });
 
 app.put('/api/outings/:id', authMiddleware, adminMiddleware, [
@@ -1463,12 +1599,16 @@ app.put('/api/outings/:id', authMiddleware, adminMiddleware, [
 ], async (req, res) => {
   if (!validate(req, res)) return;
   const { title, location, description, date, time, cost, max_participants, image_url, images, status, category, trip_type } = req.body;
+  const baseSlug = slugifyOutingTitle(title);
   const imagesJson = Array.isArray(images) ? JSON.stringify(images) : (images || '[]');
+  const outingId = parseInt(req.params.id, 10);
+  const slugConflict = (await dbQuery('SELECT id FROM outings WHERE slug = $1 AND id <> $2 LIMIT 1', [baseSlug, outingId])).rows[0];
+  const finalSlug = slugConflict ? `${baseSlug}-${outingId}` : baseSlug;
   await dbQuery(
-    'UPDATE outings SET title=$1, location=$2, description=$3, date=$4, time=$5, cost=$6, max_participants=$7, image_url=$8, images=$9, status=$10, category=$11, trip_type=$12 WHERE id=$13',
-    [sanitize(title), sanitize(location), sanitize(description || ''), date, sanitize(time), cost, max_participants, image_url || '', imagesJson, status, sanitize(category || ''), sanitize(trip_type || 'one_day'), req.params.id]
+    'UPDATE outings SET title=$1, slug=$2, location=$3, description=$4, date=$5, time=$6, cost=$7, max_participants=$8, image_url=$9, images=$10, status=$11, category=$12, trip_type=$13 WHERE id=$14',
+    [sanitize(title), finalSlug, sanitize(location), sanitize(description || ''), date, sanitize(time), cost, max_participants, image_url || '', imagesJson, status, sanitize(category || ''), sanitize(trip_type || 'one_day'), req.params.id]
   );
-  res.json({ success: true });
+  res.json({ success: true, slug: finalSlug });
 });
 
 app.delete('/api/outings/:id', authMiddleware, adminMiddleware, [
@@ -1486,9 +1626,10 @@ app.post('/api/bookings/create-order', authMiddleware, [
   body('participant_names').optional().trim().isLength({ max: 1000 }).escape(),
   body('selected_date').optional().trim().isISO8601().withMessage('Valid selected date required'),
   body('departure_time').optional().trim().isLength({ max: 20 }),
+  body('use_wallet').optional().isBoolean().toBoolean(),
 ], async (req, res) => {
   if (!validate(req, res)) return;
-  const { outing_id, participants, participant_names, selected_date, departure_time } = req.body;
+  const { outing_id, participants, participant_names, selected_date, departure_time, use_wallet } = req.body;
   const user_id = req.user.id; // IDOR prevention: use authenticated user
 
   const outingResult = await dbQuery('SELECT * FROM outings WHERE id = $1', [outing_id]);
@@ -1513,8 +1654,15 @@ app.post('/api/bookings/create-order', authMiddleware, [
   }
 
   const totalAmount = outing.cost * participants;
-  const tokenAmount = Math.ceil(totalAmount * 0.20);
-  const remainingAmount = totalAmount - tokenAmount;
+  // Vibes Wallet: optionally apply available credit as a discount (debited on payment success)
+  let walletDiscount = 0;
+  if (use_wallet) {
+    const balance = await getWalletBalance(user_id);
+    walletDiscount = Math.max(0, Math.min(balance, walletRedeemCap(totalAmount)));
+  }
+  const payableTotal = totalAmount - walletDiscount;
+  const tokenAmount = Math.ceil(payableTotal * 0.20);
+  const remainingAmount = payableTotal - tokenAmount;
   try {
     const order = await razorpay.orders.create({
       amount: tokenAmount * 100,
@@ -1523,10 +1671,10 @@ app.post('/api/bookings/create-order', authMiddleware, [
       notes: { user_id: String(user_id), outing_id: String(outing_id), participants: String(participants), type: 'token' }
     });
     const result = await dbQuery(
-      'INSERT INTO bookings (user_id, outing_id, participants, participant_names, total_amount, token_amount, remaining_amount, payment_status, remaining_payment_status, payment_id, selected_date, departure_time) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id',
-      [user_id, outing_id, participants, sanitize(participant_names || ''), totalAmount, tokenAmount, remainingAmount, 'pending', 'pending', order.id, sanitize(selected_date || ''), sanitize(departure_time || '')]
+      'INSERT INTO bookings (user_id, outing_id, participants, participant_names, total_amount, token_amount, remaining_amount, payment_status, remaining_payment_status, payment_id, selected_date, departure_time, wallet_discount) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id',
+      [user_id, outing_id, participants, sanitize(participant_names || ''), totalAmount, tokenAmount, remainingAmount, 'pending', 'pending', order.id, sanitize(selected_date || ''), sanitize(departure_time || ''), walletDiscount]
     );
-    res.json({ success: true, order_id: order.id, booking_id: result.rows[0].id, amount: tokenAmount, total_amount: totalAmount, remaining_amount: remainingAmount, key_id: process.env.RAZORPAY_KEY_ID });
+    res.json({ success: true, order_id: order.id, booking_id: result.rows[0].id, amount: tokenAmount, total_amount: totalAmount, remaining_amount: remainingAmount, wallet_discount: walletDiscount, key_id: process.env.RAZORPAY_KEY_ID });
   } catch (err) {
     console.error('Razorpay order error:', err);
     res.status(500).json({ message: 'Payment gateway error. Check your Razorpay API keys in .env file.' });
@@ -1560,6 +1708,14 @@ app.post('/api/bookings/verify-payment', authMiddleware, [
   if (crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature))) {
     await dbQuery('UPDATE bookings SET payment_status = $1, payment_id = $2 WHERE id = $3', ['paid', razorpay_payment_id, booking_id]);
     await dbQuery('UPDATE outings SET current_participants = current_participants + $1 WHERE id = $2', [booking.participants, booking.outing_id]);
+
+    // Vibes Wallet: redeem any reserved discount, then credit the new-user reward
+    let walletDiscountApplied = 0;
+    if (booking.wallet_discount && Number(booking.wallet_discount) > 0) {
+      walletDiscountApplied = await redeemWalletDiscount(booking.user_id, booking.id, booking.wallet_discount);
+    }
+    const rewardCredited = await creditBookingReward(booking);
+
     const user = (await dbQuery('SELECT * FROM users WHERE id = $1', [booking.user_id])).rows[0];
     const outing = (await dbQuery('SELECT * FROM outings WHERE id = $1', [booking.outing_id])).rows[0];
     if (user && outing) {
@@ -1585,7 +1741,7 @@ app.post('/api/bookings/verify-payment', authMiddleware, [
       console.error('[DIGITAL_PASS] Generation failed:', passErr.message);
     }
     const whatsappLink = (user && outing) ? getWhatsAppLink(user.phone, outing.title, outing.date, outing.location, booking.token_amount) : '';
-    res.json({ success: true, payment_id: razorpay_payment_id, whatsapp_link: whatsappLink, token_amount: booking.token_amount, remaining_amount: booking.remaining_amount, outing_date: outing ? outing.date : '', digital_pass_id: digitalPass ? digitalPass.pass_id : null });
+    res.json({ success: true, payment_id: razorpay_payment_id, whatsapp_link: whatsappLink, token_amount: booking.token_amount, remaining_amount: booking.remaining_amount, wallet_discount: walletDiscountApplied, reward_credited: rewardCredited, outing_date: outing ? outing.date : '', digital_pass_id: digitalPass ? digitalPass.pass_id : null });
   } else {
     await dbQuery('UPDATE bookings SET payment_status = $1 WHERE id = $2', ['failed', booking_id]);
     securityLog('PAYMENT_VERIFICATION_FAILED', { userId: req.user.id, bookingId: booking_id, ip: req.ip });
@@ -1663,7 +1819,7 @@ app.post('/api/bookings/verify-remaining', authMiddleware, [
 app.post('/api/bookings', authMiddleware, async (req, res) => {
   if (IS_PROD) return res.status(403).json({ message: 'Demo bookings disabled in production' });
 
-  const { outing_id, participants, participant_names, total_amount, selected_date, departure_time } = req.body;
+  const { outing_id, participants, participant_names, total_amount, selected_date, departure_time, use_wallet } = req.body;
   const user_id = req.user.id; // IDOR prevention
   const outingResult = await dbQuery('SELECT * FROM outings WHERE id = $1', [outing_id]);
   const outing = outingResult.rows[0];
@@ -1671,22 +1827,36 @@ app.post('/api/bookings', authMiddleware, async (req, res) => {
   if (outing.current_participants + participants > outing.max_participants) {
     return res.status(400).json({ message: 'Not enough spots available' });
   }
-  const tokenAmount = Math.ceil(total_amount * 0.20);
-  const remainingAmount = total_amount - tokenAmount;
+  // Vibes Wallet: optionally apply available credit as a discount
+  let walletDiscount = 0;
+  if (use_wallet) {
+    const balance = await getWalletBalance(user_id);
+    walletDiscount = Math.max(0, Math.min(balance, walletRedeemCap(total_amount)));
+  }
+  const payableTotal = total_amount - walletDiscount;
+  const tokenAmount = Math.ceil(payableTotal * 0.20);
+  const remainingAmount = payableTotal - tokenAmount;
   const paymentId = 'pay_demo_' + crypto.randomBytes(8).toString('hex');
   const result = await dbQuery(
-    'INSERT INTO bookings (user_id, outing_id, participants, participant_names, total_amount, token_amount, remaining_amount, payment_status, remaining_payment_status, payment_id, selected_date, departure_time) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id',
-    [user_id, outing_id, participants, sanitize(participant_names || ''), total_amount, tokenAmount, remainingAmount, 'paid', 'pending', paymentId, sanitize(selected_date || ''), sanitize(departure_time || '')]
+    'INSERT INTO bookings (user_id, outing_id, participants, participant_names, total_amount, token_amount, remaining_amount, payment_status, remaining_payment_status, payment_id, selected_date, departure_time, wallet_discount) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id',
+    [user_id, outing_id, participants, sanitize(participant_names || ''), total_amount, tokenAmount, remainingAmount, 'paid', 'pending', paymentId, sanitize(selected_date || ''), sanitize(departure_time || ''), walletDiscount]
   );
+  const bookingId = result.rows[0].id;
   await dbQuery('UPDATE outings SET current_participants = current_participants + $1 WHERE id = $2', [participants, outing_id]);
+  // Vibes Wallet: redeem reserved discount, then credit the new-user reward
+  let walletDiscountApplied = 0;
+  if (walletDiscount > 0) {
+    walletDiscountApplied = await redeemWalletDiscount(user_id, bookingId, walletDiscount);
+  }
+  const rewardCredited = await creditBookingReward({ id: bookingId, user_id, reward_credited: 0 });
   // Auto-generate Digital Trip Pass for demo booking
   let digitalPass = null;
   try {
-    digitalPass = await generateDigitalPass(result.rows[0].id, user_id, outing_id);
+    digitalPass = await generateDigitalPass(bookingId, user_id, outing_id);
   } catch (passErr) {
     console.error('[DIGITAL_PASS] Demo generation failed:', passErr.message);
   }
-  res.json({ success: true, booking_id: result.rows[0].id, payment_id: paymentId, token_amount: tokenAmount, remaining_amount: remainingAmount, digital_pass_id: digitalPass ? digitalPass.pass_id : null });
+  res.json({ success: true, booking_id: bookingId, payment_id: paymentId, token_amount: tokenAmount, remaining_amount: remainingAmount, wallet_discount: walletDiscountApplied, reward_credited: rewardCredited, digital_pass_id: digitalPass ? digitalPass.pass_id : null });
 });
 
 app.get('/api/bookings/:userId', authMiddleware, [

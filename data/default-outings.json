@@ -15,7 +15,8 @@
       "/outing_pic/Adiyogi_Shiva/Adiyogi_Shiva_Statue_2.webp"
     ],
     "category": "mountains",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "nandi-hills-sunrise-adiyogi-shiva-experience"
   },
   {
     "title": "🏞️ Bheemeshwari Adventure Day",
@@ -33,7 +34,8 @@
       "/outing_pic/Bhima/Bhima_4.webp"
     ],
     "category": "adventure",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "bheemeshwari-adventure-day"
   },
   {
     "title": "☕️ Chikmagalur Coffee & Chill (2D/1N)",
@@ -52,7 +54,8 @@
       "/outing_pic/Chikmagalur/Chikmagalur_5.webp"
     ],
     "category": "mountains",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "chikmagalur-coffee-chill-2d-1n"
   },
   {
     "title": "🏰 Mysore Royal Day Out",
@@ -70,7 +73,8 @@
       "/outing_pic/Mysore/Mysore_4.webp"
     ],
     "category": "road_trips",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "mysore-royal-day-out"
   },
   {
     "title": "🏔 Ooty Mountain Escape (2D/1N)",
@@ -87,7 +91,8 @@
       "/outing_pic/Ooty/ooty_3.webp"
     ],
     "category": "mountains",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "ooty-mountain-escape-2d-1n"
   },
   {
     "title": "☔ Coorg Rainforest Retreat (2D/1N)",
@@ -104,7 +109,8 @@
       "/outing_pic/Coorg/Coorg_3.webp"
     ],
     "category": "road_trips",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "coorg-rainforest-retreat-2d-1n"
   },
   {
     "title": "🌈 Wayanad Wild Weekend (2D/1N)",
@@ -124,7 +130,8 @@
       "/outing_pic/Wayanad/wayanad_13.webp"
     ],
     "category": "adventure",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "wayanad-wild-weekend-2d-1n"
   },
   {
     "title": "🏜️ Gandikota Grand Canyon (2D/1N)",
@@ -140,7 +147,8 @@
       "/outing_pic/Gandikota/Gandikota_2.webp"
     ],
     "category": "adventure",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "gandikota-grand-canyon-2d-1n"
   },
   {
     "title": "🛕 Lepakshi Heritage & Vibes",
@@ -156,7 +164,8 @@
       "/outing_pic/Lepakshi/Lepakshi_2.webp"
     ],
     "category": "festivals",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "lepakshi-heritage-vibes"
   },
   {
     "title": "🌲 Sakleshpur Green Route Trek",
@@ -172,7 +181,8 @@
       "/outing_pic/Sakleshpur/Sakleshpur_2.webp"
     ],
     "category": "adventure",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "sakleshpur-green-route-trek"
   },
   {
     "title": "🏖️ Goa Beach Blowout (2D/1N)",
@@ -189,7 +199,8 @@
       "/outing_pic/Goa/goa_3.webp"
     ],
     "category": "beaches",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "goa-beach-blowout-2d-1n"
   },
   {
     "title": "🏛️ Hassan Heritage Trail",
@@ -204,7 +215,8 @@
       "/outing_pic/Hassan/Hassan_1.webp"
     ],
     "category": "road_trips",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "hassan-heritage-trail"
   },
   {
     "title": "🏖️ Malpe Beach & St. Mary's Island",
@@ -225,7 +237,8 @@
       "/outing_pic/Malpe/malpe_15.webp"
     ],
     "category": "beaches",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "malpe-beach-st-mary-s-island"
   },
   {
     "title": "🌊 Shimoga Waterfalls & Nature Tour (2D/1N)",
@@ -245,7 +258,8 @@
       "/outing_pic/Shimoga/shimoga_15.webp"
     ],
     "category": "adventure",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "shimoga-waterfalls-nature-tour-2d-1n"
   },
   {
     "title": "💧 Shivanasamudra Falls Day Trip",
@@ -260,7 +274,8 @@
       "/outing_pic/Shivanasamudra_Falls/Shivanasamudra_1.webp"
     ],
     "category": "adventure",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "shivanasamudra-falls-day-trip"
   },
   {
     "title": "🕉️ Shravanabelagola Jain Heritage",
@@ -281,7 +296,8 @@
       "/outing_pic/Shravanabelagola/shravanabelagola_10.webp"
     ],
     "category": "festivals",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "shravanabelagola-jain-heritage"
   },
   {
     "title": "⛰️ Savandurga Trek Adventure",
@@ -297,7 +313,8 @@
       "/outing_pic/savandurga_trek/savandurga_trek_2.webp"
     ],
     "category": "adventure",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "savandurga-trek-adventure"
   },
   {
     "title": "🧗 Ramanagara Rock Climbing & Rappelling",
@@ -316,7 +333,8 @@
       "/outing_pic/Ramanagara/ramanagara_13.webp"
     ],
     "category": "adventure",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "ramanagara-rock-climbing-rappelling"
   },
   {
     "title": "🦌 Biligiri Ranga Hills Wildlife Safari (2D/1N)",
@@ -336,7 +354,8 @@
       "/outing_pic/Biligiri_Ranga_Hills/biligiri_ranga_hills_11.webp"
     ],
     "category": "adventure",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "biligiri-ranga-hills-wildlife-safari-2d-1n"
   },
   {
     "title": "🐘 Mudumalai National Park Safari (2D/1N)",
@@ -354,7 +373,8 @@
       "/outing_pic/Mudumalai_National_Park/mudumalai_national_park_4.webp"
     ],
     "category": "adventure",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "mudumalai-national-park-safari-2d-1n"
   },
   {
     "title": "🐾 Masinagudi Jungle Escape (2D/1N)",
@@ -374,7 +394,8 @@
       "/outing_pic/Masinagudi/masinagudi_8.webp"
     ],
     "category": "adventure",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "masinagudi-jungle-escape-2d-1n"
   },
   {
     "title": "🌧️ Agumbe Rainforest Trek (2D/1N)",
@@ -394,7 +415,8 @@
       "/outing_pic/Agumbe/agumbe_15.webp"
     ],
     "category": "adventure",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "agumbe-rainforest-trek-2d-1n"
   },
   {
     "title": "🔦 Antaragange Night Trek",
@@ -409,7 +431,8 @@
       "/outing_pic/Antaragange/antaragange_1.webp"
     ],
     "category": "adventure",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "antaragange-night-trek"
   },
   {
     "title": "🕳️ Belum Caves Underground Adventure",
@@ -429,7 +452,8 @@
       "/outing_pic/Belum_Caves/belum_caves_6.webp"
     ],
     "category": "adventure",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "belum-caves-underground-adventure"
   },
   {
     "title": "⛰️ Kodachadri Monsoon Trek (2D/1N)",
@@ -449,7 +473,8 @@
       "/outing_pic/Kodachadri/kodachadri_15.webp"
     ],
     "category": "mountains",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "kodachadri-monsoon-trek-2d-1n"
   },
   {
     "title": "🌅 Skandagiri Sunrise Night Trek",
@@ -468,7 +493,8 @@
       "/outing_pic/Skandagiri/skandagiri_13.webp"
     ],
     "category": "mountains",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "skandagiri-sunrise-night-trek"
   },
   {
     "title": "🏙️ Bangalore City Tour",
@@ -483,7 +509,8 @@
       "/outing_pic/Bangalore_City/Bangalore_Mysore_Maharaja_Palace.webp"
     ],
     "category": "road_trips",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "bangalore-city-tour"
   },
   {
     "title": "🍃 Coonoor Tea Estate Retreat (2D/1N)",
@@ -502,7 +529,8 @@
       "/outing_pic/Coonoor/coonoor_15.webp"
     ],
     "category": "mountains",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "coonoor-tea-estate-retreat-2d-1n"
   },
   {
     "title": "🌿 Yercaud Jewel of the South (2D/1N)",
@@ -523,7 +551,8 @@
       "/outing_pic/Yercaud/yercaud_10.webp"
     ],
     "category": "mountains",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "yercaud-jewel-of-the-south-2d-1n"
   },
   {
     "title": "🌸 Kodaikanal Princess of Hills (2D/1N)",
@@ -543,7 +572,8 @@
       "/outing_pic/Kodaikanal/kodaikanal_12.webp"
     ],
     "category": "mountains",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "kodaikanal-princess-of-hills-2d-1n"
   },
   {
     "title": "🇫🇷 Puducherry French Colony Vibes (2D/1N)",
@@ -560,7 +590,8 @@
       "/outing_pic/Puducherry/Puducherry_3.webp"
     ],
     "category": "beaches",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "puducherry-french-colony-vibes-2d-1n"
   },
   {
     "title": "🏄 Gokarna Beach Trek (2D/1N)",
@@ -581,7 +612,8 @@
       "/outing_pic/Gokarna/gokarna_11.webp"
     ],
     "category": "beaches",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "gokarna-beach-trek-2d-1n"
   },
   {
     "title": "🏛️ Hampi Ruins & Boulder Vibes (2D/1N)",
@@ -599,7 +631,8 @@
       "/outing_pic/Hampi/hampi_15.webp"
     ],
     "category": "road_trips",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "hampi-ruins-boulder-vibes-2d-1n"
   },
   {
     "title": "💦 Jog Falls Majestic Waterfall Trip",
@@ -616,7 +649,8 @@
       "/outing_pic/Jog_Falls/jog_falls_3.webp"
     ],
     "category": "adventure",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "jog-falls-majestic-waterfall-trip"
   },
   {
     "title": "🐅 Kabini Jungle Safari (2D/1N)",
@@ -637,7 +671,8 @@
       "/outing_pic/Kabini/kabini_11.webp"
     ],
     "category": "adventure",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "kabini-jungle-safari-2d-1n"
   },
   {
     "title": "🍵 Munnar Tea Garden Bliss (2D/1N)",
@@ -657,7 +692,8 @@
       "/outing_pic/Munnar/munnar_10.webp"
     ],
     "category": "mountains",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "munnar-tea-garden-bliss-2d-1n"
   },
   {
     "title": "🔱 Murudeshwar Temple & Beach",
@@ -676,7 +712,8 @@
       "/outing_pic/Murudeshwar/murudeshwar_11.webp"
     ],
     "category": "beaches",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "murudeshwar-temple-beach"
   },
   {
     "title": "🐘 Nagarhole National Park Safari (2D/1N)",
@@ -698,7 +735,8 @@
       "/outing_pic/Nagarhole/nagarhole_14.webp"
     ],
     "category": "adventure",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "nagarhole-national-park-safari-2d-1n"
   },
   {
     "title": "🛕 Udupi Temple & Coastal Food Trail",
@@ -716,7 +754,8 @@
       "/outing_pic/Udupi/udupi_11.webp"
     ],
     "category": "beaches",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "udupi-temple-coastal-food-trail"
   },
   {
     "title": "🎢 Wonderla Amusement Park Day",
@@ -731,7 +770,8 @@
       "/outing_pic/Wonderla/wonderla_11.webp"
     ],
     "category": "adventure",
-    "trip_type": "one_day"
+    "trip_type": "one_day",
+    "slug": "wonderla-amusement-park-day"
   },
   {
     "title": "🦁 Bandipur Tiger Reserve Safari (2D/1N)",
@@ -752,7 +792,8 @@
       "/outing_pic/Bandipur/bandipur_12.webp"
     ],
     "category": "adventure",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "bandipur-tiger-reserve-safari-2d-1n"
   },
   {
     "title": "🌊 Dandeli River Adventure (2D/1N)",
@@ -769,6 +810,7 @@
       "/outing_pic/Dandeli/dandeli_12.webp"
     ],
     "category": "adventure",
-    "trip_type": "2d1n"
+    "trip_type": "2d1n",
+    "slug": "dandeli-river-adventure-2d-1n"
   }
 ]
