@@ -1791,23 +1791,23 @@ async function renderHome(app) {
       <div class="stat-item"><div class="num">${stats.avgRating}★</div><div class="label">Avg Vibe Check</div></div>
     </div>
 
-    // <!-- WELCOME BONUS — New traveller reward -->
-    // <section class="welcome-bonus" id="welcomeBonus">
-    //   <div class="welcome-bonus-card">
-    //     <div class="welcome-bonus-icon">🎁</div>
-    //     <div class="welcome-bonus-body">
-    //       <h2>Welcome Bonus for New Travelers</h2>
-    //       <p>Join VibesOuting and earn ₹100 wallet credit on every booking. Use your rewards for future adventures and save more every time you travel with us — your go-to for weekend trips from Bangalore, travel rewards &amp; trip cashback.</p>
-    //       <button class="welcome-bonus-cta" onclick="${currentUser ? "navigate('outings')" : 'claimWelcomeBonus()'}">
-    //         <i class="fas fa-${currentUser ? 'compass' : 'gift'}"></i> ${currentUser ? 'Book Now & Earn ₹100' : 'Sign Up & Claim ₹100'}
-    //       </button>
-    //     </div>
-    //     <div class="welcome-bonus-amt">
-    //       <span class="amt">₹100</span>
-    //       <span class="amt-label">Wallet Credit</span>
-    //     </div>
-    //   </div>
-    // </section>
+    <!-- WELCOME BONUS — New traveller reward -->
+    <section class="welcome-bonus" id="welcomeBonus">
+      <div class="welcome-bonus-card">
+        <div class="welcome-bonus-icon">🎁</div>
+        <div class="welcome-bonus-body">
+          <h2>Welcome Bonus for New Travelers</h2>
+          <p>Join VibesOuting and earn ₹100 wallet credit on every booking. Use your rewards for future adventures and save more every time you travel with us — your go-to for weekend trips from Bangalore, travel rewards &amp; trip cashback.</p>
+          <button class="welcome-bonus-cta" onclick="${currentUser ? "navigate('outings')" : 'claimWelcomeBonus()'}">
+            <i class="fas fa-${currentUser ? 'compass' : 'gift'}"></i> ${currentUser ? 'Book Now & Earn ₹100' : 'Sign Up & Claim ₹100'}
+          </button>
+        </div>
+        <div class="welcome-bonus-amt">
+          <span class="amt">₹100</span>
+          <span class="amt-label">Wallet Credit</span>
+        </div>
+      </div>
+    </section>
 
     <!-- CATEGORY SECTION -->
     <section class="categories-section">
