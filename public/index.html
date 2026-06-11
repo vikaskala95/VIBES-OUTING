@@ -3298,7 +3298,8 @@ function renderDetailedPlan(plan) {
         </div>
       </div>
 
-      <!-- Budget Breakdown -->
+      <!-- Budget Breakdown (Admin Only) -->
+      ${currentUser && currentUser.role === 'admin' ? `
       <div class="dp-section">
         <h3 class="dp-section-title"><i class="fas fa-rupee-sign"></i> Budget Breakdown</h3>
         <table class="dp-table">
@@ -3307,6 +3308,7 @@ function renderDetailedPlan(plan) {
           <tr style="background:linear-gradient(135deg,rgba(108,60,225,.06),rgba(139,92,246,.06));font-weight:700"><td>Total Per Person</td><td>100%</td><td>₹${budget.reduce((s,b) => s + b.amount, 0)}</td></tr></tbody>
         </table>
       </div>
+      ` : ''}
 
       <!-- Packing List -->
       <div class="dp-section">
