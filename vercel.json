@@ -11,6 +11,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://vibesouting-production.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ],
   "headers": [

@@ -5874,6 +5874,19 @@ function downloadCurrentMedia() {
 }
 
 // ─── INIT ───────────────────────────────────────────────────────
+// Remove any legacy service worker + caches. An older build registered a
+// cache-first worker that kept serving stale HTML, which caused pages to
+// open and then bounce back to the homepage. This ensures every load runs
+// the current code straight from the network.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(reg => reg.unregister());
+  }).catch(() => {});
+  if (window.caches && caches.keys) {
+    caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(() => {});
+  }
+}
+
 renderNav();
 initOfferBar();
 (async () => {
