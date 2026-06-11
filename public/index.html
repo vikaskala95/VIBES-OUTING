@@ -833,16 +833,41 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 <div class="toast" id="toast"></div>
 
 <script>
+// ─── CENTRALIZED CLIENT ERROR LOGGING ───────────────────────────
+// Single funnel for all frontend exceptions. Keeps a capped in-memory ring
+// buffer (inspectable via window.__vibesErrorLog) and mirrors to the console.
+// Designed to never throw — logging must not break the app.
+const _clientErrorLog = [];
+function logClientError(context, detail, extra) {
+  try {
+    let message = detail;
+    if (detail instanceof Error) message = detail.message + (detail.stack ? '\n' + detail.stack : '');
+    else if (detail && typeof detail === 'object') { try { message = JSON.stringify(detail); } catch (_) { message = String(detail); } }
+    const entry = {
+      ts: new Date().toISOString(),
+      context: context || 'unknown',
+      message: typeof message === 'string' ? message : String(message),
+      url: (typeof location !== 'undefined' && location.href) || '',
+      ...(extra && typeof extra === 'object' ? extra : {}),
+    };
+    _clientErrorLog.push(entry);
+    if (_clientErrorLog.length > 50) _clientErrorLog.shift();
+    window.__vibesErrorLog = _clientErrorLog;
+    console.error('[VIBES_ERROR]', context, entry.message, extra || '');
+    if (typeof trackEvent === 'function') trackEvent('client_error', { context: entry.context });
+  } catch (_) { /* logging must never break the app */ }
+}
+window.logClientError = logClientError;
+
 // ─── GLOBAL ERROR HANDLING & LOGGING ────────────────────────────
 window.addEventListener('error', function(e) {
-  console.error('[VIBES_ERROR]', e.message, e.filename, e.lineno, e.colno);
-  // Prevent error from breaking the app - show a toast if UI is available
-  if (typeof toast === 'function' && e.message && !e.message.includes('Script error')) {
-    // Only show user-facing toast for actionable errors
+  // Ignore cross-origin "Script error." noise and resource load errors w/o message
+  if (e.message && !e.message.includes('Script error')) {
+    logClientError('window.error', e.message, { filename: e.filename, lineno: e.lineno, colno: e.colno });
   }
 });
 window.addEventListener('unhandledrejection', function(e) {
-  console.error('[VIBES_UNHANDLED_PROMISE]', e.reason);
+  logClientError('unhandledrejection', e.reason);
   // Prevent unhandled rejections from breaking navigation
   e.preventDefault();
 });
@@ -1133,12 +1158,66 @@ window._googleConfigReady = fetch((API_BASE || '') + '/api/config').then(r => r.
   }).catch(() => {});
 });
 
-const api = async (url, opts = {}, _retryCount = 0) => {
-  const MAX_RETRIES = 2;
+// ─── API CACHE + IN-FLIGHT DEDUPLICATION ────────────────────────
+// Short-lived response cache (opt-in via opts.cacheTtl) plus automatic
+// deduplication of concurrent identical GET requests. Together these stop
+// re-render storms and burst traffic from hammering the backend (a common
+// cause of 429s and "infinite request loops").
+const _apiCache = new Map();      // key -> { expires, data }
+const _apiInflight = new Map();   // key -> Promise
+
+function _apiKey(url) { return 'GET:' + url; }
+
+// Drop cached entries. Pass a prefix to scope, or nothing to clear everything.
+function invalidateApiCache(prefix) {
+  if (!prefix) { _apiCache.clear(); return; }
+  for (const k of _apiCache.keys()) {
+    if (k === _apiKey(prefix) || k.startsWith(_apiKey(prefix))) _apiCache.delete(k);
+  }
+}
+window.invalidateApiCache = invalidateApiCache;
+
+const api = (url, opts = {}) => {
+  const method = (opts.method || 'GET').toUpperCase();
+  const isCacheableGet = method === 'GET' && !opts.body;
+
+  // Serve a fresh cached response when the caller opted into caching.
+  if (isCacheableGet) {
+    const key = _apiKey(url);
+    const cached = _apiCache.get(key);
+    if (cached && cached.expires > Date.now()) return Promise.resolve(cached.data);
+
+    // Collapse concurrent identical GETs into a single network request.
+    if (_apiInflight.has(key)) return _apiInflight.get(key);
+
+    const p = _apiAttempt(url, opts, 0).then((data) => {
+      const ttl = Number(opts.cacheTtl) || 0;
+      // Only cache successful, non-session-expired responses.
+      const ok = data && data.success !== false && !data.sessionExpired;
+      if (ttl > 0 && ok) _apiCache.set(key, { expires: Date.now() + ttl, data });
+      return data;
+    }).finally(() => { _apiInflight.delete(key); });
+
+    _apiInflight.set(key, p);
+    return p;
+  }
+
+  // Mutations (POST/PUT/DELETE) invalidate the read cache so the UI never
+  // shows stale data after a change.
+  return _apiAttempt(url, opts, 0).then((data) => {
+    if (data && data.success !== false) invalidateApiCache();
+    return data;
+  });
+};
+
+const _apiAttempt = async (url, opts = {}, _retryCount = 0) => {
+  const MAX_RETRIES = 3;
   const TIMEOUT_MS = 15000;
   const showToast = opts.showToast !== false;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  // Exponential backoff with jitter: ~0.5s, 1s, 2s, 4s (capped at 8s).
+  const backoffDelay = (attempt) => Math.min(8000, 500 * Math.pow(2, attempt)) + Math.floor(Math.random() * 250);
 
   try {
     const headers = { 'Content-Type': 'application/json' };
@@ -1169,14 +1248,29 @@ const api = async (url, opts = {}, _retryCount = 0) => {
     }
 
     if (res.status === 429) {
+      // Respect Retry-After when present, otherwise back off exponentially.
+      if (_retryCount < MAX_RETRIES) {
+        clearTimeout(timeoutId);
+        const retryAfter = parseFloat(res.headers.get('retry-after'));
+        const delay = (isFinite(retryAfter) && retryAfter > 0) ? retryAfter * 1000 : backoffDelay(_retryCount);
+        await new Promise(r => setTimeout(r, delay));
+        return _apiAttempt(url, opts, _retryCount + 1);
+      }
       const msg = 'Too many requests. Please wait a moment and try again.';
       if (showToast) toast(msg, 'error');
-      return { success: false, message: msg };
+      return { success: false, message: msg, rateLimited: true };
+    }
+
+    // Transient server errors (502/503/504) — retry with backoff before failing.
+    if ((res.status === 502 || res.status === 503 || res.status === 504) && _retryCount < MAX_RETRIES) {
+      clearTimeout(timeoutId);
+      await new Promise(r => setTimeout(r, backoffDelay(_retryCount)));
+      return _apiAttempt(url, opts, _retryCount + 1);
     }
 
     const contentType = res.headers.get('content-type') || '';
     if (!contentType.includes('application/json')) {
-      console.error('API Error: Expected JSON but got', contentType, 'from', base + '/api' + url);
+      logClientError('api non-json', `Expected JSON but got "${contentType}" (HTTP ${res.status})`, { endpoint: '/api' + url });
       // Try to parse as JSON anyway (some proxies strip content-type)
       try {
         const text = await res.text();
@@ -1211,13 +1305,13 @@ const api = async (url, opts = {}, _retryCount = 0) => {
     const isTimeout = err.name === 'AbortError';
     const isNetwork = err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError') || err.message?.includes('Network request failed');
 
-    console.error(`API Error [${opts.method || 'GET'} /api${url}]:`, err.name, err.message);
+    logClientError(`api ${opts.method || 'GET'} /api${url}`, err, { attempt: _retryCount + 1 });
 
-    // Retry once on transient failures (cold starts, timeouts)
+    // Retry on transient failures (cold starts, timeouts) with exponential backoff
     if (_retryCount < MAX_RETRIES && (isTimeout || isNetwork)) {
       console.warn(`Retrying API call (attempt ${_retryCount + 2}/${MAX_RETRIES + 1})...`);
-      await new Promise(r => setTimeout(r, 1000 * (_retryCount + 1)));
-      return api(url, opts, _retryCount + 1);
+      await new Promise(r => setTimeout(r, backoffDelay(_retryCount)));
+      return _apiAttempt(url, opts, _retryCount + 1);
     }
 
     let msg;
@@ -1746,7 +1840,11 @@ function renderOutingNotFound(app) {
 
 // ─── HOME PAGE ──────────────────────────────────────────────────
 async function renderHome(app) {
-  const [outingsData, statsData, blogsData] = await Promise.all([api('/outings'), api('/public-stats'), api('/blogs?featured=1')]);
+  const [outingsData, statsData, blogsData] = await Promise.all([
+    api('/outings', { cacheTtl: 60000 }),
+    api('/public-stats', { cacheTtl: 60000 }),
+    api('/blogs?featured=1', { cacheTtl: 60000 })
+  ]);
   outings = Array.isArray(outingsData) ? outingsData : [];
   const featured = outings.slice(0, 3);
   const featuredBlogs = Array.isArray(blogsData) ? blogsData.slice(0, 3) : [];
@@ -2119,7 +2217,7 @@ function outingCard(o) {
 // ─── OUTINGS PAGE ───────────────────────────────────────────────
 async function renderOutings(app) {
   const url = selectedVibe ? '/outings?category=' + encodeURIComponent(selectedVibe) : '/outings';
-  const data = await api(url, { showToast: false });
+  const data = await api(url, { showToast: false, cacheTtl: 60000 });
   const apiFailed = !Array.isArray(data) && data && data.success === false;
   outings = Array.isArray(data) ? data : [];
   const vibeLabels = { beaches: '🏖️ Beaches', mountains: '⛰️ Mountains', festivals: '🎵 Festivals', road_trips: '🚗 Road Trips', adventure: '🥾 Adventure', nightlife: '🌙 Nightlife' };
