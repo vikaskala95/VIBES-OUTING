@@ -532,11 +532,22 @@ if (USE_PG) {
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
-    max: 20,
+    // Pool sizing — tune via env for higher concurrency during load/stress tests
+    max: parseInt(process.env.PG_POOL_MAX) || 20,
+    min: parseInt(process.env.PG_POOL_MIN) || 0,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: parseInt(process.env.PG_CONNECT_TIMEOUT) || 5000,
+    // Prevent a single slow/stuck query from holding a connection forever
+    // (guards against pool exhaustion under DB stress / lock contention)
+    statement_timeout: parseInt(process.env.PG_STATEMENT_TIMEOUT) || 15000,
+    query_timeout: parseInt(process.env.PG_QUERY_TIMEOUT) || 15000,
+    // Keep TCP connections alive through proxies/load balancers
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+    allowExitOnIdle: false,
   });
-  pool.on('error', (err) => console.error('PostgreSQL pool error:', err.message));
+  // A pool 'error' on an idle client must never crash the process under load
+  pool.on('error', (err) => console.error('PostgreSQL pool error (recovered):', err.message));
   console.log('Database: PostgreSQL (Railway) ✓');
 } else {
   const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'vibes.db');
@@ -550,7 +561,7 @@ if (USE_PG) {
 async function dbQuery(sql, params = []) {
   if (USE_PG) {
     const result = await pool.query(sql, params);
-    return { rows: result.rows };
+    return { rows: result.rows, rowCount: result.rowCount };
   }
   // Translate $1,$2... → ? for SQLite
   const sqliteSql = sql.replace(/\$\d+/g, '?');
@@ -558,7 +569,7 @@ async function dbQuery(sql, params = []) {
   const trimmed = sqliteSql.trim().toUpperCase();
   if (trimmed.startsWith('SELECT') || trimmed.startsWith('WITH')) {
     const rows = sqliteDb.prepare(sqliteSql).all(...params);
-    return { rows };
+    return { rows, rowCount: rows.length };
   }
   if (trimmed.startsWith('INSERT') && / RETURNING /i.test(sqliteSql)) {
     // SQLite doesn't support RETURNING — strip it, run, then fetch last insert
@@ -566,10 +577,10 @@ async function dbQuery(sql, params = []) {
     const stmt = sqliteDb.prepare(withoutReturning);
     const info = stmt.run(...params);
     // Build a minimal returning row with id
-    return { rows: [{ id: info.lastInsertRowid }] };
+    return { rows: [{ id: info.lastInsertRowid }], rowCount: info.changes };
   }
-  sqliteDb.prepare(sqliteSql).run(...params);
-  return { rows: [] };
+  const info = sqliteDb.prepare(sqliteSql).run(...params);
+  return { rows: [], rowCount: info.changes };
 }
 
 // ─── SECURITY: JWT Auth Middleware ──────────────────────────────
@@ -688,7 +699,7 @@ async function withTransaction(fn) {
       await client.query('BEGIN');
       const q = async (sql, params = []) => {
         const r = await client.query(sql, params);
-        return { rows: r.rows };
+        return { rows: r.rows, rowCount: r.rowCount };
       };
       const result = await fn(q);
       await client.query('COMMIT');
@@ -775,8 +786,11 @@ async function creditBookingReward(booking) {
   if (!booking || booking.reward_credited) return 0;
   const user = (await dbQuery('SELECT id, name, email, phone FROM users WHERE id = $1', [booking.user_id])).rows[0];
   if (!user) return 0;
-  // Mark first to avoid double-credit on retries / concurrent verifications
-  await dbQuery('UPDATE bookings SET reward_credited = 1 WHERE id = $1', [booking.id]);
+  // Atomically claim the reward: only ONE caller can flip reward_credited 0→1.
+  // Concurrent / retried verifications see rowCount 0 here and bail, so the
+  // ₹reward is credited at most once per booking even under heavy load.
+  const claim = await dbQuery('UPDATE bookings SET reward_credited = 1 WHERE id = $1 AND reward_credited = 0', [booking.id]);
+  if (!claim.rowCount) return 0;
   if (await isRewardBlockedByDuplicate(user)) {
     securityLog('WALLET_REWARD_BLOCKED_DUPLICATE', { userId: user.id, bookingId: booking.id });
     return 0;
@@ -796,17 +810,29 @@ function walletRedeemCap(totalAmount) {
   return Math.max(0, Math.floor(Number(totalAmount) * 0.9));
 }
 
-// Redeem wallet credit as a booking discount (records a debit transaction)
+// Redeem wallet credit as a booking discount (records a debit transaction).
+// Concurrency-safe: locks the user row and recomputes the balance INSIDE the
+// transaction so two simultaneous redemptions can never overspend the wallet.
 async function redeemWalletDiscount(userId, bookingId, requestedAmount) {
-  const balance = await getWalletBalance(userId);
-  const redeem = Math.max(0, Math.min(balance, Number(requestedAmount) || 0));
-  if (redeem <= 0) return 0;
-  await dbQuery(
-    'INSERT INTO wallet_transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
-    [userId, 'debit', redeem, `Booking Discount — Booking #${bookingId}`]
-  );
-  securityLog('WALLET_DISCOUNT_REDEEMED', { userId, bookingId, amount: redeem });
-  return redeem;
+  const want = Math.max(0, Number(requestedAmount) || 0);
+  if (want <= 0) return 0;
+  return withTransaction(async (q) => {
+    const lockClause = USE_PG ? ' FOR UPDATE' : '';
+    // Lock the user row to serialize concurrent wallet mutations for this account
+    await q(`SELECT id FROM users WHERE id = $1${lockClause}`, [userId]);
+    const txns = (await q('SELECT type, amount FROM wallet_transactions WHERE user_id = $1', [userId])).rows;
+    const credits = txns.filter(t => t.type === 'credit').reduce((s, t) => s + Number(t.amount), 0);
+    const debits = txns.filter(t => t.type === 'debit').reduce((s, t) => s + Number(t.amount), 0);
+    const balance = credits - debits;
+    const redeem = Math.max(0, Math.min(balance, want));
+    if (redeem <= 0) return 0;
+    await q(
+      'INSERT INTO wallet_transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
+      [userId, 'debit', redeem, `Booking Discount — Booking #${bookingId}`]
+    );
+    securityLog('WALLET_DISCOUNT_REDEEMED', { userId, bookingId, amount: redeem });
+    return redeem;
+  });
 }
 
 // ─── DATABASE INITIALIZATION (async) ────────────────────────────
@@ -1793,8 +1819,24 @@ app.post('/api/bookings/verify-payment', authMiddleware, [
 
   // Constant-time comparison to prevent timing attacks
   if (crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature))) {
-    await dbQuery('UPDATE bookings SET payment_status = $1, payment_id = $2 WHERE id = $3', ['paid', razorpay_payment_id, booking_id]);
-    await dbQuery('UPDATE outings SET current_participants = current_participants + $1 WHERE id = $2', [booking.participants, booking.outing_id]);
+    // Atomically confirm the booking exactly once. Under load (or flaky
+    // networks) the client may fire verify-payment more than once; concurrent
+    // or retried calls lock the row, see payment already 'paid', and skip all
+    // side-effects — preventing duplicate seat counts, duplicate wallet debits
+    // and duplicate reward credits.
+    const claimed = await withTransaction(async (q) => {
+      const lock = USE_PG ? ' FOR UPDATE' : '';
+      const fresh = (await q(`SELECT payment_status FROM bookings WHERE id = $1${lock}`, [booking_id])).rows[0];
+      if (!fresh || fresh.payment_status === 'paid') return false;
+      await q('UPDATE bookings SET payment_status = $1, payment_id = $2 WHERE id = $3', ['paid', razorpay_payment_id, booking_id]);
+      await q('UPDATE outings SET current_participants = current_participants + $1 WHERE id = $2', [booking.participants, booking.outing_id]);
+      return true;
+    });
+    if (!claimed) {
+      // Idempotent: booking was already confirmed by a prior verification call
+      securityLog('PAYMENT_DUPLICATE_VERIFY', { userId: req.user.id, bookingId: booking_id, ip: req.ip });
+      return res.json({ success: true, payment_id: booking.payment_id || razorpay_payment_id, token_amount: booking.token_amount, remaining_amount: booking.remaining_amount, already_confirmed: true });
+    }
 
     // Vibes Wallet: redeem any reserved discount, then credit the new-user reward
     let walletDiscountApplied = 0;
@@ -1889,7 +1931,11 @@ app.post('/api/bookings/verify-remaining', authMiddleware, [
   const expectedSignature = crypto.createHmac('sha256', razorpaySecret2)
     .update(body_str).digest('hex');
   if (crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature))) {
-    await dbQuery('UPDATE bookings SET remaining_payment_status = $1, remaining_payment_id = $2 WHERE id = $3', ['paid', razorpay_payment_id, booking_id]);
+    // Idempotent: only the first verification flips pending→paid and notifies
+    const claim = await dbQuery('UPDATE bookings SET remaining_payment_status = $1, remaining_payment_id = $2 WHERE id = $3 AND remaining_payment_status <> $1', ['paid', razorpay_payment_id, booking_id]);
+    if (!claim.rowCount) {
+      return res.json({ success: true, payment_id: razorpay_payment_id, already_confirmed: true });
+    }
     // Create remaining payment notification
     const outing2 = (await dbQuery('SELECT title FROM outings WHERE id = $1', [booking.outing_id])).rows[0];
     if (outing2) {
@@ -3758,7 +3804,7 @@ initDatabase().then(async () => {
     console.error('MCP Server mount failed (non-fatal):', err.message);
   });
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`\n🚀 VIBES@Outing Platform running at http://localhost:${PORT}`);
     console.log(`   Environment: ${IS_PROD ? 'PRODUCTION' : 'DEVELOPMENT'}`);
     console.log('   Database: PostgreSQL ✓');
@@ -3768,8 +3814,54 @@ initDatabase().then(async () => {
       console.error('Email transport verification error:', err.message);
     });
   });
+
+  // Tune socket timeouts for load behind proxies/load balancers.
+  // keepAliveTimeout must exceed the typical LB idle timeout to avoid
+  // races that surface as 502s under sustained/spike traffic.
+  server.keepAliveTimeout = parseInt(process.env.KEEP_ALIVE_TIMEOUT) || 65000;
+  server.headersTimeout = parseInt(process.env.HEADERS_TIMEOUT) || 66000;
+  server.requestTimeout = parseInt(process.env.REQUEST_TIMEOUT) || 30000;
+
+  // ─── GRACEFUL SHUTDOWN ────────────────────────────────────────
+  // Drain in-flight requests and close the DB pool on restart/deploy so
+  // spike, endurance and rolling-restart scenarios don't drop connections
+  // or leak resources.
+  let shuttingDown = false;
+  const shutdown = (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`\n${signal} received — shutting down gracefully...`);
+    server.close(async () => {
+      try {
+        if (USE_PG && pool) await pool.end();
+        else if (sqliteDb) sqliteDb.close();
+      } catch (e) {
+        console.error('Error during DB shutdown:', e.message);
+      }
+      console.log('Shutdown complete.');
+      process.exit(0);
+    });
+    // Force-exit if connections refuse to drain in time
+    setTimeout(() => {
+      console.error('Forced shutdown after timeout.');
+      process.exit(1);
+    }, parseInt(process.env.SHUTDOWN_TIMEOUT) || 15000).unref();
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }).catch(err => {
   console.error('❌ Failed to initialize database:', err.message || err.code || err);
   console.error('   DATABASE_URL:', process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:\/\/[^@]*@/, '://***@') : 'NOT SET');
   process.exit(1);
+});
+
+// ─── PROCESS-LEVEL SAFETY NETS ──────────────────────────────────
+// A single unhandled rejection/exception must never silently kill the
+// process mid-load. Log and keep serving; rely on the platform's health
+// checks + graceful shutdown for genuinely fatal states.
+process.on('unhandledRejection', (reason) => {
+  console.error('[UNHANDLED_REJECTION]', reason && reason.stack ? reason.stack : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT_EXCEPTION]', err && err.stack ? err.stack : err);
 });
