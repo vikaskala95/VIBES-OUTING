@@ -2013,6 +2013,17 @@ app.get('/api/razorpay-key', (req, res) => {
   res.json({ key_id: process.env.RAZORPAY_KEY_ID || '' });
 });
 
+// ─── CLIENT ERROR LOGGING ───────────────────────────────────────
+app.post('/api/log/error', rateLimit({ windowMs: 60000, max: 20 }), [
+  body('message').trim().isLength({ max: 500 }),
+  body('source').optional().trim().isLength({ max: 200 }),
+  body('context').optional().trim().isLength({ max: 500 }),
+], (req, res) => {
+  const { message, source, context } = req.body || {};
+  console.error(`[CLIENT_ERROR] ${message || 'unknown'} | src=${source || '-'} | ctx=${context || '-'} | ip=${req.ip}`);
+  res.json({ logged: true });
+});
+
 app.post('/api/suggestions', authMiddleware, [
   body('title').trim().notEmpty().isLength({ max: 200 }).escape(),
   body('location').trim().notEmpty().isLength({ max: 100 }).escape(),
@@ -2633,6 +2644,109 @@ app.get('/api/wallet/:userId', authMiddleware, [
   const credits = txns.rows.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0);
   const debits = txns.rows.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0);
   res.json({ balance: credits - debits, transactions: txns.rows });
+});
+
+// ─── WALLET RECHARGE API ────────────────────────────────────────
+
+// Create Razorpay order for wallet recharge
+app.post('/api/wallet/recharge/create-order', authMiddleware, [
+  body('amount').isInt({ min: 100, max: 50000 }).withMessage('Amount must be between ₹100 and ₹50,000'),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { amount } = req.body;
+
+  if (!RAZORPAY_CONFIGURED) {
+    return res.status(503).json({ success: false, message: 'Payment gateway not configured. Please set Razorpay API keys.' });
+  }
+
+  try {
+    const idempotencyKey = `wallet_recharge_${req.user.id}_${Date.now()}`;
+    const order = await razorpay.orders.create({
+      amount: amount * 100, // paise
+      currency: 'INR',
+      receipt: `wallet_${req.user.id}_${Date.now()}`,
+      notes: {
+        user_id: String(req.user.id),
+        type: 'wallet_recharge',
+        amount: String(amount),
+        idempotency_key: idempotencyKey
+      }
+    });
+
+    securityLog('WALLET_RECHARGE_ORDER_CREATED', { userId: req.user.id, amount, orderId: order.id, ip: req.ip });
+
+    res.json({
+      success: true,
+      order_id: order.id,
+      amount,
+      key_id: process.env.RAZORPAY_KEY_ID,
+      idempotency_key: idempotencyKey
+    });
+  } catch (err) {
+    console.error('Wallet recharge order error:', err);
+    securityLog('WALLET_RECHARGE_ORDER_FAILED', { userId: req.user.id, amount, error: err.message, ip: req.ip });
+    res.status(500).json({ success: false, message: 'Failed to create recharge order. Please try again.' });
+  }
+});
+
+// Verify wallet recharge payment and credit wallet
+app.post('/api/wallet/recharge/verify', authMiddleware, [
+  body('razorpay_order_id').trim().notEmpty().withMessage('Order ID required'),
+  body('razorpay_payment_id').trim().notEmpty().withMessage('Payment ID required'),
+  body('razorpay_signature').trim().notEmpty().withMessage('Signature required'),
+  body('amount').isInt({ min: 100, max: 50000 }).withMessage('Invalid amount'),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amount } = req.body;
+
+  const razorpaySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!razorpaySecret) {
+    securityLog('WALLET_RECHARGE_NO_SECRET', { userId: req.user.id, ip: req.ip });
+    return res.status(500).json({ success: false, message: 'Payment gateway not configured' });
+  }
+
+  // Verify signature using HMAC SHA256 (constant-time comparison)
+  const body_str = razorpay_order_id + '|' + razorpay_payment_id;
+  const expectedSignature = crypto.createHmac('sha256', razorpaySecret).update(body_str).digest('hex');
+
+  let sigValid = false;
+  try {
+    sigValid = crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature));
+  } catch (e) {
+    sigValid = false;
+  }
+
+  if (!sigValid) {
+    securityLog('WALLET_RECHARGE_SIGNATURE_INVALID', { userId: req.user.id, orderId: razorpay_order_id, ip: req.ip });
+    return res.status(400).json({ success: false, message: 'Payment verification failed. Signature mismatch.' });
+  }
+
+  // Prevent duplicate credits: check if this payment_id already credited
+  const existingTxn = await dbQuery(
+    "SELECT id FROM wallet_transactions WHERE user_id = $1 AND description LIKE $2",
+    [req.user.id, `%${razorpay_payment_id}%`]
+  );
+  if (existingTxn.rows.length > 0) {
+    securityLog('WALLET_RECHARGE_DUPLICATE', { userId: req.user.id, paymentId: razorpay_payment_id, ip: req.ip });
+    return res.json({ success: true, message: 'Payment already credited', balance: await getWalletBalance(req.user.id), duplicate: true });
+  }
+
+  // Credit the wallet
+  await dbQuery(
+    'INSERT INTO wallet_transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
+    [req.user.id, 'credit', amount, `Wallet Recharge — ₹${amount} (Ref: ${razorpay_payment_id})`]
+  );
+
+  // Create notification
+  await dbQuery(
+    'INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
+    [req.user.id, 'wallet', 'Wallet Recharged! 💰', `₹${amount} has been added to your Vibes Wallet. Payment ID: ${razorpay_payment_id}`]
+  );
+
+  const newBalance = await getWalletBalance(req.user.id);
+  securityLog('WALLET_RECHARGE_SUCCESS', { userId: req.user.id, amount, paymentId: razorpay_payment_id, newBalance, ip: req.ip });
+
+  res.json({ success: true, message: 'Wallet recharged successfully', balance: newBalance, amount, payment_id: razorpay_payment_id });
 });
 
 // ─── SUPPORT TICKETS API ────────────────────────────────────────
@@ -3624,6 +3738,16 @@ if (!process.env.API_ONLY) {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
 }
+
+// ─── GLOBAL ERROR HANDLER ───────────────────────────────────────
+app.use((err, req, res, _next) => {
+  const status = err.status || 500;
+  console.error(`[UNHANDLED_ERROR] ${req.method} ${req.path}:`, err.message || err);
+  securityLog('UNHANDLED_ROUTE_ERROR', { method: req.method, path: req.path, error: err.message, ip: req.ip });
+  if (!res.headersSent) {
+    res.status(status).json({ success: false, message: status === 500 ? 'Internal server error' : err.message });
+  }
+});
 
 // ─── START SERVER (after DB init) ───────────────────────────────
 const PORT = process.env.PORT || 3000;

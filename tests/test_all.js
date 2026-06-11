@@ -1052,6 +1052,37 @@ async function walletTests() {
     const expected = balanceBefore + 100 - r.body.wallet_discount;
     assert(after.body.balance === expected, `Expected balance ${expected}, got ${after.body.balance}`);
   });
+
+  // --- Wallet Recharge Tests ---
+  await test('Wallet', 'Recharge — create-order requires auth', async () => {
+    const r = await req('POST', '/api/wallet/recharge/create-order', { amount: 500 });
+    assert(r.status === 401, `Expected 401, got ${r.status}`);
+  });
+
+  await test('Wallet', 'Recharge — create-order validates amount min', async () => {
+    const r = await req('POST', '/api/wallet/recharge/create-order', { amount: 50 }, userToken);
+    assert(r.status === 400 || r.status === 422, `Expected 400/422, got ${r.status}`);
+  });
+
+  await test('Wallet', 'Recharge — create-order validates amount max', async () => {
+    const r = await req('POST', '/api/wallet/recharge/create-order', { amount: 100000 }, userToken);
+    assert(r.status === 400 || r.status === 422, `Expected 400/422, got ${r.status}`);
+  });
+
+  await test('Wallet', 'Recharge — verify requires auth', async () => {
+    const r = await req('POST', '/api/wallet/recharge/verify', {
+      razorpay_order_id: 'order_test', razorpay_payment_id: 'pay_test', razorpay_signature: 'sig_test', amount: 500
+    });
+    assert(r.status === 401, `Expected 401, got ${r.status}`);
+  });
+
+  await test('Wallet', 'Recharge — verify rejects invalid signature', async () => {
+    const r = await req('POST', '/api/wallet/recharge/verify', {
+      razorpay_order_id: 'order_test123', razorpay_payment_id: 'pay_test123', razorpay_signature: 'invalid_sig', amount: 500
+    }, userToken);
+    assert(r.status === 400, `Expected 400, got ${r.status}`);
+    assert(r.body.message && r.body.message.includes('Signature'), `Expected signature error, got: ${r.body.message}`);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════

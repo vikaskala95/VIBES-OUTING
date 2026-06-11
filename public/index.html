@@ -833,6 +833,20 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 <div class="toast" id="toast"></div>
 
 <script>
+// ─── GLOBAL ERROR HANDLING & LOGGING ────────────────────────────
+window.addEventListener('error', function(e) {
+  console.error('[VIBES_ERROR]', e.message, e.filename, e.lineno, e.colno);
+  // Prevent error from breaking the app - show a toast if UI is available
+  if (typeof toast === 'function' && e.message && !e.message.includes('Script error')) {
+    // Only show user-facing toast for actionable errors
+  }
+});
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('[VIBES_UNHANDLED_PROMISE]', e.reason);
+  // Prevent unhandled rejections from breaking navigation
+  e.preventDefault();
+});
+
 // ─── STATE ──────────────────────────────────────────────────────
 // SECURITY: Store user info in sessionStorage (not localStorage) — token is in httpOnly cookie
 let currentUser = JSON.parse(sessionStorage.getItem('vibes_user') || 'null');
@@ -841,6 +855,7 @@ let outings = [];
 let currentPage = 'home';
 let selectedVibe = null;
 let bookingWalletBalance = 0;
+let _navigating = false; // Guard against concurrent navigate() calls
 const SITE_NAME = 'VIBES@Outing';
 const SITE_ORIGIN = window.location.origin;
 const DEFAULT_SEO = {
@@ -1610,9 +1625,26 @@ let _pendingPasswordReset = false;
 
 // ─── PAGES ──────────────────────────────────────────────────────
 async function navigate(page, skipHistory) {
+  // Guard against concurrent navigations that cause state corruption
+  if (_navigating && !skipHistory) {
+    console.warn('[NAV] Blocked concurrent navigate to:', page);
+    return;
+  }
+  _navigating = true;
+  try {
+    await _navigateInternal(page, skipHistory);
+  } catch (err) {
+    console.error('[NAV] Error during navigation:', err);
+  } finally {
+    _navigating = false;
+  }
+}
+
+async function _navigateInternal(page, skipHistory) {
   if (page && /^outing-\d+$/.test(page)) {
     const legacyId = parseInt(page.split('-')[1], 10);
     if (legacyId) {
+      _navigating = false; // Allow nested navigate in navigateToOuting
       await navigateToOuting(legacyId, skipHistory);
       return;
     }
@@ -2205,7 +2237,11 @@ async function bookOuting(id) {
       <div class="wallet-toggle-box">
         <div class="wt-info"><i class="fas fa-wallet" style="color:var(--primary)"></i> Use Vibes Wallet credit<br><b>₹${bookingWalletBalance.toLocaleString()}</b> available</div>
         <label class="wallet-switch"><input type="checkbox" id="useWalletToggle" onchange="updateTotal(${o.cost})"><span class="slider"></span></label>
-      </div>` : ''}
+      </div>` : `
+      <div class="wallet-toggle-box" style="justify-content:space-between">
+        <div class="wt-info"><i class="fas fa-wallet" style="color:var(--text-light)"></i> Wallet Balance: <b>₹0</b></div>
+        <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;font-size:.78rem;padding:.35rem .75rem" onclick="closeModal();showAddMoney()"><i class="fas fa-plus"></i> Add Money</button>
+      </div>`}
       <div style="background:rgba(108,60,225,.06);padding:1rem;border-radius:10px;margin-bottom:1rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
           <span style="font-weight:600">Total Trip Cost</span>
@@ -2263,6 +2299,33 @@ function updateTotal(cost) {
   document.getElementById('bookTokenBtn').textContent = token;
 }
 
+// ─── BOOKING SUCCESS MODAL (no page navigation, no race conditions) ─────
+function showBookingSuccessModal(data) {
+  const { token_amount, remaining_amount, wallet_discount, reward_credited, payment_id, booking_id, whatsapp_link } = data;
+  openModal(`
+    <button class="close" onclick="closeModal()">&times;</button>
+    <div style="text-align:center;padding:1rem">
+      <div style="font-size:3rem;margin-bottom:1rem">🎉</div>
+      <h2 style="color:var(--success)">Token Booking Confirmed!</h2>
+      <p style="color:var(--text-light);margin:1rem 0">Payment ID: <code>${escapeHtml(String(payment_id))}</code></p>
+      <div style="background:#F8FAFC;padding:1rem;border-radius:10px;margin:1rem 0;text-align:left">
+        <p style="margin:.25rem 0"><strong>🔒 Token Paid:</strong> <span style="color:var(--success);font-weight:700">₹${token_amount}</span></p>
+        <p style="margin:.25rem 0"><strong>⏰ Remaining:</strong> <span style="color:var(--secondary);font-weight:700">₹${remaining_amount}</span></p>
+        ${wallet_discount > 0 ? `<p style="margin:.25rem 0"><strong>🎁 Wallet Discount:</strong> <span style="color:var(--success);font-weight:700">-₹${wallet_discount}</span></p>` : ''}
+        <p style="margin:.25rem 0;font-size:.85rem;color:var(--text-light)">💡 Complete remaining payment 24 hours before the trip date</p>
+      </div>
+      ${reward_credited > 0 ? `<div style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);padding:.85rem 1rem;border-radius:10px;margin:1rem 0;border:1px solid #6EE7B7;text-align:center"><span style="font-weight:700;color:#047857">🎁 ₹${reward_credited} added to your Vibes Wallet!</span><br><span style="font-size:.8rem;color:#059669">Use it as a discount on your next trip.</span></div>` : ''}
+      <div style="background:linear-gradient(135deg,#EEF2FF,#F0F9FF);padding:1rem;border-radius:10px;margin:1rem 0;border:1px solid #C7D2FE">
+        <p style="font-weight:600;margin-bottom:.5rem;color:var(--primary)">✨ Share Your Trip Expectations!</p>
+        <p style="font-size:.85rem;color:var(--text-light);margin-bottom:.75rem">Tell us what you're looking forward to — activities, food, comfort, photography & more.</p>
+        <button class="btn btn-block" style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff" onclick="closeModal();showExpectationsForm(${parseInt(booking_id) || 0})"><i class="fas fa-magic"></i> Share My Expectations</button>
+      </div>
+      ${whatsapp_link ? `<a href="${whatsapp_link}" target="_blank" class="btn btn-success btn-block" style="background:#25D366;margin-bottom:.75rem"><i class="fab fa-whatsapp"></i> Share on WhatsApp</a>` : ''}
+      <button class="btn btn-primary btn-block" onclick="closeModal();navigate('dashboard')"><i class="fas fa-ticket-alt"></i> View My Bookings</button>
+    </div>
+  `);
+}
+
 async function confirmBooking(e, outingId, cost) {
   e.preventDefault();
   const participants = parseInt(document.getElementById('bookParticipants').value);
@@ -2289,7 +2352,7 @@ async function confirmBooking(e, outingId, cost) {
         if (fallback.reward_credited > 0) trackEvent('reward_credited', { amount: fallback.reward_credited });
         const rewardMsg = fallback.reward_credited > 0 ? ' | 🎁 ₹' + fallback.reward_credited + ' wallet credit earned!' : '';
         toast('🎉 Token booking confirmed (demo)! Paid ₹' + fallback.token_amount + ' | Remaining ₹' + fallback.remaining_amount + rewardMsg, 'success');
-        navigate(currentPage);
+        showBookingSuccessModal({ token_amount: fallback.token_amount, remaining_amount: fallback.remaining_amount, wallet_discount: fallback.wallet_discount || 0, reward_credited: fallback.reward_credited || 0, payment_id: fallback.payment_id || 'DEMO', booking_id: fallback.booking_id });
       }
       else toast(fallback.message, 'error');
       return;
@@ -2320,31 +2383,7 @@ async function confirmBooking(e, outingId, cost) {
         if (verifyRes.wallet_discount > 0) trackEvent('reward_redeemed', { amount: verifyRes.wallet_discount });
         if (verifyRes.reward_credited > 0) trackEvent('reward_credited', { amount: verifyRes.reward_credited });
         toast('🎉 Token payment of ₹' + orderRes.amount + ' successful!', 'success');
-        setTimeout(() => {
-          openModal(`
-            <button class="close" onclick="closeModal()">&times;</button>
-            <div style="text-align:center;padding:1rem">
-              <div style="font-size:3rem;margin-bottom:1rem">🎉</div>
-              <h2 style="color:var(--success)">Token Booking Confirmed!</h2>
-              <p style="color:var(--text-light);margin:1rem 0">Payment ID: <code>${verifyRes.payment_id}</code></p>
-              <div style="background:#F8FAFC;padding:1rem;border-radius:10px;margin:1rem 0;text-align:left">
-                <p style="margin:.25rem 0"><strong>🔒 Token Paid:</strong> <span style="color:var(--success);font-weight:700">₹${orderRes.amount}</span></p>
-                <p style="margin:.25rem 0"><strong>⏰ Remaining:</strong> <span style="color:var(--secondary);font-weight:700">₹${orderRes.remaining_amount}</span></p>
-                ${verifyRes.wallet_discount > 0 ? `<p style="margin:.25rem 0"><strong>🎁 Wallet Discount:</strong> <span style="color:var(--success);font-weight:700">-₹${verifyRes.wallet_discount}</span></p>` : ''}
-                <p style="margin:.25rem 0;font-size:.85rem;color:var(--text-light)">💡 Complete remaining payment 24 hours before the trip date</p>
-              </div>
-              ${verifyRes.reward_credited > 0 ? `<div style="background:linear-gradient(135deg,#ECFDF5,#D1FAE5);padding:.85rem 1rem;border-radius:10px;margin:1rem 0;border:1px solid #6EE7B7;text-align:center"><span style="font-weight:700;color:#047857">🎁 ₹${verifyRes.reward_credited} added to your Vibes Wallet!</span><br><span style="font-size:.8rem;color:#059669">Use it as a discount on your next trip.</span></div>` : ''}
-              <div style="background:linear-gradient(135deg,#EEF2FF,#F0F9FF);padding:1rem;border-radius:10px;margin:1rem 0;border:1px solid #C7D2FE">
-                <p style="font-weight:600;margin-bottom:.5rem;color:var(--primary)">✨ Share Your Trip Expectations!</p>
-                <p style="font-size:.85rem;color:var(--text-light);margin-bottom:.75rem">Tell us what you're looking forward to — activities, food, comfort, photography & more.</p>
-                <button class="btn btn-block" style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff" onclick="closeModal();showExpectationsForm(${orderRes.booking_id})"><i class="fas fa-magic"></i> Share My Expectations</button>
-              </div>
-              ${verifyRes.whatsapp_link ? `<a href="${verifyRes.whatsapp_link}" target="_blank" class="btn btn-success btn-block" style="background:#25D366;margin-bottom:.75rem"><i class="fab fa-whatsapp"></i> Share on WhatsApp</a>` : ''}
-              <button class="btn btn-primary btn-block" onclick="closeModal();navigate('dashboard')"><i class="fas fa-ticket-alt"></i> View My Bookings</button>
-            </div>
-          `);
-        }, 500);
-        navigate(currentPage);
+        showBookingSuccessModal({ token_amount: orderRes.amount, remaining_amount: orderRes.remaining_amount, wallet_discount: verifyRes.wallet_discount || 0, reward_credited: verifyRes.reward_credited || 0, payment_id: verifyRes.payment_id || response.razorpay_payment_id, booking_id: orderRes.booking_id, whatsapp_link: verifyRes.whatsapp_link });
       } else {
         toast('Payment verification failed', 'error');
       }
@@ -2425,7 +2464,7 @@ async function renderUserDashboard(app) {
       <div class="dash-stats">
         <div class="dash-stat"><div class="icon" style="background:rgba(108,60,225,.1);color:var(--primary)"><i class="fas fa-ticket-alt"></i></div><h4>Total Bookings</h4><div class="value">${bookings.length}</div></div>
         <div class="dash-stat"><div class="icon" style="background:rgba(16,185,129,.1);color:var(--success)"><i class="fas fa-rupee-sign"></i></div><h4>Total Spent</h4><div class="value">₹${bookings.reduce((s,b) => s + b.total_amount, 0)}</div></div>
-        <div class="dash-stat" style="cursor:pointer" onclick="navigate('wallet')"><div class="icon" style="background:linear-gradient(135deg,rgba(108,60,225,.12),rgba(249,115,22,.12));color:var(--primary)"><i class="fas fa-wallet"></i></div><h4>🎁 Vibes Wallet</h4><div class="value">₹${walletBalance.toLocaleString()}</div></div>
+        <div class="dash-stat" style="cursor:pointer" onclick="navigate('wallet')"><div class="icon" style="background:linear-gradient(135deg,rgba(108,60,225,.12),rgba(249,115,22,.12));color:var(--primary)"><i class="fas fa-wallet"></i></div><h4>🎁 Vibes Wallet</h4><div class="value">₹${walletBalance.toLocaleString()}</div><button class="btn btn-sm" style="margin-top:.5rem;background:linear-gradient(135deg,var(--success),#059669);color:#fff;font-size:.75rem;padding:.3rem .7rem" onclick="event.stopPropagation();showAddMoney()"><i class="fas fa-plus"></i> Add Money</button></div>
         <div class="dash-stat"><div class="icon" style="background:rgba(245,158,11,.1);color:#F59E0B"><i class="fas fa-star"></i></div><h4>My Reviews</h4><div class="value">${reviewsList.length}</div></div>
         <div class="dash-stat"><div class="icon" style="background:rgba(6,214,160,.1);color:var(--accent)"><i class="fas fa-pen-fancy"></i></div><h4>My Blogs</h4><div class="value">${blogsList.length}</div></div>
         <div class="dash-stat">
@@ -5297,7 +5336,7 @@ async function renderWallet(app) {
         <h4>Available Balance</h4>
         <div class="balance">₹${balance.toLocaleString()}</div>
         <div class="wallet-actions">
-          <button onclick="showAddMoney()"><i class="fas fa-plus"></i> Add Money</button>
+          <button onclick="showAddMoney()" style="background:linear-gradient(135deg,var(--success),#059669);font-weight:700;font-size:.95rem"><i class="fas fa-plus-circle"></i> Add Money</button>
           <button onclick="navigate('dashboard')"><i class="fas fa-receipt"></i> My Bookings</button>
         </div>
       </div>
@@ -5311,7 +5350,8 @@ async function renderWallet(app) {
               </div>
               <div>
                 <h5>${escapeHtml(t.description)}</h5>
-                <p>${new Date(t.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</p>
+                <p>${new Date(t.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})} at ${new Date(t.created_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</p>
+                <p style="font-size:.75rem;color:var(--text-light)"><span style="display:inline-block;background:${t.type==='credit'?'#ECFDF5':'#FEF2F2'};color:${t.type==='credit'?'#047857':'#B91C1C'};padding:1px 8px;border-radius:99px;font-weight:600;font-size:.7rem;text-transform:uppercase">${t.type}</span> &nbsp; ID: #${t.id}</p>
               </div>
             </div>
             <div class="txn-amount ${t.type}">${t.type==='credit'?'+':'-'}₹${t.amount}</div>
@@ -5320,6 +5360,7 @@ async function renderWallet(app) {
           <div style="text-align:center;padding:2rem;color:var(--text-light)">
             <i class="fas fa-receipt" style="font-size:2rem;margin-bottom:.75rem;display:block;opacity:.3"></i>
             <p>No transactions yet</p>
+            <button class="btn btn-primary" style="margin-top:1rem" onclick="showAddMoney()"><i class="fas fa-plus"></i> Add Money to Get Started</button>
           </div>
         `}
       </div>
@@ -5331,18 +5372,94 @@ async function renderWallet(app) {
 function showAddMoney() {
   openModal(`
     <button class="close" onclick="closeModal()">&times;</button>
-    <h2><i class="fas fa-wallet" style="color:var(--primary)"></i> Add Money to Wallet</h2>
-    <form onsubmit="event.preventDefault();toast('Wallet top-up coming soon!','success');closeModal()">
-      <div class="form-group"><label>Amount (₹)</label><input type="number" min="100" max="50000" placeholder="Enter amount" required></div>
-      <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
-        <button type="button" class="btn btn-sm" style="background:#F1F5F9" onclick="this.closest('form').querySelector('input').value=500">₹500</button>
-        <button type="button" class="btn btn-sm" style="background:#F1F5F9" onclick="this.closest('form').querySelector('input').value=1000">₹1,000</button>
-        <button type="button" class="btn btn-sm" style="background:#F1F5F9" onclick="this.closest('form').querySelector('input').value=2000">₹2,000</button>
-        <button type="button" class="btn btn-sm" style="background:#F1F5F9" onclick="this.closest('form').querySelector('input').value=5000">₹5,000</button>
+    <h2 style="margin-bottom:.25rem"><i class="fas fa-wallet" style="color:var(--primary)"></i> Add Money to Wallet</h2>
+    <p style="color:var(--text-light);font-size:.85rem;margin-bottom:1.25rem">Top up your Vibes Wallet to use as discount on future bookings.</p>
+    <form id="walletRechargeForm" onsubmit="handleWalletRecharge(event)">
+      <div class="form-group"><label>Amount (₹)</label><input type="number" id="rechargeAmount" min="100" max="50000" placeholder="Enter amount" required></div>
+      <div style="display:flex;gap:.5rem;margin-bottom:1.25rem;flex-wrap:wrap">
+        <button type="button" class="btn btn-sm" style="background:#F1F5F9;border:1px solid var(--border)" onclick="document.getElementById('rechargeAmount').value=100">₹100</button>
+        <button type="button" class="btn btn-sm" style="background:#F1F5F9;border:1px solid var(--border)" onclick="document.getElementById('rechargeAmount').value=200">₹200</button>
+        <button type="button" class="btn btn-sm" style="background:#F1F5F9;border:1px solid var(--border)" onclick="document.getElementById('rechargeAmount').value=500">₹500</button>
+        <button type="button" class="btn btn-sm" style="background:#F1F5F9;border:1px solid var(--border)" onclick="document.getElementById('rechargeAmount').value=1000">₹1,000</button>
+        <button type="button" class="btn btn-sm" style="background:#F1F5F9;border:1px solid var(--border)" onclick="document.getElementById('rechargeAmount').value=2000">₹2,000</button>
+        <button type="button" class="btn btn-sm" style="background:#F1F5F9;border:1px solid var(--border)" onclick="document.getElementById('rechargeAmount').value=5000">₹5,000</button>
       </div>
-      <button class="btn btn-primary btn-block" type="submit"><i class="fas fa-plus"></i> Add Money</button>
+      <button class="btn btn-primary btn-block" type="submit" id="rechargeBtn"><i class="fas fa-plus"></i> Add Money</button>
     </form>
   `);
+}
+
+async function handleWalletRecharge(e) {
+  e.preventDefault();
+  const amountInput = document.getElementById('rechargeAmount');
+  const amount = parseInt(amountInput.value);
+  if (!amount || amount < 100 || amount > 50000) {
+    toast('Please enter an amount between ₹100 and ₹50,000', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('rechargeBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; }
+
+  const orderRes = await api('/wallet/recharge/create-order', { method: 'POST', body: { amount } });
+
+  if (!orderRes.success) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Add Money'; }
+    toast(orderRes.message || 'Failed to create recharge order', 'error');
+    return;
+  }
+
+  closeModal();
+
+  const options = {
+    key: orderRes.key_id,
+    amount: amount * 100,
+    currency: 'INR',
+    name: 'VIBES@Outing',
+    description: 'Wallet Recharge — ₹' + amount,
+    image: 'https://img.icons8.com/3d-fluency/94/compass.png',
+    order_id: orderRes.order_id,
+    handler: async function (response) {
+      const verifyRes = await api('/wallet/recharge/verify', { method: 'POST', body: {
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature,
+        amount: amount
+      }});
+      if (verifyRes.success) {
+        toast('💰 ₹' + amount + ' added to your wallet!', 'success');
+        openModal(`
+          <button class="close" onclick="closeModal()">&times;</button>
+          <div style="text-align:center;padding:1.5rem">
+            <div style="font-size:3rem;margin-bottom:1rem">💰</div>
+            <h2 style="color:var(--success)">Wallet Recharged!</h2>
+            <p style="color:var(--text-light);margin:.75rem 0">₹${amount} has been added to your Vibes Wallet.</p>
+            <div style="background:#F8FAFC;padding:1rem;border-radius:10px;margin:1rem 0">
+              <p style="margin:.25rem 0"><strong>Amount Added:</strong> <span style="color:var(--success);font-weight:700">+₹${amount}</span></p>
+              <p style="margin:.25rem 0"><strong>New Balance:</strong> <span style="color:var(--primary);font-weight:700">₹${verifyRes.balance}</span></p>
+              <p style="margin:.25rem 0;font-size:.8rem;color:var(--text-light)">Ref: ${verifyRes.payment_id || response.razorpay_payment_id}</p>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="closeModal();navigate('wallet')"><i class="fas fa-wallet"></i> View Wallet</button>
+          </div>
+        `);
+      } else {
+        toast(verifyRes.message || 'Payment verification failed', 'error');
+      }
+    },
+    prefill: {
+      name: currentUser ? currentUser.name : '',
+      email: currentUser ? (currentUser.email || '') : '',
+    },
+    theme: { color: '#6C3CE1' },
+    modal: {
+      ondismiss: function () {
+        toast('Wallet recharge cancelled', 'error');
+      }
+    }
+  };
+
+  const rzp = new Razorpay(options);
+  rzp.open();
 }
 
 // ─── ADMIN: SUPPORT TICKETS ────────────────────────────────────
