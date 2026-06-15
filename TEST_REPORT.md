@@ -1,9 +1,9 @@
 # 🧪 VIBES@Outing — Test Report
 
-**Date:** 2026-06-11 11:32:58  
+**Date:** 2026-06-15 03:18:48  
 **Environment:** Development (localhost:3000)  
 **Node.js:** v22.17.0  
-**Total Duration:** 3.85s  
+**Total Duration:** 8.52s  
 
 ---
 
@@ -11,216 +11,265 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 116 |
-| ✅ Passed | 5 |
-| ❌ Failed | 111 |
-| ⚠ Skipped | 9 |
-| Pass Rate | 4.3% |
+| Total Tests | 155 |
+| ✅ Passed | 155 |
+| ❌ Failed | 0 |
+| ⚠ Skipped | 0 |
+| Pass Rate | 100.0% |
 
 ---
 
 ## 📋 Test Categories
 
-### Smoke (0/5 passed)
+### Smoke (5/5 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | Server is reachable | ❌ FAIL | 47ms | — |
-| 2 | API returns JSON for outings | ❌ FAIL | 4ms | — |
-| 3 | Unknown API returns 404 | ❌ FAIL | 3ms | — |
-| 4 | Public stats endpoint works | ❌ FAIL | 2ms | — |
-| 5 | Static files served | ❌ FAIL | 4ms | — |
+| 1 | Server is reachable | ✅ PASS | 44ms | — |
+| 2 | API returns JSON for outings | ✅ PASS | 13ms | — |
+| 3 | Unknown API returns 404 | ✅ PASS | 3ms | — |
+| 4 | Public stats endpoint works | ✅ PASS | 3ms | — |
+| 5 | Static files served | ✅ PASS | 6ms | — |
 
-### Auth (0/13 passed)
-
-| # | Test Name | Status | Time | Error |
-|---|-----------|--------|------|-------|
-| 1 | Signup — valid user | ❌ FAIL | 3ms | — |
-| 2 | Signup — duplicate email rejected | ❌ FAIL | 3ms | — |
-| 3 | Signup — missing name rejected | ❌ FAIL | 3ms | — |
-| 4 | Signup — weak password rejected | ❌ FAIL | 2ms | — |
-| 5 | Signup — invalid email rejected | ❌ FAIL | 2ms | — |
-| 6 | Login — valid credentials | ❌ FAIL | 2ms | — |
-| 7 | Login — wrong password | ❌ FAIL | 2ms | — |
-| 8 | Login — non-existent user | ❌ FAIL | 2ms | — |
-| 9 | Login — missing fields | ❌ FAIL | 2ms | — |
-| 10 | Admin login | ❌ FAIL | 3ms | — |
-| 11 | Logout | ❌ FAIL | 1ms | — |
-| 12 | Protected route rejects unauthenticated | ❌ FAIL | 1ms | — |
-| 13 | Invalid token rejected | ❌ FAIL | 2ms | — |
-
-### Outings (0/6 passed)
+### Auth (13/13 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | GET /api/outings — list all | ❌ FAIL | 3ms | — |
-| 2 | GET /api/outings/:id — valid ID | ❌ FAIL | 3ms | — |
-| 3 | GET /api/outings/:id — invalid ID | ❌ FAIL | 2ms | — |
-| 4 | GET /api/outings/:id — non-numeric ID | ❌ FAIL | 2ms | — |
-| 5 | POST create — non-admin rejected | ❌ FAIL | 2ms | — |
-| 6 | DELETE — non-admin rejected | ❌ FAIL | 2ms | — |
+| 1 | Signup — valid user | ✅ PASS | 281ms | — |
+| 2 | Signup — duplicate email rejected | ✅ PASS | 246ms | — |
+| 3 | Signup — missing name rejected | ✅ PASS | 3ms | — |
+| 4 | Signup — weak password rejected | ✅ PASS | 3ms | — |
+| 5 | Signup — invalid email rejected | ✅ PASS | 2ms | — |
+| 6 | Login — valid credentials | ✅ PASS | 258ms | — |
+| 7 | Login — wrong password | ✅ PASS | 250ms | — |
+| 8 | Login — non-existent user | ✅ PASS | 232ms | — |
+| 9 | Login — missing fields | ✅ PASS | 2ms | — |
+| 10 | Admin login | ✅ PASS | 232ms | — |
+| 11 | Logout | ✅ PASS | 1ms | — |
+| 12 | Protected route rejects unauthenticated | ✅ PASS | 2ms | — |
+| 13 | Invalid token rejected | ✅ PASS | 1ms | — |
 
-### Bookings (0/7 passed)
-
-| # | Test Name | Status | Time | Error |
-|---|-----------|--------|------|-------|
-| 1 | POST /api/bookings — demo booking | ❌ FAIL | 3ms | — |
-| 2 | POST /api/bookings — unauthenticated rejected | ❌ FAIL | 2ms | — |
-| 3 | GET /api/bookings/:userId — own bookings | ❌ FAIL | 2ms | — |
-| 4 | GET /api/bookings/:userId — IDOR prevention (other user) | ❌ FAIL | 2ms | — |
-| 5 | POST /api/bookings/create-order — Razorpay order | ❌ FAIL | 3ms | — |
-| 6 | POST /api/bookings — non-existent outing | ❌ FAIL | 2ms | — |
-| 7 | Booking — exceeding max participants | ❌ FAIL | 2ms | — |
-
-### Suggestions (1/5 passed)
+### Outings (8/8 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | POST — create suggestion | ❌ FAIL | 2ms | — |
-| 2 | POST — unauthenticated rejected | ❌ FAIL | 1ms | — |
-| 3 | GET — list suggestions | ❌ FAIL | 1ms | — |
-| 4 | POST — missing title rejected | ❌ FAIL | 2ms | — |
-| 5 | PUT — non-admin rejected | ✅ PASS | 0ms | — |
+| 1 | GET /api/outings — list all | ✅ PASS | 3ms | — |
+| 2 | GET /api/outings/:id — valid ID | ✅ PASS | 2ms | — |
+| 3 | GET /api/outings/:id — invalid ID | ✅ PASS | 1ms | — |
+| 4 | GET /api/outings/:id — non-numeric ID | ✅ PASS | 1ms | — |
+| 5 | POST create — non-admin rejected | ✅ PASS | 2ms | — |
+| 6 | POST create — admin can create | ✅ PASS | 3ms | — |
+| 7 | DELETE — admin can delete | ✅ PASS | 6ms | — |
+| 8 | DELETE — non-admin rejected | ✅ PASS | 2ms | — |
 
-### Reviews (0/5 passed)
-
-| # | Test Name | Status | Time | Error |
-|---|-----------|--------|------|-------|
-| 1 | GET /api/reviews/:outingId | ❌ FAIL | 2ms | — |
-| 2 | POST — must have booked to review | ❌ FAIL | 2ms | — |
-| 3 | POST — invalid rating rejected | ❌ FAIL | 2ms | — |
-| 4 | POST — unauthenticated rejected | ❌ FAIL | 1ms | — |
-| 5 | GET — invalid outing ID | ❌ FAIL | 2ms | — |
-
-### Chat (0/4 passed)
+### Routing (19/19 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | GET — unauthenticated rejected | ❌ FAIL | 3ms | — |
-| 2 | GET — authenticated user can view | ❌ FAIL | 2ms | — |
-| 3 | POST — empty message rejected | ❌ FAIL | 1ms | — |
-| 4 | POST — unauthenticated rejected | ❌ FAIL | 2ms | — |
+| 1 | Every outing carries a valid SEO slug | ✅ PASS | 2ms | — |
+| 2 | GET /api/outings/by-slug/:slug resolves to the right outing | ✅ PASS | 3ms | — |
+| 3 | GET /api/outings/by-slug/:slug — unknown slug returns 404 | ✅ PASS | 1ms | — |
+| 4 | GET /api/outings/by-slug/:slug — invalid slug rejected | ✅ PASS | 1ms | — |
+| 5 | SPA fallback (no 404) → /outings | ✅ PASS | 6ms | — |
+| 6 | SPA fallback (no 404) → /outings/goa-beach-trip | ✅ PASS | 4ms | — |
+| 7 | SPA fallback (no 404) → /wallet | ✅ PASS | 4ms | — |
+| 8 | SPA fallback (no 404) → /dashboard | ✅ PASS | 4ms | — |
+| 9 | SPA fallback (no 404) → /blogs | ✅ PASS | 3ms | — |
+| 10 | SPA fallback (no 404) → /wishlist | ✅ PASS | 4ms | — |
+| 11 | SPA fallback (no 404) → /notifications | ✅ PASS | 4ms | — |
+| 12 | SPA fallback (no 404) → /suggest | ✅ PASS | 6ms | — |
+| 13 | SPA fallback (no 404) → /recommendations | ✅ PASS | 4ms | — |
+| 14 | SPA fallback (no 404) → /galleries | ✅ PASS | 4ms | — |
+| 15 | SPA fallback (no 404) → /for-you | ✅ PASS | 5ms | — |
+| 16 | SPA fallback (no 404) → /profile | ✅ PASS | 6ms | — |
+| 17 | SPA fallback (no 404) → /some/deep/unknown/path | ✅ PASS | 4ms | — |
+| 18 | Refresh on deep outing URL serves app shell | ✅ PASS | 5ms | — |
+| 19 | Static asset /manifest.json not swallowed by SPA fallback | ✅ PASS | 4ms | — |
 
-### Verification (0/5 passed)
-
-| # | Test Name | Status | Time | Error |
-|---|-----------|--------|------|-------|
-| 1 | POST — submit verification | ❌ FAIL | 3ms | — |
-| 2 | GET — own verification status | ❌ FAIL | 2ms | — |
-| 3 | GET — IDOR prevention | ❌ FAIL | 2ms | — |
-| 4 | POST — invalid ID type rejected | ❌ FAIL | 1ms | — |
-| 5 | POST — unauthenticated rejected | ❌ FAIL | 1ms | — |
-
-### Recommendations (1/4 passed)
-
-| # | Test Name | Status | Time | Error |
-|---|-----------|--------|------|-------|
-| 1 | GET — own recommendations | ❌ FAIL | 3ms | — |
-| 2 | GET — IDOR prevention | ❌ FAIL | 2ms | — |
-| 3 | GET — unauthenticated rejected | ❌ FAIL | 2ms | — |
-| 4 | Results exclude booked outings | ✅ PASS | 0ms | — |
-
-### Security (0/13 passed)
+### Bookings (7/7 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | X-Powered-By header is absent | ❌ FAIL | 3ms | — |
-| 2 | X-Content-Type-Options: nosniff | ❌ FAIL | 2ms | — |
-| 3 | X-Frame-Options present | ❌ FAIL | 1ms | — |
-| 4 | Content-Security-Policy present | ❌ FAIL | 2ms | — |
-| 5 | Referrer-Policy present | ❌ FAIL | 2ms | — |
-| 6 | Permissions-Policy present | ❌ FAIL | 1ms | — |
-| 7 | XSS in input is sanitized | ❌ FAIL | 1ms | — |
-| 8 | SQL injection in param is safe | ❌ FAIL | 2ms | — |
-| 9 | JSON body size limit enforced | ❌ FAIL | 2ms | — |
-| 10 | Password not in login response | ❌ FAIL | 2ms | — |
-| 11 | Dotfiles access denied | ❌ FAIL | 2ms | — |
-| 12 | No dev_reset_link in forgot-password response | ❌ FAIL | 1ms | — |
-| 13 | Compression header present | ❌ FAIL | 2ms | — |
+| 1 | POST /api/bookings — demo booking | ✅ PASS | 41ms | — |
+| 2 | POST /api/bookings — unauthenticated rejected | ✅ PASS | 1ms | — |
+| 3 | GET /api/bookings/:userId — own bookings | ✅ PASS | 3ms | — |
+| 4 | GET /api/bookings/:userId — IDOR prevention (other user) | ✅ PASS | 1ms | — |
+| 5 | POST /api/bookings/create-order — Razorpay order | ✅ PASS | 355ms | — |
+| 6 | POST /api/bookings — non-existent outing | ✅ PASS | 2ms | — |
+| 7 | Booking — exceeding max participants | ✅ PASS | 2ms | — |
 
-### PasswordReset (0/5 passed)
+### Suggestions (6/6 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | POST forgot-password — valid email (no leak) | ❌ FAIL | 2ms | — |
-| 2 | POST forgot-password — non-existent email (same response) | ❌ FAIL | 1ms | — |
-| 3 | POST forgot-password — invalid email rejected | ❌ FAIL | 2ms | — |
-| 4 | POST reset-password — invalid token | ❌ FAIL | 1ms | — |
-| 5 | POST reset-password — weak password rejected | ❌ FAIL | 1ms | — |
+| 1 | POST — create suggestion | ✅ PASS | 4ms | — |
+| 2 | POST — unauthenticated rejected | ✅ PASS | 1ms | — |
+| 3 | GET — list suggestions | ✅ PASS | 2ms | — |
+| 4 | POST — missing title rejected | ✅ PASS | 1ms | — |
+| 5 | PUT — admin approve suggestion | ✅ PASS | 3ms | — |
+| 6 | PUT — non-admin rejected | ✅ PASS | 2ms | — |
 
-### Edge (0/10 passed)
-
-| # | Test Name | Status | Time | Error |
-|---|-----------|--------|------|-------|
-| 1 | GET outing with ID 0 | ❌ FAIL | 2ms | — |
-| 2 | GET outing with negative ID | ❌ FAIL | 2ms | — |
-| 3 | GET outing with very large ID | ❌ FAIL | 1ms | — |
-| 4 | POST with empty JSON body | ❌ FAIL | 2ms | — |
-| 5 | POST with null body fields | ❌ FAIL | 1ms | — |
-| 6 | Special characters in search (GET) | ❌ FAIL | 1ms | — |
-| 7 | Very long title in suggestion | ❌ FAIL | 2ms | — |
-| 8 | Booking with 0 participants | ❌ FAIL | 2ms | — |
-| 9 | Review with rating 0 | ❌ FAIL | 1ms | — |
-| 10 | Review with rating 6 | ❌ FAIL | 2ms | — |
-
-### Misc (0/4 passed)
+### Reviews (7/7 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | GET /api/razorpay-key | ❌ FAIL | 3ms | — |
-| 2 | SPA fallback — unknown route returns index.html | ❌ FAIL | 2ms | — |
-| 3 | Multiple concurrent requests handled | ❌ FAIL | 4ms | — |
-| 4 | OPTIONS request (CORS preflight) | ❌ FAIL | 4ms | — |
+| 1 | GET /api/reviews/:outingId | ✅ PASS | 3ms | — |
+| 2 | POST — must have booked to review | ✅ PASS | 5ms | — |
+| 3 | POST — review booked outing | ✅ PASS | 3ms | — |
+| 4 | POST — duplicate review rejected | ✅ PASS | 2ms | — |
+| 5 | POST — invalid rating rejected | ✅ PASS | 2ms | — |
+| 6 | POST — unauthenticated rejected | ✅ PASS | 2ms | — |
+| 7 | GET — invalid outing ID | ✅ PASS | 2ms | — |
 
-### Integrity (0/4 passed)
-
-| # | Test Name | Status | Time | Error |
-|---|-----------|--------|------|-------|
-| 1 | Outing data has required fields | ❌ FAIL | 3ms | — |
-| 2 | Booking amounts calculate correctly (20% token) | ❌ FAIL | 2ms | — |
-| 3 | Outing participant count is non-negative | ❌ FAIL | 2ms | — |
-| 4 | Review average is between 0 and 5 | ❌ FAIL | 2ms | — |
-
-### Notifications (0/5 passed)
+### Chat (6/6 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | Get notifications — requires auth | ❌ FAIL | 2ms | — |
-| 2 | Get notifications — authenticated | ❌ FAIL | 2ms | — |
-| 3 | Get notifications — IDOR prevention | ❌ FAIL | 2ms | — |
-| 4 | Mark all read — authenticated | ❌ FAIL | 2ms | — |
-| 5 | Invalid user ID — validation | ❌ FAIL | 2ms | — |
+| 1 | GET — unauthenticated rejected | ✅ PASS | 2ms | — |
+| 2 | GET — authenticated user can view | ✅ PASS | 3ms | — |
+| 3 | POST — booked user can send message | ✅ PASS | 2ms | — |
+| 4 | POST — message appears in chat | ✅ PASS | 2ms | — |
+| 5 | POST — empty message rejected | ✅ PASS | 2ms | — |
+| 6 | POST — unauthenticated rejected | ✅ PASS | 1ms | — |
 
-### Wallet (0/9 passed)
-
-| # | Test Name | Status | Time | Error |
-|---|-----------|--------|------|-------|
-| 1 | Get wallet — requires auth | ❌ FAIL | 3ms | — |
-| 2 | Get wallet — authenticated | ❌ FAIL | 3ms | — |
-| 3 | Get wallet — IDOR prevention (other user) | ❌ FAIL | 2ms | — |
-| 4 | Get wallet — admin can view any | ❌ FAIL | 2ms | — |
-| 5 | Invalid user ID — validation | ❌ FAIL | 2ms | — |
-| 6 | Welcome Bonus — ₹100 credited at signup | ❌ FAIL | 2ms | — |
-| 7 | Welcome Bonus — not re-credited on login | ❌ FAIL | 2ms | — |
-| 8 | Reward — ₹100 credited after booking | ❌ FAIL | 2ms | — |
-| 9 | Redemption — wallet credit applied as booking discount | ❌ FAIL | 2ms | — |
-
-### Tickets (3/12 passed)
+### Verification (7/7 passed)
 
 | # | Test Name | Status | Time | Error |
 |---|-----------|--------|------|-------|
-| 1 | Submit ticket — requires auth | ❌ FAIL | 2ms | — |
-| 2 | Submit ticket — valid | ❌ FAIL | 2ms | — |
-| 3 | Submit ticket — missing fields | ❌ FAIL | 2ms | — |
-| 4 | Submit ticket — invalid priority | ❌ FAIL | 2ms | — |
-| 5 | Get my tickets — user | ❌ FAIL | 3ms | — |
-| 6 | Admin — list all tickets | ❌ FAIL | 2ms | — |
-| 7 | Admin — list tickets denied for user | ❌ FAIL | 1ms | — |
-| 8 | Admin — update ticket status | ✅ PASS | 0ms | — |
-| 9 | Admin — reply to ticket | ✅ PASS | 0ms | — |
-| 10 | Admin — update non-existent ticket | ❌ FAIL | 1ms | — |
-| 11 | Admin — invalid status value | ✅ PASS | 0ms | — |
-| 12 | XSS prevention in ticket | ❌ FAIL | 2ms | — |
+| 1 | POST — submit verification | ✅ PASS | 7ms | — |
+| 2 | GET — own verification status | ✅ PASS | 4ms | — |
+| 3 | GET — IDOR prevention | ✅ PASS | 2ms | — |
+| 4 | POST — invalid ID type rejected | ✅ PASS | 2ms | — |
+| 5 | POST — unauthenticated rejected | ✅ PASS | 1ms | — |
+| 6 | Admin — list verifications | ✅ PASS | 3ms | — |
+| 7 | Admin — approve verification | ✅ PASS | 3ms | — |
+
+### Admin (6/6 passed)
+
+| # | Test Name | Status | Time | Error |
+|---|-----------|--------|------|-------|
+| 1 | GET /api/admin/stats | ✅ PASS | 4ms | — |
+| 2 | GET /api/admin/users | ✅ PASS | 2ms | — |
+| 3 | GET /api/admin/bookings | ✅ PASS | 1ms | — |
+| 4 | GET /api/admin/security-logs | ✅ PASS | 2ms | — |
+| 5 | Non-admin rejected from admin routes | ✅ PASS | 2ms | — |
+| 6 | Admin — users list has no passwords | ✅ PASS | 2ms | — |
+
+### Recommendations (4/4 passed)
+
+| # | Test Name | Status | Time | Error |
+|---|-----------|--------|------|-------|
+| 1 | GET — own recommendations | ✅ PASS | 8ms | — |
+| 2 | GET — IDOR prevention | ✅ PASS | 2ms | — |
+| 3 | GET — unauthenticated rejected | ✅ PASS | 2ms | — |
+| 4 | Results exclude booked outings | ✅ PASS | 3ms | — |
+
+### Security (13/13 passed)
+
+| # | Test Name | Status | Time | Error |
+|---|-----------|--------|------|-------|
+| 1 | X-Powered-By header is absent | ✅ PASS | 3ms | — |
+| 2 | X-Content-Type-Options: nosniff | ✅ PASS | 2ms | — |
+| 3 | X-Frame-Options present | ✅ PASS | 2ms | — |
+| 4 | Content-Security-Policy present | ✅ PASS | 5ms | — |
+| 5 | Referrer-Policy present | ✅ PASS | 2ms | — |
+| 6 | Permissions-Policy present | ✅ PASS | 2ms | — |
+| 7 | XSS in input is sanitized | ✅ PASS | 2ms | — |
+| 8 | SQL injection in param is safe | ✅ PASS | 1ms | — |
+| 9 | JSON body size limit enforced | ✅ PASS | 3ms | — |
+| 10 | Password not in login response | ✅ PASS | 228ms | — |
+| 11 | Dotfiles access denied | ✅ PASS | 4ms | — |
+| 12 | No dev_reset_link in forgot-password response | ✅ PASS | 2ms | — |
+| 13 | Compression header present | ✅ PASS | 2ms | — |
+
+### PasswordReset (5/5 passed)
+
+| # | Test Name | Status | Time | Error |
+|---|-----------|--------|------|-------|
+| 1 | POST forgot-password — valid email (no leak) | ✅ PASS | 1726ms | — |
+| 2 | POST forgot-password — non-existent email (same response) | ✅ PASS | 3ms | — |
+| 3 | POST forgot-password — invalid email rejected | ✅ PASS | 1ms | — |
+| 4 | POST reset-password — invalid token | ✅ PASS | 1ms | — |
+| 5 | POST reset-password — weak password rejected | ✅ PASS | 2ms | — |
+
+### Edge (10/10 passed)
+
+| # | Test Name | Status | Time | Error |
+|---|-----------|--------|------|-------|
+| 1 | GET outing with ID 0 | ✅ PASS | 3ms | — |
+| 2 | GET outing with negative ID | ✅ PASS | 2ms | — |
+| 3 | GET outing with very large ID | ✅ PASS | 1ms | — |
+| 4 | POST with empty JSON body | ✅ PASS | 2ms | — |
+| 5 | POST with null body fields | ✅ PASS | 1ms | — |
+| 6 | Special characters in search (GET) | ✅ PASS | 3ms | — |
+| 7 | Very long title in suggestion | ✅ PASS | 2ms | — |
+| 8 | Booking with 0 participants | ✅ PASS | 39ms | — |
+| 9 | Review with rating 0 | ✅ PASS | 3ms | — |
+| 10 | Review with rating 6 | ✅ PASS | 4ms | — |
+
+### Misc (4/4 passed)
+
+| # | Test Name | Status | Time | Error |
+|---|-----------|--------|------|-------|
+| 1 | GET /api/razorpay-key | ✅ PASS | 2ms | — |
+| 2 | SPA fallback — unknown route returns index.html | ✅ PASS | 8ms | — |
+| 3 | Multiple concurrent requests handled | ✅ PASS | 13ms | — |
+| 4 | OPTIONS request (CORS preflight) | ✅ PASS | 1ms | — |
+
+### Integrity (4/4 passed)
+
+| # | Test Name | Status | Time | Error |
+|---|-----------|--------|------|-------|
+| 1 | Outing data has required fields | ✅ PASS | 4ms | — |
+| 2 | Booking amounts calculate correctly (20% token) | ✅ PASS | 3ms | — |
+| 3 | Outing participant count is non-negative | ✅ PASS | 2ms | — |
+| 4 | Review average is between 0 and 5 | ✅ PASS | 2ms | — |
+
+### Notifications (5/5 passed)
+
+| # | Test Name | Status | Time | Error |
+|---|-----------|--------|------|-------|
+| 1 | Get notifications — requires auth | ✅ PASS | 2ms | — |
+| 2 | Get notifications — authenticated | ✅ PASS | 3ms | — |
+| 3 | Get notifications — IDOR prevention | ✅ PASS | 4ms | — |
+| 4 | Mark all read — authenticated | ✅ PASS | 3ms | — |
+| 5 | Invalid user ID — validation | ✅ PASS | 3ms | — |
+
+### Wallet (14/14 passed)
+
+| # | Test Name | Status | Time | Error |
+|---|-----------|--------|------|-------|
+| 1 | Get wallet — requires auth | ✅ PASS | 2ms | — |
+| 2 | Get wallet — authenticated | ✅ PASS | 6ms | — |
+| 3 | Get wallet — IDOR prevention (other user) | ✅ PASS | 3ms | — |
+| 4 | Get wallet — admin can view any | ✅ PASS | 3ms | — |
+| 5 | Invalid user ID — validation | ✅ PASS | 4ms | — |
+| 6 | Welcome Bonus — ₹100 credited at signup | ✅ PASS | 2ms | — |
+| 7 | Welcome Bonus — not re-credited on login | ✅ PASS | 385ms | — |
+| 8 | Reward — ₹100 credited after booking | ✅ PASS | 3ms | — |
+| 9 | Redemption — wallet credit applied as booking discount | ✅ PASS | 35ms | — |
+| 10 | Recharge — create-order requires auth | ✅ PASS | 1ms | — |
+| 11 | Recharge — create-order validates amount min | ✅ PASS | 2ms | — |
+| 12 | Recharge — create-order validates amount max | ✅ PASS | 3ms | — |
+| 13 | Recharge — verify requires auth | ✅ PASS | 2ms | — |
+| 14 | Recharge — verify rejects invalid signature | ✅ PASS | 4ms | — |
+
+### Tickets (12/12 passed)
+
+| # | Test Name | Status | Time | Error |
+|---|-----------|--------|------|-------|
+| 1 | Submit ticket — requires auth | ✅ PASS | 2ms | — |
+| 2 | Submit ticket — valid | ✅ PASS | 5ms | — |
+| 3 | Submit ticket — missing fields | ✅ PASS | 2ms | — |
+| 4 | Submit ticket — invalid priority | ✅ PASS | 3ms | — |
+| 5 | Get my tickets — user | ✅ PASS | 2ms | — |
+| 6 | Admin — list all tickets | ✅ PASS | 2ms | — |
+| 7 | Admin — list tickets denied for user | ✅ PASS | 4ms | — |
+| 8 | Admin — update ticket status | ✅ PASS | 4ms | — |
+| 9 | Admin — reply to ticket | ✅ PASS | 3ms | — |
+| 10 | Admin — update non-existent ticket | ✅ PASS | 2ms | — |
+| 11 | Admin — invalid status value | ✅ PASS | 3ms | — |
+| 12 | XSS prevention in ticket | ✅ PASS | 7ms | — |
 
 ---
 
@@ -230,13 +279,13 @@
 |---|-----------|-------------|-------|
 | 1 | **Smoke Tests** | Server health, reachability, basic responses | 5 |
 | 2 | **Authentication Tests** | Signup, login, logout, JWT, session management | 13 |
-| 3 | **CRUD Tests** | Create, Read, Update, Delete for outings | 6 |
+| 3 | **CRUD Tests** | Create, Read, Update, Delete for outings | 8 |
 | 4 | **Booking Tests** | Payment flow, demo booking, participant limits | 7 |
-| 5 | **Suggestion Tests** | User suggestions, admin approval | 5 |
-| 6 | **Review Tests** | Ratings, comments, duplicate prevention | 5 |
-| 7 | **Chat Tests** | Group messaging, access control | 4 |
-| 8 | **Verification Tests** | ID verification, admin approval flow | 5 |
-| 9 | **Admin Tests** | Dashboard stats, user management, security logs | 0 |
+| 5 | **Suggestion Tests** | User suggestions, admin approval | 6 |
+| 6 | **Review Tests** | Ratings, comments, duplicate prevention | 7 |
+| 7 | **Chat Tests** | Group messaging, access control | 6 |
+| 8 | **Verification Tests** | ID verification, admin approval flow | 7 |
+| 9 | **Admin Tests** | Dashboard stats, user management, security logs | 6 |
 | 10 | **AI Recommendation Tests** | Personalized suggestions, IDOR prevention | 4 |
 | 11 | **Security Tests** | Headers, XSS, SQLi, IDOR, data exposure | 13 |
 | 12 | **Password Reset Tests** | Forgot/reset flow, token validation | 5 |
@@ -244,124 +293,8 @@
 | 14 | **Miscellaneous Tests** | CORS, concurrency, SPA fallback | 4 |
 | 15 | **Data Integrity Tests** | Schema validation, calculation accuracy | 4 |
 | 16 | **Notification Tests** | In-app notifications, read/unread, IDOR | 5 |
-| 17 | **Wallet Tests** | Balance, transactions, access control | 9 |
+| 17 | **Wallet Tests** | Balance, transactions, access control | 14 |
 | 18 | **Support Ticket Tests** | Create, admin manage, XSS prevention | 12 |
-
----
-
-## ❌ Failed Tests Detail
-
-- **[Smoke] Server is reachable**: 
-- **[Smoke] API returns JSON for outings**: 
-- **[Smoke] Unknown API returns 404**: 
-- **[Smoke] Public stats endpoint works**: 
-- **[Smoke] Static files served**: 
-- **[Auth] Signup — valid user**: 
-- **[Auth] Signup — duplicate email rejected**: 
-- **[Auth] Signup — missing name rejected**: 
-- **[Auth] Signup — weak password rejected**: 
-- **[Auth] Signup — invalid email rejected**: 
-- **[Auth] Login — valid credentials**: 
-- **[Auth] Login — wrong password**: 
-- **[Auth] Login — non-existent user**: 
-- **[Auth] Login — missing fields**: 
-- **[Auth] Admin login**: 
-- **[Auth] Logout**: 
-- **[Auth] Protected route rejects unauthenticated**: 
-- **[Auth] Invalid token rejected**: 
-- **[Outings] GET /api/outings — list all**: 
-- **[Outings] GET /api/outings/:id — valid ID**: 
-- **[Outings] GET /api/outings/:id — invalid ID**: 
-- **[Outings] GET /api/outings/:id — non-numeric ID**: 
-- **[Outings] POST create — non-admin rejected**: 
-- **[Outings] DELETE — non-admin rejected**: 
-- **[Bookings] POST /api/bookings — demo booking**: 
-- **[Bookings] POST /api/bookings — unauthenticated rejected**: 
-- **[Bookings] GET /api/bookings/:userId — own bookings**: 
-- **[Bookings] GET /api/bookings/:userId — IDOR prevention (other user)**: 
-- **[Bookings] POST /api/bookings/create-order — Razorpay order**: 
-- **[Bookings] POST /api/bookings — non-existent outing**: 
-- **[Bookings] Booking — exceeding max participants**: 
-- **[Suggestions] POST — create suggestion**: 
-- **[Suggestions] POST — unauthenticated rejected**: 
-- **[Suggestions] GET — list suggestions**: 
-- **[Suggestions] POST — missing title rejected**: 
-- **[Reviews] GET /api/reviews/:outingId**: 
-- **[Reviews] POST — must have booked to review**: 
-- **[Reviews] POST — invalid rating rejected**: 
-- **[Reviews] POST — unauthenticated rejected**: 
-- **[Reviews] GET — invalid outing ID**: 
-- **[Chat] GET — unauthenticated rejected**: 
-- **[Chat] GET — authenticated user can view**: 
-- **[Chat] POST — empty message rejected**: 
-- **[Chat] POST — unauthenticated rejected**: 
-- **[Verification] POST — submit verification**: 
-- **[Verification] GET — own verification status**: 
-- **[Verification] GET — IDOR prevention**: 
-- **[Verification] POST — invalid ID type rejected**: 
-- **[Verification] POST — unauthenticated rejected**: 
-- **[Recommendations] GET — own recommendations**: 
-- **[Recommendations] GET — IDOR prevention**: 
-- **[Recommendations] GET — unauthenticated rejected**: 
-- **[Security] X-Powered-By header is absent**: 
-- **[Security] X-Content-Type-Options: nosniff**: 
-- **[Security] X-Frame-Options present**: 
-- **[Security] Content-Security-Policy present**: 
-- **[Security] Referrer-Policy present**: 
-- **[Security] Permissions-Policy present**: 
-- **[Security] XSS in input is sanitized**: 
-- **[Security] SQL injection in param is safe**: 
-- **[Security] JSON body size limit enforced**: 
-- **[Security] Password not in login response**: 
-- **[Security] Dotfiles access denied**: 
-- **[Security] No dev_reset_link in forgot-password response**: 
-- **[Security] Compression header present**: 
-- **[PasswordReset] POST forgot-password — valid email (no leak)**: 
-- **[PasswordReset] POST forgot-password — non-existent email (same response)**: 
-- **[PasswordReset] POST forgot-password — invalid email rejected**: 
-- **[PasswordReset] POST reset-password — invalid token**: 
-- **[PasswordReset] POST reset-password — weak password rejected**: 
-- **[Edge] GET outing with ID 0**: 
-- **[Edge] GET outing with negative ID**: 
-- **[Edge] GET outing with very large ID**: 
-- **[Edge] POST with empty JSON body**: 
-- **[Edge] POST with null body fields**: 
-- **[Edge] Special characters in search (GET)**: 
-- **[Edge] Very long title in suggestion**: 
-- **[Edge] Booking with 0 participants**: 
-- **[Edge] Review with rating 0**: 
-- **[Edge] Review with rating 6**: 
-- **[Misc] GET /api/razorpay-key**: 
-- **[Misc] SPA fallback — unknown route returns index.html**: 
-- **[Misc] Multiple concurrent requests handled**: 
-- **[Misc] OPTIONS request (CORS preflight)**: 
-- **[Integrity] Outing data has required fields**: 
-- **[Integrity] Booking amounts calculate correctly (20% token)**: 
-- **[Integrity] Outing participant count is non-negative**: 
-- **[Integrity] Review average is between 0 and 5**: 
-- **[Notifications] Get notifications — requires auth**: 
-- **[Notifications] Get notifications — authenticated**: 
-- **[Notifications] Get notifications — IDOR prevention**: 
-- **[Notifications] Mark all read — authenticated**: 
-- **[Notifications] Invalid user ID — validation**: 
-- **[Wallet] Get wallet — requires auth**: 
-- **[Wallet] Get wallet — authenticated**: 
-- **[Wallet] Get wallet — IDOR prevention (other user)**: 
-- **[Wallet] Get wallet — admin can view any**: 
-- **[Wallet] Invalid user ID — validation**: 
-- **[Wallet] Welcome Bonus — ₹100 credited at signup**: 
-- **[Wallet] Welcome Bonus — not re-credited on login**: 
-- **[Wallet] Reward — ₹100 credited after booking**: 
-- **[Wallet] Redemption — wallet credit applied as booking discount**: 
-- **[Tickets] Submit ticket — requires auth**: 
-- **[Tickets] Submit ticket — valid**: 
-- **[Tickets] Submit ticket — missing fields**: 
-- **[Tickets] Submit ticket — invalid priority**: 
-- **[Tickets] Get my tickets — user**: 
-- **[Tickets] Admin — list all tickets**: 
-- **[Tickets] Admin — list tickets denied for user**: 
-- **[Tickets] Admin — update non-existent ticket**: 
-- **[Tickets] XSS prevention in ticket**: 
 
 ---
 

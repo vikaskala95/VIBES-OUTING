@@ -1,0 +1,63 @@
+# Development
+node_modules
+.venv
+.git
+.vscode
+.env.example
+
+# Python/Build artifacts
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+dist
+build
+.pytest_cache
+
+# Database files (don't need to deploy these)
+*.db
+*.db-wal
+*.db-shm
+vibes.db*
+
+# Logs
+*.log
+debug.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation & Planning (not needed in production)
+*.md
+presentations/
+presentations_v2/
+tests/
+
+# Config files (not needed for frontend)
+.env
+.env.local
+render.yaml
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Server code (API runs on Railway, not Vercel)
+server.js
+MCP_Server/
+generate_detailed_plans.js
+generate_ppts.py
+instagram_profile_pic.py
+create_logo.py
+optimize-images.js
+
+# Data files
+data/
+
+# Hidden files
+.*
+
+# But DO include these for the build:
+!.gitkeep

@@ -288,6 +288,80 @@ async function outingTests() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  3b. ROUTE & SPA ROUTING TESTS (deep links, refresh, SEO slugs)
+// ═══════════════════════════════════════════════════════════════
+async function routeTests() {
+  section('3b. ROUTE & SPA ROUTING TESTS');
+
+  const isHtmlApp = (r) => r.status === 200 && typeof r.body === 'string' && /id="app"/.test(r.body);
+
+  // Detect whether this server instance serves the SPA (monolith mode) or is
+  // API-only (production frontend is served by Vercel, which has its own
+  // catch-all rewrite in vercel.json). SPA-fallback tests only apply to the
+  // monolith server — run it with API_ONLY="" to exercise them locally.
+  const root = await req('GET', '/');
+  const servesSpa = isHtmlApp(root);
+
+  // ─── SEO-friendly slugs (backbone of /outings/<slug> deep links) ───
+  await test('Routing', 'Every outing carries a valid SEO slug', async () => {
+    const list = (await req('GET', '/api/outings')).body;
+    assert(Array.isArray(list) && list.length > 0, 'No outings returned');
+    const bad = list.filter(o => !o.slug || !/^[a-z0-9-]+$/.test(o.slug));
+    assert(bad.length === 0, `${bad.length} outing(s) missing a valid slug (SEO URLs would break)`);
+  });
+
+  await test('Routing', 'GET /api/outings/by-slug/:slug resolves to the right outing', async () => {
+    const list = (await req('GET', '/api/outings')).body;
+    const withSlug = list.find(o => o.slug);
+    assert(withSlug, 'No outing with a slug to test');
+    const r = await req('GET', '/api/outings/by-slug/' + encodeURIComponent(withSlug.slug));
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(r.body && r.body.id === withSlug.id, 'Slug resolved to the wrong outing');
+  });
+
+  await test('Routing', 'GET /api/outings/by-slug/:slug — unknown slug returns 404', async () => {
+    const r = await req('GET', '/api/outings/by-slug/this-trip-does-not-exist-xyz');
+    assert(r.status === 404, `Expected 404, got ${r.status}`);
+  });
+
+  await test('Routing', 'GET /api/outings/by-slug/:slug — invalid slug rejected', async () => {
+    const r = await req('GET', '/api/outings/by-slug/Invalid_Slug');
+    assert(r.status === 400 || r.status === 404, `Expected 400/404, got ${r.status}`);
+  });
+
+  // ─── SPA fallback: deep links & refresh must NEVER 404 ───
+  if (!servesSpa) {
+    console.log('    ⚠ SPA fallback tests skipped (server is API-only; rerun with API_ONLY="" to test)');
+  } else {
+    const spaPaths = [
+      '/outings', '/outings/goa-beach-trip', '/wallet', '/dashboard', '/blogs',
+      '/wishlist', '/notifications', '/suggest', '/recommendations', '/galleries',
+      '/for-you', '/profile', '/some/deep/unknown/path',
+    ];
+    for (const p of spaPaths) {
+      await test('Routing', `SPA fallback (no 404) → ${p}`, async () => {
+        const r = await req('GET', p);
+        assert(isHtmlApp(r), `Expected index.html (200 HTML) for ${p}, got status ${r.status}`);
+      });
+    }
+
+    // Browser refresh on a deep outing URL must serve the app shell, not 404.
+    await test('Routing', 'Refresh on deep outing URL serves app shell', async () => {
+      const r = await req('GET', '/outings/coorg-weekend-getaway');
+      assert(isHtmlApp(r), `Expected index.html, got status ${r.status}`);
+    });
+
+    // Real static assets must NOT be swallowed by the catch-all fallback.
+    await test('Routing', 'Static asset /manifest.json not swallowed by SPA fallback', async () => {
+      const r = await req('GET', '/manifest.json');
+      assert(r.status === 200, `Expected 200, got ${r.status}`);
+      const swallowed = typeof r.body === 'string' && /id="app"/.test(r.body);
+      assert(!swallowed, '/manifest.json was incorrectly served as index.html');
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  4. BOOKING TESTS
 // ═══════════════════════════════════════════════════════════════
 async function bookingTests() {
@@ -1217,6 +1291,8 @@ async function runAll() {
   await authTests();
   await delay(200);
   await outingTests();
+  await delay(200);
+  await routeTests();
   await delay(200);
   await bookingTests();
   await delay(200);
