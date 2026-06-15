@@ -1056,6 +1056,23 @@ function setDefaultSeo(pathname) {
   setSeoMeta({ url: SITE_ORIGIN + pathname });
 }
 
+// Single-segment SPA routes that can be opened directly / refreshed / shared
+// as clean path-based URLs (e.g. /wallet, /dashboard) in addition to hash form.
+const KNOWN_PATH_PAGES = new Set([
+  'home', 'outings', 'suggest', 'dashboard', 'galleries', 'admin',
+  'recommendations', 'blogs', 'about', 'how-it-works', 'careers',
+  'contact-support', 'cancellation-policy', 'safety-center', 'manage-trips',
+  'partners', 'affiliate', 'privacy-policy', 'terms-of-service', 'refund-policy',
+  'community-guidelines', 'wishlist', 'wallet', 'notifications',
+]);
+// Friendly path aliases → internal page key
+const PATH_ALIASES = {
+  'for-you': 'recommendations',
+  'my-gallery': 'galleries',
+  'galleries': 'galleries',
+  'profile': 'dashboard',
+};
+
 function resolvePageFromUrl() {
   const cleanPath = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
   if (cleanPath === '/') {
@@ -1068,6 +1085,15 @@ function resolvePageFromUrl() {
     if (slug) return 'outing-slug:' + slug;
     return 'outings';
   }
+  if (cleanPath === '/blogs') return 'blogs';
+  if (cleanPath.startsWith('/blogs/')) {
+    const slug = normalizeSlug(decodeURIComponent(cleanPath.replace('/blogs/', '')));
+    if (slug) return 'blog-' + slug;
+    return 'blogs';
+  }
+  const segment = normalizeSlug(decodeURIComponent(cleanPath.slice(1)));
+  if (PATH_ALIASES[segment]) return PATH_ALIASES[segment];
+  if (KNOWN_PATH_PAGES.has(segment)) return segment;
   return 'home';
 }
 
