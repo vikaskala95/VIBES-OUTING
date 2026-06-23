@@ -1,0 +1,1 @@
+import{a as o}from"./chunk-GXPICWIA.js";async function n(){return`<section><h1>Blogs</h1><ul>${(await o.get("/api/blogs").catch(()=>[])).slice(0,10).map(s=>`<li>${s.title}</li>`).join("")}</ul></section>`}export{n as renderBlogs};

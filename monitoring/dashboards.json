@@ -1,0 +1,21 @@
+{
+  "dashboards": [
+    {
+      "name": "Platform Health",
+      "widgets": [
+        "cpu.usage",
+        "memory.heapUsed",
+        "api.latency.p95",
+        "db.latency.p95"
+      ]
+    },
+    {
+      "name": "Business Failures",
+      "widgets": [
+        "failures.payment",
+        "failures.booking",
+        "failures.wallet"
+      ]
+    }
+  ]
+}

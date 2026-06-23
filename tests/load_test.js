@@ -207,6 +207,24 @@ async function runSurge(vus) {
   return { noDoubleCount, noOversell, confirmed, seatsAdded };
 }
 
+async function runBookingsPerDaySimulation(targetBookingsPerDay) {
+  const rps = targetBookingsPerDay / (24 * 60 * 60);
+  const vus = Math.max(50, Math.ceil(rps * 200));
+  const duration = 120;
+  console.log(`▶ Simulating ${targetBookingsPerDay} bookings/day (~${rps.toFixed(2)} req/s) using ${vus} VUs for ${duration}s`);
+  return runLoad(`Bookings/Day Simulation (${targetBookingsPerDay})`, vus, duration);
+}
+
+async function runWalletRechargeSurge(vus) {
+  console.log(`▶ Wallet recharge surge: ${vus} concurrent users`);
+  return runLoad('Wallet Recharge Surge', vus, arg('dur', 90));
+}
+
+async function runFlashSaleBookingSurge(vus) {
+  console.log(`▶ Flash sale booking surge: ${vus} concurrent users`);
+  return runLoad('Flash Sale Booking Surge', vus, arg('dur', 90));
+}
+
 function verdict(results) {
   const flat = [].concat(results).filter(Boolean);
   const worstErr = Math.max(0, ...flat.map((r) => r.errPct || 0));
@@ -221,6 +239,18 @@ function verdict(results) {
 (async () => {
   let results = [];
   switch (scenario) {
+    case 'phase7load':
+      results.push(await runLoad('Phase 7 Concurrent Users', arg('vus', 1000), arg('dur', 120)));
+      break;
+    case 'bookings-day':
+      results.push(await runBookingsPerDaySimulation(arg('bookings', 10000)));
+      break;
+    case 'wallet-surge':
+      results.push(await runWalletRechargeSurge(arg('vus', 1000)));
+      break;
+    case 'flash-sale-surge':
+      results.push(await runFlashSaleBookingSurge(arg('vus', 1000)));
+      break;
     case 'baseline':
       results.push(await runLoad('Baseline', arg('vus', 100), arg('dur', 60)));
       break;
@@ -240,7 +270,7 @@ function verdict(results) {
       await runSurge(arg('vus', 200));
       return;
     default:
-      console.log(`Unknown scenario "${scenario}". Use: baseline | load | stress | spike | soak | surge`);
+      console.log(`Unknown scenario "${scenario}". Use: baseline | load | stress | spike | soak | surge | phase7load | bookings-day | wallet-surge | flash-sale-surge`);
       process.exit(1);
   }
   verdict(results);

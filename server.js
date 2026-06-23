@@ -13,15 +13,65 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { body, param, validationResult } = require('express-validator');
+const { body, param, query, validationResult } = require('express-validator');
 const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const { OAuth2Client } = require('google-auth-library');
 const { mountMcpRoutes } = require('./MCP_Server/mcp-server');
+const { validateRequiredSecrets } = require('./backend/config/validate-env');
+const { initSentry, getSentryBrowserConfig } = require('./backend/services/sentry');
+const { snapshot: metricsSnapshot, markDbQuery } = require('./backend/services/metrics');
+const { requestMetricsMiddleware } = require('./backend/middleware/request-metrics');
+const {
+  loginLimiter,
+  signupLimiter,
+  forgotPasswordLimiter,
+  paymentLimiter,
+  walletRechargeLimiter,
+} = require('./backend/middleware/rate-limits');
+const { mountModularRoutes } = require('./backend/routes');
 
 const app = express();
 const IS_PROD = process.env.NODE_ENV === 'production';
+const sentry = initSentry();
+
+try {
+  validateRequiredSecrets(process.env);
+} catch (err) {
+  console.error(`❌ FATAL: ${err.message}`);
+  process.exit(1);
+}
+
+// ─── REAL-TIME NOTIFICATION HUB (SSE) ─────────────────────────
+const notificationSseClients = new Map(); // userId -> Set<res>
+
+function addNotificationSseClient(userId, res) {
+  const key = String(userId);
+  if (!notificationSseClients.has(key)) notificationSseClients.set(key, new Set());
+  notificationSseClients.get(key).add(res);
+}
+
+function removeNotificationSseClient(userId, res) {
+  const key = String(userId);
+  const set = notificationSseClients.get(key);
+  if (!set) return;
+  set.delete(res);
+  if (set.size === 0) notificationSseClients.delete(key);
+}
+
+function publishNotificationEvent(userId, event, payload = {}) {
+  const key = String(userId);
+  const set = notificationSseClients.get(key);
+  if (!set || set.size === 0) return;
+  const body = JSON.stringify({ event, ...payload, ts: new Date().toISOString() });
+  for (const client of set) {
+    try {
+      client.write(`event: ${event}\n`);
+      client.write(`data: ${body}\n\n`);
+    } catch (_) {}
+  }
+}
 
 function envFlag(value, defaultValue = false) {
   if (value === undefined || value === null || value === '') return defaultValue;
@@ -69,20 +119,50 @@ if (!JWT_SECRET || JWT_SECRET === 'CHANGE_ME_TO_A_RANDOM_64_CHAR_STRING') {
   console.warn('⚠ WARNING: Using random JWT_SECRET. Set JWT_SECRET in .env for persistence.');
 }
 const JWT_SECRET_FINAL = JWT_SECRET || crypto.randomBytes(64).toString('hex');
-const JWT_EXPIRES = '7d';
+const ACCESS_TOKEN_EXPIRES = '15m';
+const REFRESH_TOKEN_EXPIRES = '7d';
+const ACCESS_TOKEN_COOKIE_MAX_AGE_MS = 15 * 60 * 1000;
+const REFRESH_TOKEN_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const ACCESS_TOKEN_COOKIE_NAME = 'vibes_at';
+const REFRESH_TOKEN_COOKIE_NAME = 'vibes_rt';
 const BCRYPT_ROUNDS = 12;
 
 // ─── SECURITY: Google OAuth 2.0 Client ──────────────────────────
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
+app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
+const cspScriptHashes = (process.env.CSP_SCRIPT_HASHES || '')
+  .split(',')
+  .map((item) => item.trim())
+  .filter(Boolean);
+
 // ─── SECURITY: Helmet — Comprehensive HTTP security headers ────
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com", "https://cdnjs.cloudflare.com", "https://www.googletagmanager.com", "https://www.google-analytics.com", "https://accounts.google.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://accounts.google.com"],
+      scriptSrc: [
+        "'self'",
+        (req, res) => `'nonce-${res.locals.cspNonce}'`,
+        ...cspScriptHashes,
+        'https://checkout.razorpay.com',
+        'https://cdnjs.cloudflare.com',
+        'https://www.googletagmanager.com',
+        'https://www.google-analytics.com',
+        'https://accounts.google.com',
+      ],
+      styleSrc: [
+        "'self'",
+        (req, res) => `'nonce-${res.locals.cspNonce}'`,
+        'https://fonts.googleapis.com',
+        'https://cdnjs.cloudflare.com',
+        'https://accounts.google.com',
+      ],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://images.unsplash.com", "https://*.unsplash.com", "https://img.icons8.com", "https://*.razorpay.com", "https://www.google-analytics.com", "https://lh3.googleusercontent.com", "https://*.googleusercontent.com"],
       connectSrc: ["'self'", "https://api.razorpay.com", "https://lumberjack.razorpay.com", "https://vibesouting.in", "https://www.vibesouting.in", "https://api.vibesouting.in", "https://www.google-analytics.com", "https://analytics.google.com", "https://accounts.google.com", "https://oauth2.googleapis.com"],
@@ -91,7 +171,7 @@ app.use(helmet({
       baseUri: ["'self'"],
       formAction: ["'self'"],
       frameAncestors: ["'none'"],
-      scriptSrcAttr: ["'unsafe-inline'"],
+      scriptSrcAttr: ["'none'"],
       upgradeInsecureRequests: IS_PROD ? [] : null,
     },
   },
@@ -157,23 +237,6 @@ app.use(compression());
 app.use(cookieParser(process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex')));
 
 // ─── SECURITY: Rate Limiting — Brute-force & DDoS mitigation ───
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100, // Relaxed: Railway proxy shares IP across all users
-  message: { success: false, message: 'Too many attempts. Please try again after 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true,
-});
-
-const signupLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // 5 signups per hour per IP
-  message: { success: false, message: 'Too many accounts created. Try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: parseInt(process.env.API_RATE_LIMIT) || 300,
@@ -182,31 +245,50 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const passwordResetLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 3,
-  message: { success: false, message: 'Too many password reset requests. Try later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 app.use('/api/', apiLimiter);
-app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth/signup', signupLimiter);
-app.use('/api/auth/forgot-password', passwordResetLimiter);
+app.use('/api/auth/forgot-password', forgotPasswordLimiter);
+app.use('/api/bookings/create-order', paymentLimiter);
+app.use('/api/bookings/verify-payment', paymentLimiter);
+app.use('/api/bookings/pay-remaining', paymentLimiter);
+app.use('/api/bookings/verify-remaining', paymentLimiter);
+app.use('/api/bookings/payment-failed', paymentLimiter);
+app.use('/api/wallet/recharge/create-order', walletRechargeLimiter);
+app.use('/api/wallet/recharge/verify', walletRechargeLimiter);
+app.use('/api/', requestMetricsMiddleware);
 
 // ─── HEALTH CHECK (before body parsing, no rate limit) ──────────
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
 });
 
+app.get('/api/metrics', (req, res) => {
+  res.json(metricsSnapshot());
+});
+
+app.get('/api/metrics/dashboard', (req, res) => {
+  const dashboardPath = path.join(__dirname, 'monitoring', 'dashboards.json');
+  if (!fs.existsSync(dashboardPath)) {
+    return res.status(404).json({ success: false, message: 'Dashboard definition not found' });
+  }
+  const dashboard = JSON.parse(fs.readFileSync(dashboardPath, 'utf8'));
+  return res.json({ success: true, dashboard });
+});
+
+app.get('/api/monitoring/sentry-config', (req, res) => {
+  res.json({ success: true, ...getSentryBrowserConfig() });
+});
+
 // ─── LOGGING: Request logger for API debugging ─────────────────
 app.use('/api/', (req, res, next) => {
+  req.requestId = extractRequestId(req);
+  res.setHeader('X-Request-ID', req.requestId);
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
     if (duration > 3000 || res.statusCode >= 400) {
-      console.log(`[API] ${req.method} ${req.originalUrl} → ${res.statusCode} (${duration}ms) origin=${req.headers.origin || 'none'}`);
+      console.log(`[API] ${req.method} ${req.originalUrl} → ${res.statusCode} (${duration}ms) reqId=${req.requestId} origin=${req.headers.origin || 'none'}`);
     }
   });
   next();
@@ -219,6 +301,7 @@ app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 // ─── STATIC FILES: Serve in dev/monolith mode, skip in API-only mode ─
 if (!process.env.API_ONLY) {
   app.use(express.static(path.join(__dirname, 'public'), {
+    index: false,
     dotfiles: 'deny',
     etag: true,
     maxAge: IS_PROD ? '1d' : 0,
@@ -248,7 +331,7 @@ app.use((req, res, next) => {
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method) && req.path.startsWith('/api/')) {
     // If auth comes from cookie only (no Authorization header), check Origin/Referer
     const authHeader = req.headers.authorization;
-    if (!authHeader && req.cookies && req.cookies.vibes_token) {
+    if (!authHeader && req.cookies && (req.cookies[ACCESS_TOKEN_COOKIE_NAME] || req.cookies[REFRESH_TOKEN_COOKIE_NAME])) {
       const origin = req.headers.origin || req.headers.referer || '';
       let originHost = '';
       try {
@@ -264,6 +347,8 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+mountModularRoutes(app);
 
 // ─── RAZORPAY SETUP ─────────────────────────────────────────────
 const RAZORPAY_CONFIGURED = !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
@@ -559,8 +644,17 @@ if (USE_PG) {
 
 // Unified async query interface — same API regardless of backend
 async function dbQuery(sql, params = []) {
+  const normalizedSql = String(sql || '').trim().toLowerCase();
+  const started = process.hrtime.bigint();
   if (USE_PG) {
     const result = await pool.query(sql, params);
+    markDbQuery(Number(process.hrtime.bigint() - started) / 1e6);
+    if (normalizedSql.startsWith('insert into notifications')) {
+      const userId = Number(params[0]);
+      if (!Number.isNaN(userId) && userId > 0) {
+        publishNotificationEvent(userId, 'notification.created', { userId });
+      }
+    }
     return { rows: result.rows, rowCount: result.rowCount };
   }
   // Translate $1,$2... → ? for SQLite
@@ -569,6 +663,7 @@ async function dbQuery(sql, params = []) {
   const trimmed = sqliteSql.trim().toUpperCase();
   if (trimmed.startsWith('SELECT') || trimmed.startsWith('WITH')) {
     const rows = sqliteDb.prepare(sqliteSql).all(...params);
+    markDbQuery(Number(process.hrtime.bigint() - started) / 1e6);
     return { rows, rowCount: rows.length };
   }
   if (trimmed.startsWith('INSERT') && / RETURNING /i.test(sqliteSql)) {
@@ -576,47 +671,120 @@ async function dbQuery(sql, params = []) {
     const withoutReturning = sqliteSql.replace(/ RETURNING .*/i, '');
     const stmt = sqliteDb.prepare(withoutReturning);
     const info = stmt.run(...params);
-    // Build a minimal returning row with id
-    return { rows: [{ id: info.lastInsertRowid }], rowCount: info.changes };
+    markDbQuery(Number(process.hrtime.bigint() - started) / 1e6);
+    // Build a minimal returning row with id only when a row was inserted.
+    if (info.changes > 0) return { rows: [{ id: info.lastInsertRowid }], rowCount: info.changes };
+    return { rows: [], rowCount: info.changes };
   }
   const info = sqliteDb.prepare(sqliteSql).run(...params);
+  markDbQuery(Number(process.hrtime.bigint() - started) / 1e6);
+  if (normalizedSql.startsWith('insert into notifications')) {
+    const userId = Number(params[0]);
+    if (!Number.isNaN(userId) && userId > 0) {
+      publishNotificationEvent(userId, 'notification.created', { userId });
+    }
+  }
   return { rows: [], rowCount: info.changes };
 }
 
 // ─── SECURITY: JWT Auth Middleware ──────────────────────────────
-function generateToken(user) {
+function generateAccessToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: user.id, email: user.email, role: user.role, tv: Number(user.token_version || 0), typ: 'access' },
     JWT_SECRET_FINAL,
-    { expiresIn: JWT_EXPIRES, issuer: 'vibes-outing', audience: 'vibes-outing-app' }
+    { expiresIn: ACCESS_TOKEN_EXPIRES, issuer: 'vibes-outing', audience: 'vibes-outing-app' }
   );
 }
 
+function generateRefreshToken(user, rid) {
+  return jwt.sign(
+    { id: user.id, tv: Number(user.token_version || 0), rid, typ: 'refresh' },
+    JWT_SECRET_FINAL,
+    { expiresIn: REFRESH_TOKEN_EXPIRES, issuer: 'vibes-outing', audience: 'vibes-outing-app' }
+  );
+}
+
+function hashToken(token) {
+  return crypto.createHash('sha256').update(String(token || '')).digest('hex');
+}
+
+async function storeRefreshSession(userId, refreshToken) {
+  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_COOKIE_MAX_AGE_MS).toISOString();
+  await dbQuery(
+    'UPDATE users SET refresh_token_hash = $1, refresh_token_expires_at = $2 WHERE id = $3',
+    [hashToken(refreshToken), expiresAt, userId]
+  );
+}
+
+async function invalidateUserSession(userId, invalidateAccess = true) {
+  if (!userId) return;
+  if (invalidateAccess) {
+    await dbQuery(
+      'UPDATE users SET refresh_token_hash = NULL, refresh_token_expires_at = NULL, token_version = COALESCE(token_version, 0) + 1 WHERE id = $1',
+      [userId]
+    );
+    return;
+  }
+  await dbQuery(
+    'UPDATE users SET refresh_token_hash = NULL, refresh_token_expires_at = NULL WHERE id = $1',
+    [userId]
+  );
+}
+
+async function issueAuthSession(res, user) {
+  const rid = crypto.randomBytes(16).toString('hex');
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user, rid);
+  await storeRefreshSession(user.id, refreshToken);
+  setAuthCookies(res, accessToken, refreshToken);
+  return { accessToken };
+}
+
+function clearAuthCookies(res) {
+  const clearOpts = {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+  };
+  res.clearCookie(ACCESS_TOKEN_COOKIE_NAME, clearOpts);
+  res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, clearOpts);
+}
+
 function authMiddleware(req, res, next) {
-  // Support both Bearer token and httpOnly cookie
+  // Support both Bearer token and httpOnly access token cookie
   let token = null;
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
-  } else if (req.cookies && req.cookies.vibes_token) {
-    token = req.cookies.vibes_token;
+  } else if (req.cookies && req.cookies[ACCESS_TOKEN_COOKIE_NAME]) {
+    token = req.cookies[ACCESS_TOKEN_COOKIE_NAME];
   }
 
   if (!token) {
     return res.status(401).json({ success: false, message: 'Authentication required' });
   }
-  try {
+  (async () => {
     const decoded = jwt.verify(token, JWT_SECRET_FINAL, {
       issuer: 'vibes-outing',
       audience: 'vibes-outing-app',
     });
+    if (decoded.typ !== 'access') {
+      clearAuthCookies(res);
+      return res.status(401).json({ success: false, message: 'Invalid token type' });
+    }
+    const userResult = await dbQuery('SELECT token_version FROM users WHERE id = $1', [decoded.id]);
+    const user = userResult.rows[0];
+    if (!user || Number(user.token_version || 0) !== Number(decoded.tv || 0)) {
+      clearAuthCookies(res);
+      return res.status(401).json({ success: false, message: 'Session has been invalidated' });
+    }
     req.user = decoded;
-    next();
-  } catch (err) {
-    // Clear invalid cookie
-    res.clearCookie('vibes_token');
+    return next();
+  })().catch(() => {
+    clearAuthCookies(res);
     return res.status(401).json({ success: false, message: 'Invalid or expired token' });
-  }
+  });
 }
 
 function adminMiddleware(req, res, next) {
@@ -685,10 +853,83 @@ function clearLoginAttempts(identifier) {
 // ─── VIBES WALLET: New-user reward constants & helpers ──────────
 const WALLET_REWARD_AMOUNT = parseInt(process.env.WALLET_REWARD_AMOUNT, 10) || 100;
 const REWARD_DESC_PREFIX = 'New User Reward';
+const BOOKING_RESERVATION_TTL_MINUTES = parseInt(process.env.BOOKING_RESERVATION_TTL_MINUTES, 10) || 15;
 
 // New-user welcome bonus (credited once at first registration — manual or Google)
 const WELCOME_BONUS_AMOUNT = parseInt(process.env.WELCOME_BONUS_AMOUNT, 10) || 100;
 const WELCOME_BONUS_DESC = 'Welcome Bonus';
+
+function extractRequestId(req) {
+  const fromHeader = (req.headers['x-request-id'] || '').toString().trim();
+  const fromBody = req.body && req.body.request_id ? String(req.body.request_id).trim() : '';
+  const candidate = fromHeader || fromBody;
+  if (candidate && /^[A-Za-z0-9._:-]{8,128}$/.test(candidate)) return candidate;
+  return crypto.randomUUID();
+}
+
+function parseDbTimestamp(value) {
+  if (!value) return null;
+  const raw = String(value);
+  // SQLite may return "YYYY-MM-DD HH:mm:ss" without timezone; interpret as UTC.
+  const normalized = /Z$/i.test(raw) ? raw : raw.replace(' ', 'T') + 'Z';
+  const d = new Date(normalized);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+async function bookingAuditLog(eventType, payload = {}) {
+  try {
+    await dbQuery(
+      'INSERT INTO booking_audit_logs (event_type, request_id, user_id, booking_id, outing_id, details) VALUES ($1, $2, $3, $4, $5, $6)',
+      [
+        String(eventType || 'UNKNOWN'),
+        payload.requestId || null,
+        payload.userId || null,
+        payload.bookingId || null,
+        payload.outingId || null,
+        JSON.stringify(payload.details || {}),
+      ]
+    );
+  } catch (_) {
+    // Audit logging must never block payment/booking flow.
+  }
+}
+
+async function releaseExpiredReservations(targetOutingId = null) {
+  return withTransaction(async (q) => {
+    const whereOuting = targetOutingId ? ' AND outing_id = $1' : '';
+    let expired = [];
+    if (USE_PG) {
+      expired = (await q(
+        `UPDATE booking_reservations
+         SET status = 'expired'
+         WHERE status = 'reserved' AND expires_at <= NOW()${whereOuting}
+         RETURNING id, booking_id, outing_id, user_id, seat_count`,
+        targetOutingId ? [targetOutingId] : []
+      )).rows;
+    } else {
+      expired = (await q(
+        `SELECT id, booking_id, outing_id, user_id, seat_count
+         FROM booking_reservations
+         WHERE status = 'reserved' AND expires_at <= CURRENT_TIMESTAMP${whereOuting}`,
+        targetOutingId ? [targetOutingId] : []
+      )).rows;
+      for (const row of expired) {
+        await q("UPDATE booking_reservations SET status = 'expired' WHERE id = $1", [row.id]);
+      }
+    }
+
+    for (const row of expired) {
+      await q("UPDATE bookings SET payment_status = 'failed' WHERE id = $1 AND payment_status = 'pending'", [row.booking_id]);
+      await bookingAuditLog('RESERVATION_EXPIRED', {
+        bookingId: row.booking_id,
+        userId: row.user_id,
+        outingId: row.outing_id,
+        details: { reservation_id: row.id, seat_count: row.seat_count },
+      });
+    }
+    return expired.length;
+  }).catch(() => 0);
+}
 
 // Run a set of DB operations inside a single atomic transaction.
 // The callback receives a `q(sql, params)` function bound to the transaction.
@@ -731,11 +972,24 @@ async function grantWelcomeBonusTx(q, userId) {
   const lockClause = USE_PG ? ' FOR UPDATE' : '';
   const row = (await q(`SELECT welcome_bonus_granted FROM users WHERE id = $1${lockClause}`, [userId])).rows[0];
   if (!row) return false;
+  const existingBonusTxn = (await q(
+    `SELECT id FROM wallet_transactions WHERE user_id = $1 AND type = 'credit' AND (transaction_type = 'WELCOME_BONUS' OR description = $2) LIMIT 1`,
+    [userId, WELCOME_BONUS_DESC]
+  )).rows[0];
+  if (existingBonusTxn) {
+    await q(
+      USE_PG
+        ? 'UPDATE users SET welcome_bonus_granted = TRUE WHERE id = $1'
+        : 'UPDATE users SET welcome_bonus_granted = 1 WHERE id = $1',
+      [userId]
+    );
+    return false;
+  }
   const alreadyGranted = USE_PG ? row.welcome_bonus_granted === true : !!row.welcome_bonus_granted;
   if (alreadyGranted) return false;
   await q(
-    'INSERT INTO wallet_transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
-    [userId, 'credit', WELCOME_BONUS_AMOUNT, WELCOME_BONUS_DESC]
+    'INSERT INTO wallet_transactions (user_id, type, transaction_type, reference_id, amount, description) VALUES ($1, $2, $3, $4, $5, $6)',
+    [userId, 'credit', 'WELCOME_BONUS', `WELCOME_BONUS:${userId}`, WELCOME_BONUS_AMOUNT, WELCOME_BONUS_DESC]
   );
   await q(
     USE_PG
@@ -796,8 +1050,8 @@ async function creditBookingReward(booking) {
     return 0;
   }
   await dbQuery(
-    'INSERT INTO wallet_transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
-    [user.id, 'credit', WALLET_REWARD_AMOUNT, `${REWARD_DESC_PREFIX} — Booking #${booking.id}`]
+    'INSERT INTO wallet_transactions (user_id, type, transaction_type, reference_id, amount, description) VALUES ($1, $2, $3, $4, $5, $6)',
+    [user.id, 'credit', 'BOOKING_REWARD', `BOOKING:${booking.id}`, WALLET_REWARD_AMOUNT, `${REWARD_DESC_PREFIX} — Booking #${booking.id}`]
   );
   await dbQuery('INSERT INTO notifications (user_id, type, title, message) VALUES ($1, $2, $3, $4)',
     [user.id, 'wallet', `🎁 ₹${WALLET_REWARD_AMOUNT} Vibes Wallet Credit!`, `You earned ₹${WALLET_REWARD_AMOUNT} reward credit on your booking. Use it as a discount on your next adventure!`]).catch(() => {});
@@ -827,8 +1081,8 @@ async function redeemWalletDiscount(userId, bookingId, requestedAmount) {
     const redeem = Math.max(0, Math.min(balance, want));
     if (redeem <= 0) return 0;
     await q(
-      'INSERT INTO wallet_transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
-      [userId, 'debit', redeem, `Booking Discount — Booking #${bookingId}`]
+      'INSERT INTO wallet_transactions (user_id, type, transaction_type, reference_id, amount, description) VALUES ($1, $2, $3, $4, $5, $6)',
+      [userId, 'debit', 'BOOKING_DISCOUNT', `BOOKING:${bookingId}`, redeem, `Booking Discount — Booking #${bookingId}`]
     );
     securityLog('WALLET_DISCOUNT_REDEEMED', { userId, bookingId, amount: redeem });
     return redeem;
@@ -849,6 +1103,9 @@ async function initDatabase() {
         role TEXT DEFAULT 'user',
         must_change_password INTEGER DEFAULT 0,
         welcome_bonus_granted BOOLEAN DEFAULT FALSE,
+        token_version INTEGER DEFAULT 0,
+        refresh_token_hash TEXT,
+        refresh_token_expires_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`);
     await dbQuery(`CREATE TABLE IF NOT EXISTS outings (
@@ -986,6 +1243,17 @@ async function initDatabase() {
       )`);
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)').catch(() => {});
 
+    // Wishlist table
+    await dbQuery(`CREATE TABLE IF NOT EXISTS wishlist (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        outing_id INTEGER NOT NULL REFERENCES outings(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, outing_id)
+      )`);
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_wishlist_user_id ON wishlist(user_id)').catch(() => {});
+    await dbQuery('CREATE INDEX IF NOT EXISTS idx_wishlist_outing_id ON wishlist(outing_id)').catch(() => {});
+
     // Support tickets table
     await dbQuery(`CREATE TABLE IF NOT EXISTS support_tickets (
         id SERIAL PRIMARY KEY,
@@ -1007,11 +1275,14 @@ async function initDatabase() {
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id),
         type TEXT NOT NULL,
+        transaction_type TEXT DEFAULT 'GENERAL',
+        reference_id TEXT,
         amount INTEGER NOT NULL,
         description TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`);
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_wallet_txn_user_id ON wallet_transactions(user_id)').catch(() => {});
+    await dbQuery("CREATE UNIQUE INDEX IF NOT EXISTS uq_wallet_welcome_bonus ON wallet_transactions(user_id) WHERE transaction_type = 'WELCOME_BONUS'").catch(() => {});
 
     // Galleries table
     await dbQuery(`CREATE TABLE IF NOT EXISTS galleries (
@@ -1111,7 +1382,7 @@ async function initDatabase() {
     await dbQuery('CREATE INDEX IF NOT EXISTS idx_boarding_logs_pass_id ON boarding_logs(pass_id)').catch(() => {});
   } else {
     // SQLite: tables one at a time (exec doesn't support multi-statement in all versions)
-    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password TEXT NOT NULL, interests TEXT DEFAULT '', role TEXT DEFAULT 'user', must_change_password INTEGER DEFAULT 0, welcome_bonus_granted INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, phone TEXT, password TEXT NOT NULL, interests TEXT DEFAULT '', role TEXT DEFAULT 'user', must_change_password INTEGER DEFAULT 0, welcome_bonus_granted INTEGER DEFAULT 0, token_version INTEGER DEFAULT 0, refresh_token_hash TEXT, refresh_token_expires_at DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS outings (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, slug TEXT DEFAULT '', location TEXT NOT NULL, description TEXT, image_url TEXT DEFAULT '', images TEXT DEFAULT '[]', date TEXT NOT NULL, time TEXT DEFAULT '10:00 AM', cost INTEGER NOT NULL, max_participants INTEGER DEFAULT 20, current_participants INTEGER DEFAULT 0, status TEXT DEFAULT 'active', category TEXT DEFAULT '', trip_type TEXT DEFAULT 'one_day', created_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS bookings (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, participants INTEGER DEFAULT 1, participant_names TEXT DEFAULT '', total_amount INTEGER NOT NULL, token_amount INTEGER DEFAULT 0, remaining_amount INTEGER DEFAULT 0, payment_status TEXT DEFAULT 'pending', remaining_payment_status TEXT DEFAULT 'pending', payment_id TEXT, remaining_payment_id TEXT, selected_date TEXT DEFAULT '', departure_time TEXT DEFAULT '', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (outing_id) REFERENCES outings(id))`);
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS suggestions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, location TEXT NOT NULL, description TEXT, budget TEXT, status TEXT DEFAULT 'pending', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
@@ -1137,14 +1408,20 @@ async function initDatabase() {
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT DEFAULT 'general', title TEXT NOT NULL, message TEXT NOT NULL, read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)`); } catch(e) {}
 
+    // Wishlist table
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS wishlist (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, outing_id INTEGER NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, outing_id), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (outing_id) REFERENCES outings(id) ON DELETE CASCADE)`);
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_wishlist_user_id ON wishlist(user_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_wishlist_outing_id ON wishlist(outing_id)`); } catch(e) {}
+
     // Support tickets table
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS support_tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, category TEXT NOT NULL, subject TEXT NOT NULL, priority TEXT DEFAULT 'Medium', message TEXT NOT NULL, status TEXT DEFAULT 'open', admin_reply TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets(user_id)`); } catch(e) {}
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status)`); } catch(e) {}
 
     // Wallet transactions table
-    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS wallet_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, description TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
+    sqliteDb.exec(`CREATE TABLE IF NOT EXISTS wallet_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT NOT NULL, transaction_type TEXT DEFAULT 'GENERAL', reference_id TEXT, amount INTEGER NOT NULL, description TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`);
     try { sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_user_id ON wallet_transactions(user_id)`); } catch(e) {}
+    try { sqliteDb.exec(`CREATE UNIQUE INDEX IF NOT EXISTS uq_wallet_welcome_bonus ON wallet_transactions(user_id) WHERE transaction_type = 'WELCOME_BONUS'`); } catch(e) {}
 
     // Galleries table
     sqliteDb.exec(`CREATE TABLE IF NOT EXISTS galleries (id INTEGER PRIMARY KEY AUTOINCREMENT, outing_id INTEGER NOT NULL, title TEXT NOT NULL, cover_image TEXT DEFAULT '', created_by INTEGER NOT NULL, published INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (outing_id) REFERENCES outings(id), FOREIGN KEY (created_by) REFERENCES users(id))`);
@@ -1240,8 +1517,56 @@ async function initDatabase() {
   // Migration: add one-time welcome bonus flag to users if missing
   if (USE_PG) {
     await dbQuery("ALTER TABLE users ADD COLUMN IF NOT EXISTS welcome_bonus_granted BOOLEAN DEFAULT FALSE").catch(() => {});
+    await dbQuery("ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 0").catch(() => {});
+    await dbQuery("ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token_hash TEXT").catch(() => {});
+    await dbQuery("ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token_expires_at TIMESTAMP").catch(() => {});
   } else {
     await dbQuery("ALTER TABLE users ADD COLUMN welcome_bonus_granted INTEGER DEFAULT 0").catch(() => {});
+    await dbQuery("ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 0").catch(() => {});
+    await dbQuery("ALTER TABLE users ADD COLUMN refresh_token_hash TEXT").catch(() => {});
+    await dbQuery("ALTER TABLE users ADD COLUMN refresh_token_expires_at DATETIME").catch(() => {});
+  }
+
+  // Migration: wallet transaction classification for idempotent rewards/bonuses
+  if (USE_PG) {
+    await dbQuery("ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS transaction_type TEXT DEFAULT 'GENERAL'").catch(() => {});
+    await dbQuery("ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS reference_id TEXT").catch(() => {});
+  } else {
+    await dbQuery("ALTER TABLE wallet_transactions ADD COLUMN transaction_type TEXT DEFAULT 'GENERAL'").catch(() => {});
+    await dbQuery("ALTER TABLE wallet_transactions ADD COLUMN reference_id TEXT").catch(() => {});
+  }
+  await dbQuery("UPDATE wallet_transactions SET transaction_type = 'WELCOME_BONUS' WHERE transaction_type = 'GENERAL' AND type = 'credit' AND description = $1", [WELCOME_BONUS_DESC]).catch(() => {});
+  if (USE_PG) {
+    await dbQuery(`
+      DELETE FROM wallet_transactions wt
+      USING wallet_transactions newer
+      WHERE wt.user_id = newer.user_id
+        AND wt.id > newer.id
+        AND wt.type = 'credit'
+        AND newer.type = 'credit'
+        AND (wt.transaction_type = 'WELCOME_BONUS' OR wt.description = $1)
+        AND (newer.transaction_type = 'WELCOME_BONUS' OR newer.description = $1)
+    `, [WELCOME_BONUS_DESC]).catch(() => {});
+  } else {
+    await dbQuery(`
+      DELETE FROM wallet_transactions
+      WHERE id IN (
+        SELECT wt.id
+        FROM wallet_transactions wt
+        JOIN wallet_transactions newer
+          ON wt.user_id = newer.user_id
+         AND wt.id > newer.id
+        WHERE wt.type = 'credit'
+          AND newer.type = 'credit'
+          AND (wt.transaction_type = 'WELCOME_BONUS' OR wt.description = $1)
+          AND (newer.transaction_type = 'WELCOME_BONUS' OR newer.description = $1)
+      )
+    `, [WELCOME_BONUS_DESC]).catch(() => {});
+  }
+  if (USE_PG) {
+    await dbQuery("CREATE UNIQUE INDEX IF NOT EXISTS uq_wallet_welcome_bonus ON wallet_transactions(user_id) WHERE transaction_type = 'WELCOME_BONUS'").catch(() => {});
+  } else {
+    await dbQuery("CREATE UNIQUE INDEX IF NOT EXISTS uq_wallet_welcome_bonus ON wallet_transactions(user_id) WHERE transaction_type = 'WELCOME_BONUS'").catch(() => {});
   }
 
   // Migration: add images column to outings if missing
@@ -1334,10 +1659,66 @@ async function initDatabase() {
   // Migration: add selected_date and departure_time columns to bookings if missing
   await dbQuery("ALTER TABLE bookings ADD COLUMN selected_date TEXT DEFAULT ''").catch(() => {});
   await dbQuery("ALTER TABLE bookings ADD COLUMN departure_time TEXT DEFAULT ''").catch(() => {});
+  await dbQuery("ALTER TABLE bookings ADD COLUMN payment_order_id TEXT").catch(() => {});
+  await dbQuery("ALTER TABLE bookings ADD COLUMN create_request_id TEXT").catch(() => {});
 
   // Migration: Vibes Wallet rewards — track per-booking discount & reward issuance
   await dbQuery("ALTER TABLE bookings ADD COLUMN wallet_discount INTEGER DEFAULT 0").catch(() => {});
   await dbQuery("ALTER TABLE bookings ADD COLUMN reward_credited INTEGER DEFAULT 0").catch(() => {});
+
+  // Migration: booking reservation + audit log tables for oversell prevention and reliability
+  await dbQuery(`CREATE TABLE IF NOT EXISTS booking_reservations (
+      id SERIAL PRIMARY KEY,
+      booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+      outing_id INTEGER NOT NULL REFERENCES outings(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      seat_count INTEGER NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      status TEXT DEFAULT 'reserved',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`).catch(async () => {
+      await dbQuery(`CREATE TABLE IF NOT EXISTS booking_reservations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id INTEGER NOT NULL,
+        outing_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        seat_count INTEGER NOT NULL,
+        expires_at DATETIME NOT NULL,
+        status TEXT DEFAULT 'reserved',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+        FOREIGN KEY (outing_id) REFERENCES outings(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )`).catch(() => {});
+    });
+
+  await dbQuery(`CREATE TABLE IF NOT EXISTS booking_audit_logs (
+      id SERIAL PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      request_id TEXT,
+      user_id INTEGER,
+      booking_id INTEGER,
+      outing_id INTEGER,
+      details TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`).catch(async () => {
+      await dbQuery(`CREATE TABLE IF NOT EXISTS booking_audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,
+        request_id TEXT,
+        user_id INTEGER,
+        booking_id INTEGER,
+        outing_id INTEGER,
+        details TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`).catch(() => {});
+    });
+
+  await dbQuery('CREATE UNIQUE INDEX IF NOT EXISTS uq_booking_reservation_booking ON booking_reservations(booking_id)').catch(() => {});
+  await dbQuery('CREATE INDEX IF NOT EXISTS idx_booking_reservations_outing_status_expiry ON booking_reservations(outing_id, status, expires_at)').catch(() => {});
+  await dbQuery('CREATE INDEX IF NOT EXISTS idx_booking_audit_logs_booking ON booking_audit_logs(booking_id, created_at)').catch(() => {});
+  await dbQuery('CREATE INDEX IF NOT EXISTS idx_booking_audit_logs_request ON booking_audit_logs(request_id)').catch(() => {});
+  await dbQuery('CREATE UNIQUE INDEX IF NOT EXISTS uq_booking_create_request ON bookings(user_id, create_request_id)').catch(() => {});
 
   // Migration: auto-detect trip_type for existing outings (also fixes wrongly defaulted 'one_day')
   const allOutings = (await dbQuery("SELECT id, title, description FROM outings")).rows;
@@ -1370,12 +1751,19 @@ function loadDefaultOutings() {
 }
 
 // ─── SECURITY: Set secure cookie helper ─────────────────────────
-function setAuthCookie(res, token) {
-  res.cookie('vibes_token', token, {
+function setAuthCookies(res, accessToken, refreshToken) {
+  res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, {
     httpOnly: true,
-    secure: IS_PROD,
-    sameSite: IS_PROD ? 'none' : 'strict', // 'none' required for cross-origin (Vercel→Railway)
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    secure: true,
+    sameSite: 'strict',
+    maxAge: ACCESS_TOKEN_COOKIE_MAX_AGE_MS,
+    path: '/',
+  });
+  res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    maxAge: REFRESH_TOKEN_COOKIE_MAX_AGE_MS,
     path: '/',
   });
 }
@@ -1401,13 +1789,12 @@ app.post('/api/auth/signup', [
       );
       const userId = result.rows[0].id;
       const granted = await grantWelcomeBonusTx(q, userId);
-      const created = (await q('SELECT id, name, email, role FROM users WHERE id = $1', [userId])).rows[0];
+      const created = (await q('SELECT id, name, email, role, token_version FROM users WHERE id = $1', [userId])).rows[0];
       return { user: created, bonusGranted: granted };
     });
-    const token = generateToken(user);
-    setAuthCookie(res, token);
+    const { accessToken } = await issueAuthSession(res, user);
     securityLog('SIGNUP', { userId: user.id, email, ip: req.ip });
-    res.json({ success: true, user, token, bonusGranted, bonusAmount: bonusGranted ? WELCOME_BONUS_AMOUNT : 0 });
+    res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role }, token: accessToken, bonusGranted, bonusAmount: bonusGranted ? WELCOME_BONUS_AMOUNT : 0 });
   } catch (e) {
     res.status(400).json({ success: false, message: 'Email already exists' });
   }
@@ -1427,7 +1814,7 @@ app.post('/api/auth/login', [
     return res.status(429).json({ success: false, message: 'Account temporarily locked due to too many failed attempts. Try again in 15 minutes.' });
   }
 
-  const userResult = await dbQuery('SELECT id, name, email, role, password as hashed FROM users WHERE email = $1', [email]);
+  const userResult = await dbQuery('SELECT id, name, email, role, token_version, password as hashed FROM users WHERE email = $1', [email]);
   const user = userResult.rows[0];
 
   // Constant-time response for non-existent users (prevent user enumeration)
@@ -1446,10 +1833,9 @@ app.post('/api/auth/login', [
   }
 
   clearLoginAttempts(lockoutKey);
-  const token = generateToken({ id: user.id, email: user.email, role: user.role });
-  setAuthCookie(res, token);
+  const { accessToken } = await issueAuthSession(res, user);
   securityLog('LOGIN_SUCCESS', { userId: user.id, email, ip: req.ip });
-  res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
+  res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role }, token: accessToken });
 });
 
 // ─── GOOGLE OAUTH: Sign in / Sign up with Google ────────────────
@@ -1481,12 +1867,12 @@ app.post('/api/auth/google', [
 
   try {
     // Check if user exists by google_id or email
-    let user = (await dbQuery('SELECT id, name, email, role, google_id, avatar_url FROM users WHERE google_id = $1', [googleId])).rows[0];
+    let user = (await dbQuery('SELECT id, name, email, role, token_version, google_id, avatar_url FROM users WHERE google_id = $1', [googleId])).rows[0];
     let bonusGranted = false;
 
     if (!user) {
       // Check by email — link Google account to existing email user
-      user = (await dbQuery('SELECT id, name, email, role, google_id, avatar_url FROM users WHERE email = $1', [email])).rows[0];
+      user = (await dbQuery('SELECT id, name, email, role, token_version, google_id, avatar_url FROM users WHERE email = $1', [email])).rows[0];
 
       if (user) {
         // Link Google account to existing user — NO welcome bonus (account already registered)
@@ -1504,7 +1890,7 @@ app.post('/api/auth/google', [
           );
           const userId = result.rows[0].id;
           const g = await grantWelcomeBonusTx(q, userId);
-          const row = (await q('SELECT id, name, email, role FROM users WHERE id = $1', [userId])).rows[0];
+          const row = (await q('SELECT id, name, email, role, token_version FROM users WHERE id = $1', [userId])).rows[0];
           return { created: row, granted: g };
         });
         user = created;
@@ -1520,13 +1906,12 @@ app.post('/api/auth/google', [
       }
     }
 
-    const token = generateToken({ id: user.id, email: user.email, role: user.role });
-    setAuthCookie(res, token);
+    const { accessToken } = await issueAuthSession(res, user);
     securityLog('GOOGLE_LOGIN', { userId: user.id, email, ip: req.ip });
     res.json({
       success: true,
       user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar_url: user.avatar_url || '' },
-      token,
+      token: accessToken,
       bonusGranted,
       bonusAmount: bonusGranted ? WELCOME_BONUS_AMOUNT : 0,
     });
@@ -1537,9 +1922,80 @@ app.post('/api/auth/google', [
 });
 
 // ─── SECURITY: Logout — clear cookie ────────────────────────────
-app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('vibes_token');
+app.post('/api/auth/logout', async (req, res) => {
+  let userId = null;
+  try {
+    const authHeader = req.headers.authorization;
+    const accessToken = authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.split(' ')[1]
+      : (req.cookies ? req.cookies[ACCESS_TOKEN_COOKIE_NAME] : null);
+    const refreshToken = req.cookies ? req.cookies[REFRESH_TOKEN_COOKIE_NAME] : null;
+    if (accessToken) {
+      const decoded = jwt.verify(accessToken, JWT_SECRET_FINAL, { issuer: 'vibes-outing', audience: 'vibes-outing-app' });
+      if (decoded && decoded.id) userId = decoded.id;
+    } else if (refreshToken) {
+      const decoded = jwt.verify(refreshToken, JWT_SECRET_FINAL, { issuer: 'vibes-outing', audience: 'vibes-outing-app' });
+      if (decoded && decoded.id) userId = decoded.id;
+    }
+  } catch (_) {}
+
+  if (userId) {
+    await invalidateUserSession(userId, true).catch(() => {});
+    securityLog('LOGOUT', { userId, ip: req.ip });
+  }
+
+  clearAuthCookies(res);
   res.json({ success: true });
+});
+
+app.post('/api/auth/refresh', async (req, res) => {
+  const refreshToken = req.cookies ? req.cookies[REFRESH_TOKEN_COOKIE_NAME] : null;
+  if (!refreshToken) return res.status(401).json({ success: false, message: 'Refresh token missing' });
+
+  try {
+    const decoded = jwt.verify(refreshToken, JWT_SECRET_FINAL, {
+      issuer: 'vibes-outing',
+      audience: 'vibes-outing-app',
+    });
+    if (decoded.typ !== 'refresh') {
+      clearAuthCookies(res);
+      return res.status(401).json({ success: false, message: 'Invalid refresh token type' });
+    }
+
+    const userResult = await dbQuery(
+      'SELECT id, name, email, role, token_version, refresh_token_hash, refresh_token_expires_at FROM users WHERE id = $1',
+      [decoded.id]
+    );
+    const user = userResult.rows[0];
+    if (!user) {
+      clearAuthCookies(res);
+      return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+    }
+
+    const dbTokenVersion = Number(user.token_version || 0);
+    if (dbTokenVersion !== Number(decoded.tv || 0)) {
+      clearAuthCookies(res);
+      return res.status(401).json({ success: false, message: 'Session has been invalidated' });
+    }
+
+    const refreshExpiry = user.refresh_token_expires_at ? new Date(user.refresh_token_expires_at) : null;
+    const refreshHash = user.refresh_token_hash || '';
+    if (!refreshHash || refreshHash !== hashToken(refreshToken) || (refreshExpiry && refreshExpiry.getTime() <= Date.now())) {
+      clearAuthCookies(res);
+      return res.status(401).json({ success: false, message: 'Refresh token expired or rotated' });
+    }
+
+    // Rotation: issue a new refresh token and invalidate the old one atomically.
+    const { accessToken } = await issueAuthSession(res, user);
+    return res.json({
+      success: true,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      token: accessToken,
+    });
+  } catch (_) {
+    clearAuthCookies(res);
+    return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
+  }
 });
 
 // ─── PUBLIC CONFIG: Expose non-secret client config ─────────────
@@ -1740,18 +2196,39 @@ app.post('/api/bookings/create-order', authMiddleware, [
   body('selected_date').optional().trim().isISO8601().withMessage('Valid selected date required'),
   body('departure_time').optional().trim().isLength({ max: 20 }),
   body('use_wallet').optional().isBoolean().toBoolean(),
+  body('request_id').optional().trim().isLength({ min: 8, max: 128 }).matches(/^[A-Za-z0-9._:-]+$/),
 ], async (req, res) => {
   if (!validate(req, res)) return;
   const { outing_id, participants, participant_names, selected_date, departure_time, use_wallet } = req.body;
   const user_id = req.user.id; // IDOR prevention: use authenticated user
+  const requestId = req.requestId || extractRequestId(req);
+
+  await releaseExpiredReservations(outing_id).catch(() => {});
+
+  // Retry-safe: return the same pending order for the same request id.
+  const sameRequest = (await dbQuery(
+    'SELECT id, payment_id, payment_order_id, token_amount, total_amount, remaining_amount, wallet_discount, payment_status FROM bookings WHERE user_id = $1 AND create_request_id = $2 ORDER BY id DESC LIMIT 1',
+    [user_id, requestId]
+  )).rows[0];
+  if (sameRequest && sameRequest.payment_status === 'pending') {
+    return res.json({
+      success: true,
+      request_id: requestId,
+      order_id: sameRequest.payment_order_id || sameRequest.payment_id,
+      booking_id: sameRequest.id,
+      amount: sameRequest.token_amount,
+      total_amount: sameRequest.total_amount,
+      remaining_amount: sameRequest.remaining_amount,
+      wallet_discount: sameRequest.wallet_discount,
+      key_id: process.env.RAZORPAY_KEY_ID,
+      reused: true,
+    });
+  }
 
   const outingResult = await dbQuery('SELECT * FROM outings WHERE id = $1', [outing_id]);
   const outing = outingResult.rows[0];
   if (!outing) return res.status(404).json({ message: 'Outing not found' });
   if (outing.status !== 'active') return res.status(400).json({ message: 'Outing is not active' });
-  if (outing.current_participants + participants > outing.max_participants) {
-    return res.status(400).json({ message: 'Not enough spots available' });
-  }
 
   // Validate selected_date if provided — must be a valid weekend day for the trip type
   if (selected_date) {
@@ -1776,21 +2253,113 @@ app.post('/api/bookings/create-order', authMiddleware, [
   const payableTotal = totalAmount - walletDiscount;
   const tokenAmount = Math.ceil(payableTotal * 0.20);
   const remainingAmount = payableTotal - tokenAmount;
+
   try {
     const order = await razorpay.orders.create({
       amount: tokenAmount * 100,
       currency: 'INR',
       receipt: 'outing_' + outing_id + '_' + Date.now(),
-      notes: { user_id: String(user_id), outing_id: String(outing_id), participants: String(participants), type: 'token' }
+      notes: { user_id: String(user_id), outing_id: String(outing_id), participants: String(participants), type: 'token', request_id: requestId }
     });
-    const result = await dbQuery(
-      'INSERT INTO bookings (user_id, outing_id, participants, participant_names, total_amount, token_amount, remaining_amount, payment_status, remaining_payment_status, payment_id, selected_date, departure_time, wallet_discount) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id',
-      [user_id, outing_id, participants, sanitize(participant_names || ''), totalAmount, tokenAmount, remainingAmount, 'pending', 'pending', order.id, sanitize(selected_date || ''), sanitize(departure_time || ''), walletDiscount]
-    );
-    res.json({ success: true, order_id: order.id, booking_id: result.rows[0].id, amount: tokenAmount, total_amount: totalAmount, remaining_amount: remainingAmount, wallet_discount: walletDiscount, key_id: process.env.RAZORPAY_KEY_ID });
+
+    const bookingData = await withTransaction(async (q) => {
+      const outingLock = USE_PG ? ' FOR UPDATE' : '';
+      const lockedOuting = (await q(`SELECT id, max_participants, current_participants, status FROM outings WHERE id = $1${outingLock}`, [outing_id])).rows[0];
+      if (!lockedOuting || lockedOuting.status !== 'active') {
+        throw new Error('Outing is not active');
+      }
+
+      // Retry-safe guard: reuse active pending booking for same user+outing.
+      const activePending = (await q(
+        `SELECT b.id, b.payment_id, b.payment_order_id, b.token_amount, b.total_amount, b.remaining_amount, b.wallet_discount
+         FROM bookings b
+         JOIN booking_reservations r ON r.booking_id = b.id
+         WHERE b.user_id = $1 AND b.outing_id = $2 AND b.payment_status = 'pending'
+           AND r.status = 'reserved'
+           AND ${USE_PG ? 'r.expires_at > NOW()' : 'r.expires_at > CURRENT_TIMESTAMP'}
+         ORDER BY b.created_at DESC
+         LIMIT 1`,
+        [user_id, outing_id]
+      )).rows[0];
+      if (activePending) return { reused: true, ...activePending };
+
+      const reservedSeats = (await q(
+        `SELECT COALESCE(SUM(seat_count), 0) AS reserved
+         FROM booking_reservations
+         WHERE outing_id = $1 AND status = 'reserved'
+           AND ${USE_PG ? 'expires_at > NOW()' : 'expires_at > CURRENT_TIMESTAMP'}`,
+        [outing_id]
+      )).rows[0];
+      const currentParticipants = Number(lockedOuting.current_participants || 0);
+      const maxParticipants = Number(lockedOuting.max_participants || 0);
+      const activeReserved = Number(reservedSeats?.reserved || 0);
+      const available = maxParticipants - currentParticipants - activeReserved;
+      if (available < participants) {
+        throw new Error('Not enough spots available');
+      }
+
+      const bookingInsert = await q(
+        'INSERT INTO bookings (user_id, outing_id, participants, participant_names, total_amount, token_amount, remaining_amount, payment_status, remaining_payment_status, payment_id, payment_order_id, selected_date, departure_time, wallet_discount, create_request_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id',
+        [user_id, outing_id, participants, sanitize(participant_names || ''), totalAmount, tokenAmount, remainingAmount, 'pending', 'pending', order.id, order.id, sanitize(selected_date || ''), sanitize(departure_time || ''), walletDiscount, requestId]
+      );
+      const bookingId = bookingInsert.rows[0].id;
+      await q(
+        `INSERT INTO booking_reservations (booking_id, outing_id, user_id, seat_count, expires_at, status)
+         VALUES ($1, $2, $3, $4, ${USE_PG ? `NOW() + ($5 || ' minutes')::interval` : `datetime('now', '+' || $5 || ' minutes')`}, 'reserved')`,
+        [bookingId, outing_id, user_id, participants, BOOKING_RESERVATION_TTL_MINUTES]
+      );
+      return {
+        reused: false,
+        id: bookingId,
+        payment_id: order.id,
+        payment_order_id: order.id,
+        token_amount: tokenAmount,
+        total_amount: totalAmount,
+        remaining_amount: remainingAmount,
+        wallet_discount: walletDiscount,
+      };
+    });
+
+    await bookingAuditLog('ORDER_CREATED_AND_RESERVED', {
+      requestId,
+      userId: user_id,
+      bookingId: bookingData.id,
+      outingId: outing_id,
+      details: {
+        participants,
+        token_amount: bookingData.token_amount,
+        ttl_minutes: BOOKING_RESERVATION_TTL_MINUTES,
+        reused: bookingData.reused,
+      },
+    });
+
+    res.json({
+      success: true,
+      request_id: requestId,
+      order_id: bookingData.payment_order_id || bookingData.payment_id,
+      booking_id: bookingData.id,
+      amount: bookingData.token_amount,
+      total_amount: bookingData.total_amount,
+      remaining_amount: bookingData.remaining_amount,
+      wallet_discount: bookingData.wallet_discount,
+      key_id: process.env.RAZORPAY_KEY_ID,
+      reused: bookingData.reused,
+    });
   } catch (err) {
-    console.error('Razorpay order error:', err);
-    res.status(500).json({ message: 'Payment gateway error. Check your Razorpay API keys in .env file.' });
+    console.error('Razorpay order/reservation error:', err);
+    await bookingAuditLog('ORDER_CREATE_FAILED', {
+      requestId,
+      userId: user_id,
+      outingId: outing_id,
+      details: { message: err.message },
+    });
+    if (String(err.message || '').includes('Not enough spots available')) {
+      return res.status(400).json({ success: false, request_id: requestId, message: 'Not enough spots available' });
+    }
+    if (String(err.message || '').includes('Outing is not active')) {
+      return res.status(400).json({ success: false, request_id: requestId, message: 'Outing is not active' });
+    }
+    res.status(500).json({ success: false, request_id: requestId, message: 'Payment gateway error. Check your Razorpay API keys in .env file.' });
   }
 });
 
@@ -1799,9 +2368,13 @@ app.post('/api/bookings/verify-payment', authMiddleware, [
   body('razorpay_payment_id').trim().notEmpty(),
   body('razorpay_signature').trim().notEmpty(),
   body('booking_id').isInt({ min: 1 }),
+  body('request_id').optional().trim().isLength({ min: 8, max: 128 }).matches(/^[A-Za-z0-9._:-]+$/),
 ], async (req, res) => {
   if (!validate(req, res)) return;
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature, booking_id } = req.body;
+  const requestId = req.requestId || extractRequestId(req);
+
+  await releaseExpiredReservations().catch(() => {});
 
   // IDOR prevention: verify booking belongs to authenticated user
   const bookingResult = await dbQuery('SELECT * FROM bookings WHERE id = $1 AND user_id = $2', [booking_id, req.user.id]);
@@ -1816,26 +2389,92 @@ app.post('/api/bookings/verify-payment', authMiddleware, [
   }
   const expectedSignature = crypto.createHmac('sha256', razorpaySecret)
     .update(body_str).digest('hex');
+  const providedSignature = String(razorpay_signature || '');
 
   // Constant-time comparison to prevent timing attacks
-  if (crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature))) {
-    // Atomically confirm the booking exactly once. Under load (or flaky
-    // networks) the client may fire verify-payment more than once; concurrent
-    // or retried calls lock the row, see payment already 'paid', and skip all
-    // side-effects — preventing duplicate seat counts, duplicate wallet debits
-    // and duplicate reward credits.
-    const claimed = await withTransaction(async (q) => {
+  if (providedSignature.length === expectedSignature.length && crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(providedSignature))) {
+    // Atomically confirm the booking exactly once and convert the seat
+    // reservation to a confirmed booking.
+    const confirmResult = await withTransaction(async (q) => {
       const lock = USE_PG ? ' FOR UPDATE' : '';
-      const fresh = (await q(`SELECT payment_status FROM bookings WHERE id = $1${lock}`, [booking_id])).rows[0];
-      if (!fresh || fresh.payment_status === 'paid') return false;
+      const fresh = (await q(`SELECT * FROM bookings WHERE id = $1${lock}`, [booking_id])).rows[0];
+      if (!fresh) return { status: 'missing' };
+      if (fresh.payment_status === 'paid') {
+        return { status: 'already_paid', payment_id: fresh.payment_id || razorpay_payment_id };
+      }
+
+      const duplicatePayment = (await q(
+        `SELECT id FROM bookings WHERE payment_status = 'paid' AND payment_id = $1 AND id <> $2 LIMIT 1${USE_PG ? ' FOR UPDATE' : ''}`,
+        [razorpay_payment_id, booking_id]
+      )).rows[0];
+      if (duplicatePayment) {
+        return { status: 'duplicate_payment_id' };
+      }
+
+      const reservation = (await q(`SELECT * FROM booking_reservations WHERE booking_id = $1${lock}`, [booking_id])).rows[0];
+      if (!reservation) {
+        return { status: 'reservation_missing' };
+      }
+      const reservationExpiry = parseDbTimestamp(reservation.expires_at);
+      const isExpired = reservation.status !== 'reserved' || (reservationExpiry && reservationExpiry <= new Date());
+      if (isExpired) {
+        await q("UPDATE bookings SET payment_status = 'failed' WHERE id = $1 AND payment_status = 'pending'", [booking_id]);
+        await q("UPDATE booking_reservations SET status = 'released' WHERE id = $1", [reservation.id]);
+        return { status: 'reservation_expired' };
+      }
+
+      const outingLock = USE_PG ? ' FOR UPDATE' : '';
+      const lockedOuting = (await q(`SELECT id FROM outings WHERE id = $1${outingLock}`, [fresh.outing_id])).rows[0];
+      if (!lockedOuting) {
+        return { status: 'outing_missing' };
+      }
+
       await q('UPDATE bookings SET payment_status = $1, payment_id = $2 WHERE id = $3', ['paid', razorpay_payment_id, booking_id]);
-      await q('UPDATE outings SET current_participants = current_participants + $1 WHERE id = $2', [booking.participants, booking.outing_id]);
-      return true;
+      await q('UPDATE booking_reservations SET status = $1 WHERE id = $2', ['confirmed', reservation.id]);
+      await q('UPDATE outings SET current_participants = current_participants + $1 WHERE id = $2', [reservation.seat_count, fresh.outing_id]);
+      return { status: 'confirmed', payment_id: razorpay_payment_id, reservation_id: reservation.id };
     });
-    if (!claimed) {
+
+    if (confirmResult.status === 'already_paid') {
       // Idempotent: booking was already confirmed by a prior verification call
       securityLog('PAYMENT_DUPLICATE_VERIFY', { userId: req.user.id, bookingId: booking_id, ip: req.ip });
-      return res.json({ success: true, payment_id: booking.payment_id || razorpay_payment_id, token_amount: booking.token_amount, remaining_amount: booking.remaining_amount, already_confirmed: true });
+      await bookingAuditLog('PAYMENT_VERIFY_DUPLICATE', {
+        requestId,
+        userId: req.user.id,
+        bookingId: booking_id,
+        outingId: booking.outing_id,
+        details: { payment_id: confirmResult.payment_id },
+      });
+      return res.json({ success: true, request_id: requestId, payment_id: confirmResult.payment_id, token_amount: booking.token_amount, remaining_amount: booking.remaining_amount, already_confirmed: true });
+    }
+    if (confirmResult.status === 'duplicate_payment_id') {
+      await bookingAuditLog('PAYMENT_VERIFY_REJECTED_DUPLICATE_PAYMENT_ID', {
+        requestId,
+        userId: req.user.id,
+        bookingId: booking_id,
+        outingId: booking.outing_id,
+        details: { payment_id: razorpay_payment_id },
+      });
+      return res.status(409).json({ success: false, request_id: requestId, message: 'Duplicate payment detected. Contact support.' });
+    }
+    if (confirmResult.status === 'reservation_expired') {
+      await bookingAuditLog('PAYMENT_VERIFY_REJECTED_RESERVATION_EXPIRED', {
+        requestId,
+        userId: req.user.id,
+        bookingId: booking_id,
+        outingId: booking.outing_id,
+      });
+      return res.status(409).json({ success: false, request_id: requestId, message: 'Reservation expired. Please create a new order.' });
+    }
+    if (confirmResult.status !== 'confirmed') {
+      await bookingAuditLog('PAYMENT_VERIFY_REJECTED', {
+        requestId,
+        userId: req.user.id,
+        bookingId: booking_id,
+        outingId: booking.outing_id,
+        details: { reason: confirmResult.status },
+      });
+      return res.status(400).json({ success: false, request_id: requestId, message: 'Unable to verify payment for this booking' });
     }
 
     // Vibes Wallet: redeem any reserved discount, then credit the new-user reward
@@ -1850,6 +2489,13 @@ app.post('/api/bookings/verify-payment', authMiddleware, [
     if (user && outing) {
       sendBookingEmail(user.email, user.name, outing.title, outing.date, outing.location, booking.token_amount, razorpay_payment_id);
     }
+    await bookingAuditLog('PAYMENT_VERIFIED_SUCCESS', {
+      requestId,
+      userId: req.user.id,
+      bookingId: booking_id,
+      outingId: booking.outing_id,
+      details: { payment_id: razorpay_payment_id },
+    });
     securityLog('PAYMENT_SUCCESS', { userId: req.user.id, bookingId: booking_id, paymentId: razorpay_payment_id, ip: req.ip });
     // Create booking notification
     if (user && outing) {
@@ -1870,12 +2516,59 @@ app.post('/api/bookings/verify-payment', authMiddleware, [
       console.error('[DIGITAL_PASS] Generation failed:', passErr.message);
     }
     const whatsappLink = (user && outing) ? getWhatsAppLink(user.phone, outing.title, outing.date, outing.location, booking.token_amount) : '';
-    res.json({ success: true, payment_id: razorpay_payment_id, whatsapp_link: whatsappLink, token_amount: booking.token_amount, remaining_amount: booking.remaining_amount, wallet_discount: walletDiscountApplied, reward_credited: rewardCredited, outing_date: outing ? outing.date : '', digital_pass_id: digitalPass ? digitalPass.pass_id : null });
+    res.json({ success: true, request_id: requestId, payment_id: razorpay_payment_id, whatsapp_link: whatsappLink, token_amount: booking.token_amount, remaining_amount: booking.remaining_amount, wallet_discount: walletDiscountApplied, reward_credited: rewardCredited, outing_date: outing ? outing.date : '', digital_pass_id: digitalPass ? digitalPass.pass_id : null });
   } else {
-    await dbQuery('UPDATE bookings SET payment_status = $1 WHERE id = $2', ['failed', booking_id]);
+    await withTransaction(async (q) => {
+      const lock = USE_PG ? ' FOR UPDATE' : '';
+      const fresh = (await q(`SELECT payment_status FROM bookings WHERE id = $1${lock}`, [booking_id])).rows[0];
+      if (!fresh || fresh.payment_status === 'paid') return;
+      await q('UPDATE bookings SET payment_status = $1 WHERE id = $2', ['failed', booking_id]);
+      await q("UPDATE booking_reservations SET status = 'released' WHERE booking_id = $1 AND status = 'reserved'", [booking_id]);
+    });
+    await bookingAuditLog('PAYMENT_VERIFY_SIGNATURE_FAILED', {
+      requestId,
+      userId: req.user.id,
+      bookingId: booking_id,
+      outingId: booking.outing_id,
+      details: { payment_id: razorpay_payment_id },
+    });
     securityLog('PAYMENT_VERIFICATION_FAILED', { userId: req.user.id, bookingId: booking_id, ip: req.ip });
-    res.status(400).json({ success: false, message: 'Payment verification failed' });
+    res.status(400).json({ success: false, request_id: requestId, message: 'Payment verification failed' });
   }
+});
+
+app.post('/api/bookings/payment-failed', authMiddleware, [
+  body('booking_id').isInt({ min: 1 }),
+  body('reason').optional().trim().isLength({ max: 300 }),
+  body('request_id').optional().trim().isLength({ min: 8, max: 128 }).matches(/^[A-Za-z0-9._:-]+$/),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const { booking_id, reason } = req.body;
+  const requestId = req.requestId || extractRequestId(req);
+  const releaseResult = await withTransaction(async (q) => {
+    const lock = USE_PG ? ' FOR UPDATE' : '';
+    const booking = (await q(`SELECT * FROM bookings WHERE id = $1 AND user_id = $2${lock}`, [booking_id, req.user.id])).rows[0];
+    if (!booking) return { status: 'missing' };
+    if (booking.payment_status === 'paid') return { status: 'already_paid' };
+    await q("UPDATE bookings SET payment_status = 'failed' WHERE id = $1", [booking_id]);
+    const release = await q("UPDATE booking_reservations SET status = 'released' WHERE booking_id = $1 AND status = 'reserved'", [booking_id]);
+    return { status: 'released', released: release.rowCount || 0, outing_id: booking.outing_id };
+  });
+
+  if (releaseResult.status === 'missing') {
+    return res.status(404).json({ success: false, request_id: requestId, message: 'Booking not found' });
+  }
+  await bookingAuditLog('PAYMENT_MARKED_FAILED', {
+    requestId,
+    userId: req.user.id,
+    bookingId: booking_id,
+    outingId: releaseResult.outing_id,
+    details: { reason: sanitize(reason || 'payment_failed_callback'), released_count: releaseResult.released || 0 },
+  });
+  if (releaseResult.status === 'already_paid') {
+    return res.json({ success: true, request_id: requestId, already_paid: true });
+  }
+  res.json({ success: true, request_id: requestId, released: true, released_count: releaseResult.released || 0 });
 });
 
 app.post('/api/bookings/pay-remaining', authMiddleware, [
@@ -2658,6 +3351,32 @@ app.post('/api/auth/reset-password', [
 });
 
 // ─── NOTIFICATIONS API ──────────────────────────────────────────
+app.get('/api/notifications/stream', authMiddleware, async (req, res) => {
+  const userId = req.user.id;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+  addNotificationSseClient(userId, res);
+  res.write(`event: connected\n`);
+  res.write(`data: ${JSON.stringify({ event: 'connected', userId, ts: new Date().toISOString() })}\n\n`);
+
+  const pingTimer = setInterval(() => {
+    try {
+      res.write(`event: ping\n`);
+      res.write(`data: ${JSON.stringify({ ts: new Date().toISOString() })}\n\n`);
+    } catch (_) {}
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(pingTimer);
+    removeNotificationSseClient(userId, res);
+    try { res.end(); } catch (_) {}
+  });
+});
+
 app.get('/api/notifications/:userId', authMiddleware, [
   param('userId').isInt().toInt(),
 ], async (req, res) => {
@@ -2672,24 +3391,132 @@ app.put('/api/notifications/:id/read', authMiddleware, [
 ], async (req, res) => {
   if (!validate(req, res)) return;
   await dbQuery('UPDATE notifications SET read = 1 WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+  publishNotificationEvent(req.user.id, 'notifications.sync', { userId: req.user.id });
   res.json({ success: true });
 });
 
 app.put('/api/notifications/read-all', authMiddleware, async (req, res) => {
   await dbQuery('UPDATE notifications SET read = 1 WHERE user_id = $1', [req.user.id]);
+  publishNotificationEvent(req.user.id, 'notifications.sync', { userId: req.user.id });
   res.json({ success: true });
+});
+
+// ─── WISHLIST API ───────────────────────────────────────────────
+app.get('/api/wishlist', authMiddleware, async (req, res) => {
+  const result = await dbQuery(
+    `SELECT w.id, w.user_id, w.outing_id, w.created_at,
+            o.title as outing_title, o.location as outing_location, o.image_url as outing_image,
+            o.date as outing_date, o.cost as outing_cost
+     FROM wishlist w
+     JOIN outings o ON o.id = w.outing_id
+     WHERE w.user_id = $1
+     ORDER BY w.created_at DESC`,
+    [req.user.id]
+  );
+  res.json(result.rows);
+});
+
+app.post('/api/wishlist', authMiddleware, [
+  body('outing_id').isInt({ min: 1 }).toInt(),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const outingId = req.body.outing_id;
+  const outing = (await dbQuery('SELECT id FROM outings WHERE id = $1', [outingId])).rows[0];
+  if (!outing) return res.status(404).json({ success: false, message: 'Outing not found' });
+
+  const inserted = await dbQuery(
+    `INSERT INTO wishlist (user_id, outing_id)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id, outing_id) DO NOTHING
+     RETURNING id, user_id, outing_id, created_at`,
+    [req.user.id, outingId]
+  );
+
+  if (inserted.rows[0]) return res.json({ success: true, item: inserted.rows[0], created: true });
+
+  const existing = (await dbQuery(
+    'SELECT id, user_id, outing_id, created_at FROM wishlist WHERE user_id = $1 AND outing_id = $2',
+    [req.user.id, outingId]
+  )).rows[0];
+  return res.json({ success: true, item: existing || null, created: false });
+});
+
+app.delete('/api/wishlist/:id', authMiddleware, [
+  param('id').isInt({ min: 1 }).toInt(),
+], async (req, res) => {
+  if (!validate(req, res)) return;
+  const result = await dbQuery('DELETE FROM wishlist WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+  res.json({ success: true, deleted: result.rowCount > 0 });
 });
 
 // ─── WALLET API ─────────────────────────────────────────────────
 app.get('/api/wallet/:userId', authMiddleware, [
   param('userId').isInt().toInt(),
+  query('page').optional().isInt({ min: 1 }).toInt(),
+  query('pageSize').optional().isInt({ min: 1, max: 50 }).toInt(),
 ], async (req, res) => {
   if (!validate(req, res)) return;
   if (req.user.id !== req.params.userId && req.user.role !== 'admin') return res.status(403).json({ balance: 0, transactions: [] });
-  const txns = await dbQuery('SELECT * FROM wallet_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [req.params.userId]);
-  const credits = txns.rows.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0);
-  const debits = txns.rows.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0);
-  res.json({ balance: credits - debits, transactions: txns.rows });
+  const userId = req.params.userId;
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const pageSize = Math.min(50, Math.max(1, Number(req.query.pageSize) || 10));
+  const offset = (page - 1) * pageSize;
+
+  const [balanceRow, countRow, pageTxns, summaryRow] = await Promise.all([
+    dbQuery(
+      `SELECT
+         COALESCE(SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END), 0) AS credits,
+         COALESCE(SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END), 0) AS debits
+       FROM wallet_transactions
+       WHERE user_id = $1`,
+      [userId]
+    ),
+    dbQuery('SELECT COUNT(*) as count FROM wallet_transactions WHERE user_id = $1', [userId]),
+    dbQuery(
+      'SELECT * FROM wallet_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
+      [userId, pageSize, offset]
+    ),
+    dbQuery(
+      `SELECT
+         COALESCE(SUM(CASE WHEN type = 'credit' AND description LIKE 'Wallet Recharge%' THEN amount ELSE 0 END), 0) AS recharge_credits,
+         COALESCE(COUNT(CASE WHEN type = 'credit' AND description LIKE 'Wallet Recharge%' THEN 1 END), 0) AS recharge_count,
+         COALESCE(SUM(CASE WHEN type = 'credit' AND (description LIKE '${REWARD_DESC_PREFIX}%' OR description = '${WELCOME_BONUS_DESC}') THEN amount ELSE 0 END), 0) AS reward_credits,
+         COALESCE(COUNT(CASE WHEN type = 'credit' AND (description LIKE '${REWARD_DESC_PREFIX}%' OR description = '${WELCOME_BONUS_DESC}') THEN 1 END), 0) AS reward_count,
+         COALESCE(SUM(CASE WHEN type = 'debit' AND description LIKE 'Booking Discount%' THEN amount ELSE 0 END), 0) AS booking_debits,
+         COALESCE(COUNT(CASE WHEN type = 'debit' AND description LIKE 'Booking Discount%' THEN 1 END), 0) AS booking_debit_count
+       FROM wallet_transactions
+       WHERE user_id = $1`,
+      [userId]
+    )
+  ]);
+
+  const credits = Number(balanceRow.rows[0]?.credits || 0);
+  const debits = Number(balanceRow.rows[0]?.debits || 0);
+  const totalTransactions = Number(countRow.rows[0]?.count || 0);
+  const totalPages = Math.max(1, Math.ceil(totalTransactions / pageSize));
+  const summary = summaryRow.rows[0] || {};
+
+  res.json({
+    balance: credits - debits,
+    transactions: pageTxns.rows,
+    pagination: {
+      page,
+      pageSize,
+      totalTransactions,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1
+    },
+    summary: {
+      rechargeCredits: Number(summary.recharge_credits || 0),
+      rechargeTransactions: Number(summary.recharge_count || 0),
+      rewardCredits: Number(summary.reward_credits || 0),
+      rewardTransactions: Number(summary.reward_count || 0),
+      bookingDebits: Number(summary.booking_debits || 0),
+      bookingDeductions: Number(summary.booking_debit_count || 0)
+    },
+    asOf: new Date().toISOString()
+  });
 });
 
 // ─── WALLET RECHARGE API ────────────────────────────────────────
@@ -2767,6 +3594,59 @@ app.post('/api/wallet/recharge/verify', authMiddleware, [
     return res.status(400).json({ success: false, message: 'Payment verification failed. Signature mismatch.' });
   }
 
+  // Validate payment/order metadata to prevent amount tampering and account mismatch.
+  try {
+    const [orderDetails, paymentDetails] = await Promise.all([
+      razorpay.orders.fetch(razorpay_order_id),
+      razorpay.payments.fetch(razorpay_payment_id)
+    ]);
+
+    if (!orderDetails || !paymentDetails) {
+      return res.status(400).json({ success: false, message: 'Payment verification failed. Unable to fetch payment details.' });
+    }
+
+    const expectedAmountPaise = Number(amount) * 100;
+    const orderAmount = Number(orderDetails.amount || 0);
+    const paymentAmount = Number(paymentDetails.amount || 0);
+    const orderUserId = String(orderDetails.notes?.user_id || '');
+    const paymentOrderId = String(paymentDetails.order_id || '');
+    const paymentStatus = String(paymentDetails.status || '').toLowerCase();
+
+    if (orderUserId !== String(req.user.id)) {
+      securityLog('WALLET_RECHARGE_USER_MISMATCH', { userId: req.user.id, orderId: razorpay_order_id, orderUserId, ip: req.ip });
+      return res.status(403).json({ success: false, message: 'Payment does not belong to this user.' });
+    }
+
+    if (orderAmount !== expectedAmountPaise || paymentAmount !== expectedAmountPaise || paymentOrderId !== razorpay_order_id) {
+      securityLog('WALLET_RECHARGE_AMOUNT_MISMATCH', {
+        userId: req.user.id,
+        orderId: razorpay_order_id,
+        paymentId: razorpay_payment_id,
+        requestedAmount: expectedAmountPaise,
+        orderAmount,
+        paymentAmount,
+        paymentOrderId,
+        ip: req.ip
+      });
+      return res.status(400).json({ success: false, message: 'Payment amount verification failed.' });
+    }
+
+    if (!['authorized', 'captured'].includes(paymentStatus)) {
+      securityLog('WALLET_RECHARGE_PAYMENT_STATUS_INVALID', {
+        userId: req.user.id,
+        orderId: razorpay_order_id,
+        paymentId: razorpay_payment_id,
+        paymentStatus,
+        ip: req.ip
+      });
+      return res.status(400).json({ success: false, message: 'Payment is not in a valid state for wallet credit.' });
+    }
+  } catch (fetchErr) {
+    console.error('Wallet recharge verification fetch error:', fetchErr);
+    securityLog('WALLET_RECHARGE_VERIFY_FETCH_FAILED', { userId: req.user.id, orderId: razorpay_order_id, paymentId: razorpay_payment_id, error: fetchErr.message, ip: req.ip });
+    return res.status(502).json({ success: false, message: 'Unable to verify payment details. Please retry in a moment.' });
+  }
+
   // Prevent duplicate credits: check if this payment_id already credited
   const existingTxn = await dbQuery(
     "SELECT id FROM wallet_transactions WHERE user_id = $1 AND description LIKE $2",
@@ -2779,8 +3659,8 @@ app.post('/api/wallet/recharge/verify', authMiddleware, [
 
   // Credit the wallet
   await dbQuery(
-    'INSERT INTO wallet_transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
-    [req.user.id, 'credit', amount, `Wallet Recharge — ₹${amount} (Ref: ${razorpay_payment_id})`]
+    'INSERT INTO wallet_transactions (user_id, type, transaction_type, reference_id, amount, description) VALUES ($1, $2, $3, $4, $5, $6)',
+    [req.user.id, 'credit', 'RECHARGE', razorpay_payment_id, amount, `Wallet Recharge — ₹${amount} (Ref: ${razorpay_payment_id})`]
   );
 
   // Create notification
@@ -3767,6 +4647,12 @@ app.post('/api/digital-passes/scan', authMiddleware, adminMiddleware, [
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err.message);
   securityLog('UNHANDLED_ERROR', { error: err.message, path: req.path, ip: req.ip });
+  if (sentry) {
+    sentry.captureException(err, {
+      tags: { scope: 'express_error_handler' },
+      extra: { path: req.path, method: req.method },
+    });
+  }
   res.status(err.status || 500).json({
     success: false,
     message: IS_PROD ? 'Internal server error' : err.message,
@@ -3780,8 +4666,27 @@ app.all('/api/*', (req, res) => {
 
 // ─── SPA FALLBACK (only in monolith mode) ───────────────────────
 if (!process.env.API_ONLY) {
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  const appIndexPath = path.join(__dirname, 'public', 'app', 'index.html');
+  const injectNonce = (html, nonce) => {
+    if (!nonce) return html;
+    return html
+      .replace(/<style>/gi, `<style nonce="${nonce}">`)
+      .replace(/<script(?![^>]*\bsrc=)/gi, `<script nonce="${nonce}"`);
+  };
+
+  app.get(['/app', '/app/*'], (req, res) => {
+    if (!fs.existsSync(appIndexPath)) return res.status(404).send('app index not found');
+    const appHtml = fs.readFileSync(appIndexPath, 'utf8');
+    return res.type('html').send(injectNonce(appHtml, res.locals.cspNonce));
+  });
+
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    if (!fs.existsSync(indexPath)) {
+      return res.status(404).send('index.html not found');
+    }
+    const html = fs.readFileSync(indexPath, 'utf8');
+    return res.type('html').send(injectNonce(html, res.locals.cspNonce));
   });
 }
 
@@ -3790,6 +4695,12 @@ app.use((err, req, res, _next) => {
   const status = err.status || 500;
   console.error(`[UNHANDLED_ERROR] ${req.method} ${req.path}:`, err.message || err);
   securityLog('UNHANDLED_ROUTE_ERROR', { method: req.method, path: req.path, error: err.message, ip: req.ip });
+  if (sentry) {
+    sentry.captureException(err, {
+      tags: { scope: 'global_route_handler' },
+      extra: { method: req.method, path: req.path },
+    });
+  }
   if (!res.headersSent) {
     res.status(status).json({ success: false, message: status === 500 ? 'Internal server error' : err.message });
   }
@@ -3813,6 +4724,11 @@ initDatabase().then(async () => {
     verifyEmailTransport().catch((err) => {
       console.error('Email transport verification error:', err.message);
     });
+
+    const cleanupMs = Math.max(15000, (parseInt(process.env.BOOKING_RESERVATION_CLEANUP_MS, 10) || 30000));
+    setInterval(() => {
+      releaseExpiredReservations().catch(() => {});
+    }, cleanupMs).unref();
   });
 
   // Tune socket timeouts for load behind proxies/load balancers.

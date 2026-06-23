@@ -332,6 +332,17 @@ input,textarea,select{font-family:inherit}
 .dash-stat .icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:.75rem}
 .dash-stat h4{font-size:.85rem;color:var(--text-light);margin-bottom:.25rem}
 .dash-stat .value{font-size:1.8rem;font-weight:800}
+.dashboard-widget-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-top:1.25rem}
+.dashboard-widget{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:1rem;min-height:180px}
+.dashboard-widget h4{font-size:.95rem;font-weight:700;margin-bottom:.75rem;display:flex;align-items:center;gap:.45rem}
+.dashboard-list{display:grid;gap:.6rem}
+.dashboard-list-item{display:flex;justify-content:space-between;align-items:center;gap:.75rem;font-size:.84rem;padding:.55rem .65rem;border-radius:10px;background:#F8FAFC}
+.dashboard-skeleton{position:relative;overflow:hidden;background:#F1F5F9;border-radius:10px}
+.dashboard-skeleton::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);animation:dashShimmer 1.1s infinite}
+.dashboard-skeleton-line{height:12px;margin:.55rem 0}
+.dashboard-skeleton-line.lg{height:16px}
+.dashboard-skeleton-line.sm{height:9px;width:58%}
+@keyframes dashShimmer{100%{transform:translateX(100%)}}
 
 /* TABLE */
 .table-wrap{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
@@ -873,14 +884,168 @@ window.addEventListener('unhandledrejection', function(e) {
 });
 
 // ─── STATE ──────────────────────────────────────────────────────
-// SECURITY: Store user info in sessionStorage (not localStorage) — token is in httpOnly cookie
+// SECURITY: Store only user profile in sessionStorage (no token persistence).
+// Access tokens stay in-memory; cookies carry access/refresh tokens as HttpOnly.
 let currentUser = JSON.parse(sessionStorage.getItem('vibes_user') || 'null');
-let authToken = sessionStorage.getItem('vibes_token') || null;
+let authToken = null;
 let outings = [];
 let currentPage = 'home';
 let selectedVibe = null;
 let bookingWalletBalance = 0;
-let _navigating = false; // Guard against concurrent navigate() calls
+let wishlistItems = JSON.parse(sessionStorage.getItem('vibes_wishlist') || '[]');
+let wishlistItemMap = new Map(); // outing_id -> wishlist row id
+let wishlistSyncedUserId = null;
+let notifications = [];
+let notifPanelOpen = false;
+let notifEventSource = null;
+let notifPollingTimer = null;
+let notifReconnectTimer = null;
+let notifPollingIntervalMs = 30000;
+const WALLET_PAGE_SIZE = 10;
+const WALLET_SYNC_EVENT_KEY = 'vibes_wallet_sync_event';
+let walletViewState = {
+  page: 1,
+  pageSize: WALLET_PAGE_SIZE,
+  totalPages: 1,
+  totalTransactions: 0,
+  lastData: null,
+  lastError: null,
+  isLoading: false,
+  lastLoadAt: 0
+};
+let _walletSyncListenersBound = false;
+let _walletRefreshTimer = null;
+
+function broadcastWalletSync(reason, explicitUserId) {
+  try {
+    localStorage.setItem(WALLET_SYNC_EVENT_KEY, JSON.stringify({
+      reason: reason || 'wallet_update',
+      userId: explicitUserId || (currentUser ? currentUser.id : null),
+      at: Date.now()
+    }));
+    localStorage.removeItem(WALLET_SYNC_EVENT_KEY);
+  } catch (_) {}
+}
+
+function markWalletDirty(reason, explicitUserId) {
+  if (currentUser) invalidateApiCache('/wallet/' + currentUser.id);
+  broadcastWalletSync(reason, explicitUserId);
+}
+
+function resetWishlistState() {
+  wishlistItems = [];
+  wishlistItemMap = new Map();
+  wishlistSyncedUserId = null;
+  sessionStorage.removeItem('vibes_wishlist');
+}
+
+function setWishlistStateFromRows(rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  wishlistItemMap = new Map();
+  wishlistItems = safeRows
+    .map((row) => {
+      const outingId = Number(row.outing_id);
+      const rowId = Number(row.id);
+      if (!Number.isNaN(outingId) && outingId > 0 && !Number.isNaN(rowId) && rowId > 0) {
+        wishlistItemMap.set(outingId, rowId);
+        return outingId;
+      }
+      return null;
+    })
+    .filter((id) => id !== null);
+  sessionStorage.setItem('vibes_wishlist', JSON.stringify(wishlistItems));
+  wishlistSyncedUserId = currentUser ? currentUser.id : null;
+}
+
+async function syncWishlistFromServer(opts = {}) {
+  if (!currentUser) return false;
+  if (!opts.force && wishlistSyncedUserId === currentUser.id) return true;
+  const data = await api('/wishlist', { showToast: false, cacheTtl: 5000 });
+  if (!Array.isArray(data)) return false;
+  setWishlistStateFromRows(data);
+  return true;
+}
+
+function stopNotificationsRealtime() {
+  if (notifEventSource) {
+    try { notifEventSource.close(); } catch (_) {}
+    notifEventSource = null;
+  }
+  if (notifPollingTimer) {
+    clearInterval(notifPollingTimer);
+    notifPollingTimer = null;
+  }
+  if (notifReconnectTimer) {
+    clearTimeout(notifReconnectTimer);
+    notifReconnectTimer = null;
+  }
+}
+
+function startNotificationPollingFallback() {
+  if (notifPollingTimer) return;
+  notifPollingTimer = setInterval(() => {
+    fetchNotifications({ silent: true, force: true });
+  }, notifPollingIntervalMs);
+}
+
+function scheduleNotificationReconnect() {
+  if (notifReconnectTimer) return;
+  notifReconnectTimer = setTimeout(() => {
+    notifReconnectTimer = null;
+    initNotificationsRealtime();
+  }, 4000);
+}
+
+function initNotificationsRealtime() {
+  if (!currentUser) return;
+  if (notifEventSource) return;
+
+  try {
+    notifEventSource = new EventSource((API_BASE || '') + '/api/notifications/stream', { withCredentials: true });
+    notifEventSource.addEventListener('connected', () => {
+      if (notifPollingTimer) {
+        clearInterval(notifPollingTimer);
+        notifPollingTimer = null;
+      }
+      fetchNotifications({ silent: true, force: true });
+    });
+    notifEventSource.addEventListener('notification.created', (evt) => {
+      let payload = null;
+      try { payload = JSON.parse(evt.data || '{}'); } catch (_) {}
+      if (!payload || String(payload.userId) !== String(currentUser.id)) return;
+      fetchNotifications({ silent: true, force: true });
+    });
+    notifEventSource.addEventListener('notifications.sync', (evt) => {
+      let payload = null;
+      try { payload = JSON.parse(evt.data || '{}'); } catch (_) {}
+      if (!payload || String(payload.userId) !== String(currentUser.id)) return;
+      fetchNotifications({ silent: true, force: true });
+    });
+    notifEventSource.onerror = () => {
+      stopNotificationsRealtime();
+      startNotificationPollingFallback();
+      scheduleNotificationReconnect();
+    };
+  } catch (_) {
+    stopNotificationsRealtime();
+    startNotificationPollingFallback();
+    scheduleNotificationReconnect();
+  }
+}
+
+// ─── NAVIGATION QUEUE SYSTEM ────────────────────────────────────
+// Prevents race conditions by queuing navigations and processing sequentially
+let _navigationQueue = [];
+let _activeNavigation = null;
+let _currentRenderController = null;
+
+// Render state tracking for debugging and validation
+let _renderState = {
+  currentPage: null,
+  isRendering: false,
+  renderError: null,
+  lastRenderTime: 0
+};
 const SITE_NAME = 'VIBES@Outing';
 const SITE_ORIGIN = window.location.origin;
 const DEFAULT_SEO = {
@@ -1073,6 +1238,19 @@ const PATH_ALIASES = {
   'profile': 'dashboard',
 };
 
+// Inverse of resolvePageFromUrl: internal page key → clean, shareable path URL.
+// Returns null for pages with no dedicated route (caller falls back to hash).
+function buildPathForPage(page) {
+  if (!page || page === 'home') return '/';
+  if (page === 'outings') return '/outings';
+  if (page.startsWith('outing-slug:')) return buildOutingPath(page.substring(12));
+  if (page === 'blogs') return '/blogs';
+  if (page.startsWith('blog-')) return '/blogs/' + encodeURIComponent(normalizeSlug(page.substring(5)));
+  if (page.startsWith('gallery-')) return '/galleries/' + encodeURIComponent(page.substring(8));
+  if (KNOWN_PATH_PAGES.has(page)) return '/' + page;
+  return null;
+}
+
 function resolvePageFromUrl() {
   const cleanPath = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
   if (cleanPath === '/') {
@@ -1090,6 +1268,11 @@ function resolvePageFromUrl() {
     const slug = normalizeSlug(decodeURIComponent(cleanPath.replace('/blogs/', '')));
     if (slug) return 'blog-' + slug;
     return 'blogs';
+  }
+  if (cleanPath.startsWith('/galleries/')) {
+    const galleryId = cleanPath.replace('/galleries/', '').replace(/[^0-9]/g, '');
+    if (galleryId) return 'gallery-' + galleryId;
+    return 'galleries';
   }
   const segment = normalizeSlug(decodeURIComponent(cleanPath.slice(1)));
   if (PATH_ALIASES[segment]) return PATH_ALIASES[segment];
@@ -1110,20 +1293,25 @@ async function migrateLegacyOutingHashRoute() {
 }
 
 async function navigateToOuting(outingRef, skipHistory) {
+  // Resolve outing reference to a page string, don't call navigate()
+  // This prevents nested navigate calls and race conditions
+  
   if (typeof outingRef === 'string' && !/^\d+$/.test(outingRef)) {
     const slug = normalizeSlug(outingRef);
-    if (!slug) return;
-    return navigate('outing-slug:' + slug, !!skipHistory);
+    if (!slug) return null;
+    return 'outing-slug:' + slug;
   }
 
   const outingId = parseInt(outingRef, 10);
-  if (!outingId) return;
+  if (!outingId) return null;
+  
   const outing = await api('/outings/' + outingId, { showToast: false });
   if (!outing || !outing.slug) {
     toast('Outing not found', 'error');
-    return navigate('outings', !!skipHistory);
+    return 'outings';
   }
-  return navigate('outing-slug:' + outing.slug, !!skipHistory);
+  
+  return 'outing-slug:' + outing.slug;
 }
 // Blur placeholders cache
 let _blurPlaceholders = null;
@@ -1162,11 +1350,48 @@ function slideCarousel(carouselId, target) {
 }
 
 // ─── BROWSER HISTORY ────────────────────────────────────────────
+// Queue-based popstate handler to prevent concurrent navigations
+let _popstateQueue = [];
+let _processingPopstate = false;
+
 window.addEventListener('popstate', (e) => {
   const page = (e.state && e.state.page) ? e.state.page : resolvePageFromUrl();
-  currentPage = page;
-  navigate(page, true);
+  _popstateQueue.push({ page, state: e.state });
+  
+  if (!_processingPopstate) {
+    _processPopstateQueue();
+  }
 });
+
+// Placeholder anchors (href="#") only exist to carry an onclick handler.
+// Without this, the browser's default action appends a stray '#' to the URL
+// (e.g. /wallet#) and resets the hash, which previously caused pages to flip
+// back to Home. The onclick handler still runs; we only suppress the default.
+document.addEventListener('click', (e) => {
+  const placeholder = e.target.closest && e.target.closest('a[href="#"]');
+  if (placeholder) e.preventDefault();
+});
+
+async function _processPopstateQueue() {
+  _processingPopstate = true;
+  
+  try {
+    while (_popstateQueue.length > 0) {
+      const { page } = _popstateQueue.shift();
+      currentPage = page;
+      
+      // Use skipHistory=true to prevent pushing new history
+      await navigate(page, true);
+    }
+  } finally {
+    _processingPopstate = false;
+    
+    // Process any new events added while we were processing
+    if (_popstateQueue.length > 0) {
+      _processPopstateQueue();
+    }
+  }
+}
 
 // ─── API ────────────────────────────────────────────────────────
 // Use same-origin proxy via Vercel rewrite in production, direct in dev
@@ -1191,6 +1416,7 @@ window._googleConfigReady = fetch((API_BASE || '') + '/api/config').then(r => r.
 // cause of 429s and "infinite request loops").
 const _apiCache = new Map();      // key -> { expires, data }
 const _apiInflight = new Map();   // key -> Promise
+let _refreshInFlight = null;
 
 function _apiKey(url) { return 'GET:' + url; }
 
@@ -1203,9 +1429,42 @@ function invalidateApiCache(prefix) {
 }
 window.invalidateApiCache = invalidateApiCache;
 
+async function silentRefreshSession() {
+  if (_refreshInFlight) return _refreshInFlight;
+  _refreshInFlight = (async () => {
+    try {
+      const res = await fetch((API_BASE || '') + '/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) return { success: false };
+      const data = await res.json();
+      if (!data || !data.success) return { success: false };
+      authToken = data.token || null;
+      if (data.user) {
+        currentUser = data.user;
+        sessionStorage.setItem('vibes_user', JSON.stringify(data.user));
+      }
+      return { success: true, data };
+    } catch (_) {
+      return { success: false };
+    } finally {
+      _refreshInFlight = null;
+    }
+  })();
+  return _refreshInFlight;
+}
+
 const api = (url, opts = {}) => {
   const method = (opts.method || 'GET').toUpperCase();
   const isCacheableGet = method === 'GET' && !opts.body;
+
+  // Check if render was aborted before starting the request
+  if (opts.signal && opts.signal.aborted) {
+    return Promise.resolve({ success: false, message: 'Render cancelled', renderCancelled: true });
+  }
 
   // Serve a fresh cached response when the caller opted into caching.
   if (isCacheableGet) {
@@ -1241,11 +1500,24 @@ const _apiAttempt = async (url, opts = {}, _retryCount = 0) => {
   const TIMEOUT_MS = 15000;
   const showToast = opts.showToast !== false;
   const controller = new AbortController();
+  
+  // Link render signal to fetch signal - if render is cancelled, cancel fetch
+  let signalListener = null;
+  if (opts.signal) {
+    signalListener = () => controller.abort();
+    opts.signal.addEventListener('abort', signalListener);
+  }
+  
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
   // Exponential backoff with jitter: ~0.5s, 1s, 2s, 4s (capped at 8s).
   const backoffDelay = (attempt) => Math.min(8000, 500 * Math.pow(2, attempt)) + Math.floor(Math.random() * 250);
 
   try {
+    // Check if signal was already aborted
+    if (opts.signal && opts.signal.aborted) {
+      return { success: false, message: 'Render cancelled', renderCancelled: true };
+    }
+
     const headers = { 'Content-Type': 'application/json' };
     if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
     const base = API_BASE || '';
@@ -1259,6 +1531,13 @@ const _apiAttempt = async (url, opts = {}, _retryCount = 0) => {
     clearTimeout(timeoutId);
 
     if (res.status === 401) {
+      const isAuthEndpoint = /^\/auth\//.test(url);
+      if (!opts.skipRefresh && !isAuthEndpoint) {
+        const refreshed = await silentRefreshSession();
+        if (refreshed && refreshed.success) {
+          return _apiAttempt(url, { ...opts, skipRefresh: true }, _retryCount);
+        }
+      }
       // Background/non-critical calls (e.g. notification polling) must never tear
       // down the session or trigger any navigation.
       if (opts.background) return { success: false, sessionExpired: true };
@@ -1268,7 +1547,7 @@ const _apiAttempt = async (url, opts = {}, _retryCount = 0) => {
       // because a single 401 ran logout() → navigate('home').
       if (currentUser || authToken) {
         clearSession();
-        toast('Session expired. Please login again.', 'error');
+        if (!opts.background) toast('Session expired. Please login again.', 'error');
       }
       return { success: false, sessionExpired: true };
     }
@@ -1331,6 +1610,12 @@ const _apiAttempt = async (url, opts = {}, _retryCount = 0) => {
     const isTimeout = err.name === 'AbortError';
     const isNetwork = err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError') || err.message?.includes('Network request failed');
 
+    // Ignore abort errors from render cancellation
+    if (isTimeout && opts.signal && opts.signal.aborted) {
+      logClientError('api cancelled', 'Render was cancelled, request aborted', {});
+      return { success: false, message: 'Render cancelled', renderCancelled: true };
+    }
+
     logClientError(`api ${opts.method || 'GET'} /api${url}`, err, { attempt: _retryCount + 1 });
 
     // Retry on transient failures (cold starts, timeouts) with exponential backoff
@@ -1350,6 +1635,11 @@ const _apiAttempt = async (url, opts = {}, _retryCount = 0) => {
     }
     if (showToast) toast(msg, 'error');
     return { success: false, message: msg };
+  } finally {
+    // Clean up signal listener
+    if (opts.signal && signalListener) {
+      opts.signal.removeEventListener('abort', signalListener);
+    }
   }
 };
 
@@ -1392,7 +1682,9 @@ function renderNav() {
       <span class="user-badge"><i class="fas fa-user"></i> ${currentUser.name}</span>
       <button onclick="logout()" class="btn btn-sm btn-danger">Logout</button>
     `;
-    fetchNotifications();
+    syncWishlistFromServer({ force: true }).catch(() => {});
+    initNotificationsRealtime();
+    fetchNotifications({ silent: true });
   } else {
     n.innerHTML = `
       <a href="#" onclick="navigate('outings')">Outings</a>
@@ -1503,7 +1795,21 @@ function showSignup() {
 async function handleLogin(e) {
   e.preventDefault();
   const data = await api('/auth/login', { method: 'POST', body: { email: document.getElementById('loginEmail').value, password: document.getElementById('loginPass').value } });
-  if (data.success) { currentUser = data.user; authToken = data.token; sessionStorage.setItem('vibes_user', JSON.stringify(data.user)); sessionStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate(data.user.role === 'admin' ? 'admin' : 'home'); toast('Welcome back, ' + data.user.name + '!', 'success'); }
+  if (data.success) {
+    currentUser = data.user;
+    authToken = data.token;
+    walletViewState.lastData = null;
+    walletViewState.lastError = null;
+    bookingWalletBalance = 0;
+    invalidateApiCache('/wallet/');
+    sessionStorage.setItem('vibes_user', JSON.stringify(data.user));
+    authToken = data.token || null;
+    await syncWishlistFromServer({ force: true }).catch(() => {});
+    closeModal();
+    renderNav();
+    navigate(data.user.role === 'admin' ? 'admin' : 'home');
+    toast('Welcome back, ' + data.user.name + '!', 'success');
+  }
   else toast(data.message, 'error');
 }
 
@@ -1515,7 +1821,18 @@ async function handleSignup(e) {
     sessionStorage.removeItem('vibes_offer_intent');
     trackEvent('sign_up', { method: 'email', from_offer: fromOffer });
     if (fromOffer) trackEvent('offer_signup', { placement: 'new_user_reward' });
-    currentUser = data.user; authToken = data.token; sessionStorage.setItem('vibes_user', JSON.stringify(data.user)); sessionStorage.setItem('vibes_token', data.token); closeModal(); renderNav(); navigate('home');
+    currentUser = data.user;
+    authToken = data.token;
+    walletViewState.lastData = null;
+    walletViewState.lastError = null;
+    bookingWalletBalance = 0;
+    invalidateApiCache('/wallet/');
+    sessionStorage.setItem('vibes_user', JSON.stringify(data.user));
+    authToken = data.token || null;
+    await syncWishlistFromServer({ force: true }).catch(() => {});
+    closeModal();
+    renderNav();
+    navigate('home');
     if (data.bonusGranted) { trackEvent('welcome_bonus_credited', { method: 'email', amount: data.bonusAmount }); toast('🎉 Welcome to Vibes Outing! ₹' + (data.bonusAmount || 100) + ' has been added to your wallet.', 'success'); }
     else toast('🎉 Account created! Welcome to Vibes Outing!', 'success');
   }
@@ -1585,8 +1902,13 @@ async function handleGoogleCredential(response) {
     if (data.success) {
       currentUser = data.user;
       authToken = data.token;
+      walletViewState.lastData = null;
+      walletViewState.lastError = null;
+      bookingWalletBalance = 0;
+      invalidateApiCache('/wallet/');
       sessionStorage.setItem('vibes_user', JSON.stringify(data.user));
-      sessionStorage.setItem('vibes_token', data.token);
+      authToken = data.token || null;
+      await syncWishlistFromServer({ force: true }).catch(() => {});
       closeModal();
       renderNav();
       navigate('home');
@@ -1606,10 +1928,27 @@ async function handleGoogleCredential(response) {
 // Clears auth state WITHOUT navigating — used for silent session-expiry handling
 // so an expired/invalid token never forces the user off their current page.
 function clearSession() {
+  const previousUserId = currentUser ? currentUser.id : null;
+  stopNotificationsRealtime();
+  notifications = [];
+  notifPanelOpen = false;
   currentUser = null;
   authToken = null;
+  bookingWalletBalance = 0;
+  resetWishlistState();
+  walletViewState = {
+    page: 1,
+    pageSize: WALLET_PAGE_SIZE,
+    totalPages: 1,
+    totalTransactions: 0,
+    lastData: null,
+    lastError: null,
+    isLoading: false,
+    lastLoadAt: 0
+  };
   sessionStorage.removeItem('vibes_user');
-  sessionStorage.removeItem('vibes_token');
+  invalidateApiCache('/wallet/');
+  if (previousUserId) broadcastWalletSync('auth_session_cleared', previousUserId);
   renderNav();
 }
 
@@ -1744,92 +2083,168 @@ let _pendingPasswordReset = false;
 })();
 
 // ─── PAGES ──────────────────────────────────────────────────────
+// Navigation queue system: processes navigations sequentially to prevent race conditions
+
 async function navigate(page, skipHistory) {
-  // Guard against concurrent navigations that cause state corruption
-  if (_navigating && !skipHistory) {
-    console.warn('[NAV] Blocked concurrent navigate to:', page);
-    return;
-  }
-  _navigating = true;
-  try {
-    await _navigateInternal(page, skipHistory);
-  } catch (err) {
-    console.error('[NAV] Error during navigation:', err);
-  } finally {
-    _navigating = false;
+  return new Promise((resolve) => {
+    _navigationQueue.push({ page, skipHistory, resolve, timestamp: Date.now() });
+    
+    // Start processing if no active navigation
+    if (!_activeNavigation) {
+      _processNavigationQueue();
+    }
+  });
+}
+
+async function _processNavigationQueue() {
+  while (_navigationQueue.length > 0) {
+    const { page, skipHistory, resolve, timestamp } = _navigationQueue.shift();
+    
+    // Skip stale navigation requests (older than 5 seconds)
+    if (Date.now() - timestamp > 5000) {
+      console.warn('[NAV] Stale navigation skipped:', page);
+      resolve();
+      continue;
+    }
+    
+    _activeNavigation = { page, timestamp: Date.now() };
+    _renderState.isRendering = true;
+    _renderState.currentPage = page;
+    _renderState.renderError = null;
+    
+    try {
+      await _navigateInternal(page, skipHistory);
+      _renderState.lastRenderTime = Date.now();
+    } catch (err) {
+      console.error('[NAV] Error during navigation:', err);
+      _renderState.renderError = err;
+    } finally {
+      _renderState.isRendering = false;
+      _activeNavigation = null;
+      resolve();
+    }
   }
 }
 
 async function _navigateInternal(page, skipHistory) {
+  // Handle legacy outing ID format
   if (page && /^outing-\d+$/.test(page)) {
     const legacyId = parseInt(page.split('-')[1], 10);
     if (legacyId) {
-      _navigating = false; // Allow nested navigate in navigateToOuting
-      await navigateToOuting(legacyId, skipHistory);
+      const resolvedPage = await navigateToOuting(legacyId, skipHistory);
+      if (resolvedPage && resolvedPage !== page) {
+        // Re-queue with resolved page instead of recursive call
+        _navigationQueue.unshift({ page: resolvedPage, skipHistory, resolve: () => {}, timestamp: Date.now() });
+      }
       return;
     }
   }
 
   currentPage = page;
   const app = document.getElementById('app');
+  
+  // Cancel any in-flight render from previous navigation
+  if (_currentRenderController) {
+    _currentRenderController.abort();
+  }
+  _currentRenderController = new AbortController();
+  const renderSignal = _currentRenderController.signal;
+
   cleanupHeroSlider();
 
-  // Browser history support
+  // Browser history support (before rendering to ensure URL is set).
+  // Every known page gets a clean, shareable path URL (no '#' fragments);
+  // only truly unknown pages fall back to a hash so deep links never 404.
   if (!skipHistory) {
-    if (page === 'home') history.pushState({ page }, '', '/');
-    else if (page === 'outings') history.pushState({ page }, '', '/outings');
-    else if (page && page.startsWith('outing-slug:')) history.pushState({ page }, '', buildOutingPath(page.substring(12)));
+    const path = buildPathForPage(page);
+    if (path) history.pushState({ page }, '', path);
     else history.pushState({ page }, '', '#' + page);
   }
 
   // Show loading spinner
   app.innerHTML = '<div class="loading-spinner"></div>';
 
-  if (page === 'home') await renderHome(app);
-  else if (page === 'outings') await renderOutings(app);
-  else if (page === 'suggest') renderSuggest(app);
-  else if (page === 'dashboard') await renderUserDashboard(app);
-  else if (page === 'galleries') await renderUserGalleries(app);
-  else if (page.startsWith('gallery-')) await openUserGallery(parseInt(page.split('-')[1]));
-  else if (page === 'admin') await renderAdmin(app);
-  else if (page === 'recommendations') await renderRecommendations(app);
-  else if (page === 'blogs') await renderBlogList(app);
-  else if (page.startsWith('blog-')) await renderBlogDetail(app, page.substring(5));
-  else if (page.startsWith('outing-slug:')) await renderOutingDetailBySlug(app, page.substring(12));
+  // Check if this render was aborted before proceeding
+  if (renderSignal.aborted) {
+    _currentRenderController = null;
+    return;
+  }
 
-  // Footer pages
-  else if (page === 'about') renderAbout(app);
-  else if (page === 'how-it-works') renderHowItWorks(app);
-  else if (page === 'careers') renderCareers(app);
-  else if (page === 'contact-support') renderContactSupport(app);
-  else if (page === 'cancellation-policy') renderCancellationPolicy(app);
-  else if (page === 'safety-center') renderSafetyCenter(app);
-  else if (page === 'manage-trips') { if(currentUser) await renderUserDashboard(app); else showLogin(); }
-  else if (page === 'partners') renderPartners(app);
-  else if (page === 'affiliate') renderAffiliate(app);
-  else if (page === 'privacy-policy') renderLegalPage(app, 'privacy');
-  else if (page === 'terms-of-service') renderLegalPage(app, 'terms');
-  else if (page === 'refund-policy') renderLegalPage(app, 'refund');
-  else if (page === 'community-guidelines') renderLegalPage(app, 'community');
-  else if (page === 'wishlist') await renderWishlist(app);
-  else if (page === 'wallet') await renderWallet(app);
-  else if (page === 'notifications') await renderNotificationsPage(app);
+  // Render the appropriate page - pass signal to support cancellation
+  try {
+    if (page === 'home') await renderHome(app, renderSignal);
+    else if (page === 'outings') await renderOutings(app, renderSignal);
+    else if (page === 'suggest') renderSuggest(app);
+    else if (page === 'dashboard') await renderUserDashboard(app, renderSignal);
+    else if (page === 'galleries') await renderUserGalleries(app, renderSignal);
+    else if (page.startsWith('gallery-')) await openUserGallery(parseInt(page.split('-')[1]), renderSignal);
+    else if (page === 'admin') await renderAdmin(app, renderSignal);
+    else if (page === 'recommendations') await renderRecommendations(app, renderSignal);
+    else if (page === 'blogs') await renderBlogList(app, renderSignal);
+    else if (page.startsWith('blog-')) await renderBlogDetail(app, page.substring(5), renderSignal);
+    else if (page.startsWith('outing-slug:')) await renderOutingDetailBySlug(app, page.substring(12), renderSignal);
+    // Footer pages
+    else if (page === 'about') renderAbout(app);
+    else if (page === 'how-it-works') renderHowItWorks(app);
+    else if (page === 'careers') renderCareers(app);
+    else if (page === 'contact-support') renderContactSupport(app);
+    else if (page === 'cancellation-policy') renderCancellationPolicy(app);
+    else if (page === 'safety-center') renderSafetyCenter(app);
+    else if (page === 'manage-trips') { if(currentUser) await renderUserDashboard(app, renderSignal); else showLogin(); }
+    else if (page === 'partners') renderPartners(app);
+    else if (page === 'affiliate') renderAffiliate(app);
+    else if (page === 'privacy-policy') renderLegalPage(app, 'privacy');
+    else if (page === 'terms-of-service') renderLegalPage(app, 'terms');
+    else if (page === 'refund-policy') renderLegalPage(app, 'refund');
+    else if (page === 'community-guidelines') renderLegalPage(app, 'community');
+    else if (page === 'wishlist') await renderWishlist(app, renderSignal);
+    else if (page === 'wallet') await renderWallet(app, renderSignal);
+    else if (page === 'notifications') await renderNotificationsPage(app, renderSignal);
 
-  if (page === 'home') setDefaultSeo('/');
-  else if (page === 'outings') setDefaultSeo('/outings');
-  else if (!page.startsWith('outing-slug:')) setDefaultSeo(window.location.pathname || '/');
+    // Check if aborted before proceeding with post-render tasks
+    if (renderSignal.aborted) {
+      _currentRenderController = null;
+      return;
+    }
 
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Update SEO after successful render
+    if (page === 'home') setDefaultSeo('/');
+    else if (page === 'outings') setDefaultSeo('/outings');
+    else if (!page.startsWith('outing-slug:')) setDefaultSeo(window.location.pathname || '/');
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } finally {
+    _currentRenderController = null;
+  }
 }
 
-async function renderOutingDetailBySlug(app, slug) {
+// Validate that page state matches current URL and navigation state
+function validatePageState() {
+  const urlPage = resolvePageFromUrl();
+  if (currentPage !== urlPage) {
+    console.warn('[NAV] State mismatch detected:', { 
+      currentPage, 
+      urlPage, 
+      isRendering: _renderState.isRendering,
+      activeNav: _activeNavigation ? _activeNavigation.page : null
+    });
+    return false;
+  }
+  return true;
+}
+
+async function renderOutingDetailBySlug(app, slug, signal) {
   const safeSlug = normalizeSlug(slug);
   if (!safeSlug) {
     renderOutingNotFound(app);
     return;
   }
 
-  const outing = await api('/outings/by-slug/' + encodeURIComponent(safeSlug), { showToast: false });
+  const outing = await api('/outings/by-slug/' + encodeURIComponent(safeSlug), { showToast: false, signal });
+  
+  // Check if render was cancelled
+  if (signal && signal.aborted) return;
+  
   if (!outing || !outing.id) {
     renderOutingNotFound(app);
     return;
@@ -1841,7 +2256,7 @@ async function renderOutingDetailBySlug(app, slug) {
     history.replaceState({ page: correctedPage }, '', buildOutingPath(outing.slug));
   }
 
-  await renderOutingDetail(app, outing.id, outing);
+  await renderOutingDetail(app, outing.id, outing, signal);
 }
 
 function renderOutingNotFound(app) {
@@ -1865,12 +2280,16 @@ function renderOutingNotFound(app) {
 }
 
 // ─── HOME PAGE ──────────────────────────────────────────────────
-async function renderHome(app) {
+async function renderHome(app, signal) {
   const [outingsData, statsData, blogsData] = await Promise.all([
-    api('/outings', { cacheTtl: 60000 }),
-    api('/public-stats', { cacheTtl: 60000 }),
-    api('/blogs?featured=1', { cacheTtl: 60000 })
+    api('/outings', { cacheTtl: 60000, signal }),
+    api('/public-stats', { cacheTtl: 60000, signal }),
+    api('/blogs?featured=1', { cacheTtl: 60000, signal })
   ]);
+  
+  // Check if render was cancelled before mutating DOM
+  if (signal && signal.aborted) return;
+  
   outings = Array.isArray(outingsData) ? outingsData : [];
   const featured = outings.slice(0, 3);
   const featuredBlogs = Array.isArray(blogsData) ? blogsData.slice(0, 3) : [];
@@ -2241,9 +2660,13 @@ function outingCard(o) {
 }
 
 // ─── OUTINGS PAGE ───────────────────────────────────────────────
-async function renderOutings(app) {
+async function renderOutings(app, signal) {
   const url = selectedVibe ? '/outings?category=' + encodeURIComponent(selectedVibe) : '/outings';
-  const data = await api(url, { showToast: false, cacheTtl: 60000 });
+  const data = await api(url, { showToast: false, cacheTtl: 60000, signal });
+  
+  // Check if render was cancelled before mutating DOM
+  if (signal && signal.aborted) return;
+  
   const apiFailed = !Array.isArray(data) && data && data.success === false;
   outings = Array.isArray(data) ? data : [];
   const vibeLabels = { beaches: '🏖️ Beaches', mountains: '⛰️ Mountains', festivals: '🎵 Festivals', road_trips: '🚗 Road Trips', adventure: '🥾 Adventure', nightlife: '🌙 Nightlife' };
@@ -2474,6 +2897,7 @@ async function confirmBooking(e, outingId, cost) {
         closeModal();
         if (fallback.wallet_discount > 0) trackEvent('reward_redeemed', { amount: fallback.wallet_discount });
         if (fallback.reward_credited > 0) trackEvent('reward_credited', { amount: fallback.reward_credited });
+        if ((fallback.wallet_discount || 0) > 0 || (fallback.reward_credited || 0) > 0) markWalletDirty('booking_fallback');
         const rewardMsg = fallback.reward_credited > 0 ? ' | 🎁 ₹' + fallback.reward_credited + ' wallet credit earned!' : '';
         toast('🎉 Token booking confirmed (demo)! Paid ₹' + fallback.token_amount + ' | Remaining ₹' + fallback.remaining_amount + rewardMsg, 'success');
         showBookingSuccessModal({ token_amount: fallback.token_amount, remaining_amount: fallback.remaining_amount, wallet_discount: fallback.wallet_discount || 0, reward_credited: fallback.reward_credited || 0, payment_id: fallback.payment_id || 'DEMO', booking_id: fallback.booking_id });
@@ -2506,6 +2930,7 @@ async function confirmBooking(e, outingId, cost) {
       if (verifyRes.success) {
         if (verifyRes.wallet_discount > 0) trackEvent('reward_redeemed', { amount: verifyRes.wallet_discount });
         if (verifyRes.reward_credited > 0) trackEvent('reward_credited', { amount: verifyRes.reward_credited });
+        if ((verifyRes.wallet_discount || 0) > 0 || (verifyRes.reward_credited || 0) > 0) markWalletDirty('booking_payment_verified');
         toast('🎉 Token payment of ₹' + orderRes.amount + ' successful!', 'success');
         showBookingSuccessModal({ token_amount: orderRes.amount, remaining_amount: orderRes.remaining_amount, wallet_discount: verifyRes.wallet_discount || 0, reward_credited: verifyRes.reward_credited || 0, payment_id: verifyRes.payment_id || response.razorpay_payment_id, booking_id: orderRes.booking_id, whatsapp_link: verifyRes.whatsapp_link });
       } else {
@@ -2560,214 +2985,181 @@ async function submitSuggestion(e) {
 }
 
 // ─── USER DASHBOARD ─────────────────────────────────────────────
-async function renderUserDashboard(app) {
+async function renderUserDashboard(app, signal) {
   if (!currentUser) { showLogin(); return; }
-  const [bookings, verification, myReviews, myBlogs, myGalleries, myExpectations, myPasses, walletData] = await Promise.all([
-    api('/bookings/' + currentUser.id),
-    api('/verify-id/' + currentUser.id),
-    api('/my-reviews'),
-    api('/my-blogs'),
-    api('/user/galleries'),
-    api('/expectations/my'),
-    api('/digital-passes/my'),
-    api('/wallet/' + currentUser.id)
-  ]);
-  const verStatus = verification.status || 'none';
-  const reviewsList = Array.isArray(myReviews) ? myReviews : [];
-  const blogsList = Array.isArray(myBlogs) ? myBlogs : [];
-  const galleriesList = Array.isArray(myGalleries) ? myGalleries : [];
-  const passesList = Array.isArray(myPasses) ? myPasses : [];
-  const pendingBlogs = blogsList.filter(b => b.status === 'pending');
-  const publishedBlogs = blogsList.filter(b => b.status === 'approved');
-  const walletBalance = (walletData && walletData.balance) || 0;
-
   app.innerHTML = `
     <section class="section">
       <h2 class="section-title">👋 Hi, ${currentUser.name}!</h2>
-      <p class="section-subtitle">Your bookings, reviews, and travel stories</p>
-      <div class="dash-stats">
-        <div class="dash-stat"><div class="icon" style="background:rgba(108,60,225,.1);color:var(--primary)"><i class="fas fa-ticket-alt"></i></div><h4>Total Bookings</h4><div class="value">${bookings.length}</div></div>
-        <div class="dash-stat"><div class="icon" style="background:rgba(16,185,129,.1);color:var(--success)"><i class="fas fa-rupee-sign"></i></div><h4>Total Spent</h4><div class="value">₹${bookings.reduce((s,b) => s + b.total_amount, 0)}</div></div>
-        <div class="dash-stat" style="cursor:pointer" onclick="navigate('wallet')"><div class="icon" style="background:linear-gradient(135deg,rgba(108,60,225,.12),rgba(249,115,22,.12));color:var(--primary)"><i class="fas fa-wallet"></i></div><h4>🎁 Vibes Wallet</h4><div class="value">₹${walletBalance.toLocaleString()}</div><button class="btn btn-sm" style="margin-top:.5rem;background:linear-gradient(135deg,var(--success),#059669);color:#fff;font-size:.75rem;padding:.3rem .7rem" onclick="event.stopPropagation();showAddMoney()"><i class="fas fa-plus"></i> Add Money</button></div>
-        <div class="dash-stat"><div class="icon" style="background:rgba(245,158,11,.1);color:#F59E0B"><i class="fas fa-star"></i></div><h4>My Reviews</h4><div class="value">${reviewsList.length}</div></div>
-        <div class="dash-stat"><div class="icon" style="background:rgba(6,214,160,.1);color:var(--accent)"><i class="fas fa-pen-fancy"></i></div><h4>My Blogs</h4><div class="value">${blogsList.length}</div></div>
-        <div class="dash-stat">
-          <div class="icon" style="background:${verStatus==='verified'?'rgba(16,185,129,.1)':'rgba(245,158,11,.1)'};color:${verStatus==='verified'?'var(--success)':'var(--warning)'}">
-            <i class="fas fa-${verStatus==='verified'?'check-shield':'id-card'}"></i>
-          </div>
-          <h4>ID Verification</h4>
-          <div class="value" style="font-size:1rem">
-            ${verStatus === 'verified' ? '<span class="verified-badge"><i class="fas fa-check-circle"></i> Verified</span>' :
-              verStatus === 'pending' ? '<span class="unverified-badge"><i class="fas fa-clock"></i> Under Review</span>' :
-              `<button class="btn btn-primary btn-sm" onclick="showVerifyId()"><i class="fas fa-id-card"></i> Verify Now</button>`}
-          </div>
-        </div>
+      <p class="section-subtitle">A fast, stable dashboard with lazy-loaded widgets</p>
+      <div class="dashboard-widget-grid" id="dashboardWidgetGrid">
+        <div class="dashboard-widget" id="widget-profile" data-widget="profile">${renderDashboardWidgetSkeleton()}</div>
+        <div class="dashboard-widget" id="widget-bookings" data-widget="bookings">${renderDashboardWidgetSkeleton()}</div>
+        <div class="dashboard-widget" id="widget-wallet" data-widget="wallet">${renderDashboardWidgetSkeleton()}</div>
+        <div class="dashboard-widget" id="widget-notifications" data-widget="notifications">${renderDashboardWidgetSkeleton()}</div>
+        <div class="dashboard-widget" id="widget-rewards" data-widget="rewards">${renderDashboardWidgetSkeleton()}</div>
       </div>
-
-      <h3 style="margin-bottom:1rem">My Bookings</h3>
-      ${bookings.length ? `<div class="table-wrap"><table>
-        <thead><tr><th>Outing</th><th>Date</th><th>Participants</th><th>Token Paid</th><th>Remaining</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>${bookings.map(b => {
-          const remainingStatus = (b.remaining_payment_status === 'paid') ? '<span class="status status-paid">Paid ✅</span>' :
-            b.deadline_passed ? '<span class="status status-rejected">Deadline passed</span>' :
-            `<span class="status status-pending">₹${b.remaining_amount || 0} due</span><br><small style="color:var(--secondary)">${b.hours_until_deadline}hrs left</small>`;
-          const payBtn = (b.payment_status === 'paid' && (b.remaining_payment_status || 'pending') !== 'paid' && !b.deadline_passed) ?
-            `<button class="btn btn-sm btn-secondary" onclick="payRemaining(${b.id})"><i class="fas fa-rupee-sign"></i> Pay ₹${b.remaining_amount || 0}</button>` : '';
-          return `<tr>
-          <td><strong>${b.title}</strong><br><small style="color:var(--text-light)">${b.location}</small></td>
-          <td>${new Date(b.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
-          <td>${b.participants}</td>
-          <td><strong style="color:var(--success)">₹${b.token_amount || b.total_amount}</strong></td>
-          <td>${remainingStatus}</td>
-          <td><span class="status status-${b.payment_status}">${b.payment_status}</span></td>
-          <td>
-            ${b.payment_status === 'paid' ? `
-              <button class="btn btn-sm" style="background:#F1F5F9" onclick="navigateToOuting(${b.outing_id})"><i class="fas fa-eye"></i></button>
-              ${payBtn}
-            ` : '-'}
-          </td>
-        </tr>`}).join('')}</tbody>
-      </table></div>` : '<p style="color:var(--text-light)">No bookings yet. <a href="#" onclick="navigate(\'outings\')" style="color:var(--primary)">Explore outings!</a></p>'}
-
-      <!-- MY DIGITAL PASSES SECTION -->
-      <h3 style="margin-top:2.5rem;margin-bottom:1rem">🎫 My Digital Passes</h3>
-      ${passesList.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem;margin-bottom:1.5rem">
-        ${passesList.map(p => {
-          const statusColor = p.boarding_status === 'verified' ? 'var(--success)' : p.boarding_status === 'revoked' ? 'var(--danger)' : 'var(--primary)';
-          const statusLabel = p.boarding_status === 'verified' ? '✅ Boarded' : p.boarding_status === 'revoked' ? '❌ Revoked' : '🎫 Active';
-          const tripDate = new Date(p.outing_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
-          return `<div style="background:#fff;border-radius:16px;box-shadow:var(--shadow);overflow:hidden;border-top:4px solid ${statusColor};cursor:pointer" onclick="showDigitalPass('${escapeHtml(p.pass_id)}')">
-            <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center">
-              <div>
-                <div style="font-size:.7rem;opacity:.7;text-transform:uppercase;letter-spacing:1px">Digital Trip Pass</div>
-                <div style="font-size:1rem;font-weight:700;letter-spacing:1px;margin-top:.25rem">${escapeHtml(p.pass_id)}</div>
-              </div>
-              <div style="text-align:right">
-                <span style="background:${statusColor};color:#fff;padding:.2rem .6rem;border-radius:999px;font-size:.7rem;font-weight:600">${statusLabel}</span>
-              </div>
-            </div>
-            <div style="padding:1rem 1.25rem">
-              <div style="font-weight:600;font-size:.95rem">${escapeHtml(p.outing_title)}</div>
-              <div style="font-size:.8rem;color:var(--text-light);margin-top:.25rem"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.outing_location)} &bull; <i class="fas fa-calendar-alt"></i> ${tripDate}</div>
-              <div style="font-size:.8rem;color:var(--text-light);margin-top:.25rem"><i class="fas fa-clock"></i> ${escapeHtml(p.outing_time || '10:00 AM')} &bull; <i class="fas fa-users"></i> ${p.participants} traveler(s)</div>
-              <div style="display:flex;gap:.5rem;margin-top:.75rem">
-                <button class="btn btn-sm" style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;flex:1" onclick="event.stopPropagation();showDigitalPass('${escapeHtml(p.pass_id)}')"><i class="fas fa-qrcode"></i> View Pass</button>
-                <button class="btn btn-sm" style="background:#F1F5F9;flex:1" onclick="event.stopPropagation();printDigitalPass('${escapeHtml(p.pass_id)}')"><i class="fas fa-print"></i> Print</button>
-              </div>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>` : '<p style="color:var(--text-light);font-size:.9rem">Your digital trip passes will appear here after booking confirmation. <a href="#" onclick="navigate(\'outings\')" style="color:var(--primary)">Book an outing!</a></p>'}
-
-      <!-- MY REVIEWS SECTION -->
-      <h3 style="margin-top:2.5rem;margin-bottom:1rem">⭐ My Reviews</h3>
-      ${reviewsList.length ? `<div style="display:grid;gap:1rem">${reviewsList.map(r => `
-        <div class="review-card" style="cursor:pointer" onclick="navigateToOuting(${r.outing_id})">
-          <div style="display:flex;gap:1rem;align-items:start">
-            ${r.image_url ? `<div style="width:80px;height:60px;border-radius:8px;background:url('${escapeHtml(r.image_url)}') center/cover;flex-shrink:0"></div>` : ''}
-            <div style="flex:1">
-              <div style="font-weight:600;font-size:.9rem">${escapeHtml(r.outing_title)}</div>
-              <div style="font-size:.8rem;color:var(--text-light)">${escapeHtml(r.outing_location)} • ${new Date(r.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div>
-              <div class="stars" style="margin-top:.25rem">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
-              ${r.title ? `<div style="font-weight:500;margin-top:.25rem">${escapeHtml(r.title)}</div>` : ''}
-              ${r.comment ? `<div class="review-text">${escapeHtml(r.comment).substring(0, 150)}${r.comment.length > 150 ? '...' : ''}</div>` : ''}
-            </div>
-          </div>
-        </div>
-      `).join('')}</div>` : '<p style="color:var(--text-light);font-size:.9rem">No reviews yet. Complete a trip to share your experience!</p>'}
-
-      <!-- MY GALLERIES SECTION -->
-      <h3 style="margin-top:2.5rem;margin-bottom:1rem">📸 My Trip Galleries</h3>
-      ${galleriesList.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;margin-bottom:1.5rem">
-        ${galleriesList.slice(0, 4).map(g => {
-          const coverImg = g.cover_image || g.outing_image || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600';
-          return `<div class="gallery-card" onclick="navigate('gallery-${g.id}')">
-            <div class="cover" style="background-image:url('${escapeHtml(coverImg)}');height:140px">
-              <span class="photo-count"><i class="fas fa-image"></i> ${g.media_count || 0}</span>
-            </div>
-            <div class="info" style="padding:.75rem 1rem">
-              <h4 style="font-size:.9rem">${escapeHtml(g.outing_title)}</h4>
-              <div class="meta"><span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(g.outing_location)}</span></div>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>${galleriesList.length > 4 ? `<p style="text-align:center"><a href="#" onclick="navigate('galleries')" style="color:var(--primary);font-weight:600">View all ${galleriesList.length} galleries →</a></p>` : ''}` :
-        '<p style="color:var(--text-light);font-size:.9rem">Your trip memories will appear here after your outing is completed. <a href="#" onclick="navigate(\'galleries\')" style="color:var(--primary)">View galleries</a></p>'}
-
-      <!-- MY BLOGS SECTION -->
-      <h3 style="margin-top:2.5rem;margin-bottom:1rem">✍️ My Blogs</h3>
-      ${blogsList.length ? `
-        ${pendingBlogs.length ? `<h4 style="color:var(--warning);font-size:.9rem;margin-bottom:.75rem"><i class="fas fa-clock"></i> Pending Approval (${pendingBlogs.length})</h4>` : ''}
-        <div style="display:grid;gap:1rem;margin-bottom:1.5rem">
-          ${blogsList.map(b => `
-            <div style="background:#fff;padding:1rem 1.25rem;border-radius:12px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;border-left:4px solid ${b.status === 'approved' ? 'var(--success)' : b.status === 'rejected' ? 'var(--danger)' : 'var(--warning)'}">
-              <div>
-                <div style="font-weight:600">${escapeHtml(b.title)}</div>
-                <div style="font-size:.8rem;color:var(--text-light)">${escapeHtml(b.outing_title)} • ${escapeHtml(b.outing_location)} • ${new Date(b.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div>
-              </div>
-              <div style="display:flex;align-items:center;gap:.75rem">
-                <span class="blog-status ${b.status}">${b.status === 'approved' ? '✅ Published' : b.status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}</span>
-                ${b.status === 'approved' ? `<button class="btn btn-sm btn-primary" onclick="navigate('blog-${b.slug}')"><i class="fas fa-eye"></i> View</button>` : ''}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      ` : '<p style="color:var(--text-light);font-size:.9rem">No blogs yet. Complete a trip to write your travel story!</p>'}
-
-      <!-- MY TRIP EXPECTATIONS SECTION -->
-      <h3 style="margin-top:2.5rem;margin-bottom:1rem">✨ My Trip Expectations</h3>
-      ${(() => {
-        const expectationsList = Array.isArray(myExpectations) ? myExpectations : [];
-        const paidBookings = bookings.filter(b => b.payment_status === 'paid');
-        const bookingsWithExpectations = paidBookings.map(b => {
-          const exp = expectationsList.find(e => e.booking_id === b.id);
-          return { ...b, expectation: exp };
-        });
-        const upcomingBookings = bookingsWithExpectations.filter(b => new Date(b.date) > new Date());
-
-        if (!upcomingBookings.length && !expectationsList.length) {
-          return '<p style="color:var(--text-light);font-size:.9rem">Book a trip to share what you\'re looking forward to! 🌟</p>';
-        }
-
-        let html = '';
-        // Progress indicator
-        const totalUpcoming = upcomingBookings.length;
-        const submittedCount = upcomingBookings.filter(b => b.expectation).length;
-        if (totalUpcoming > 0) {
-          html += '<div style="background:linear-gradient(135deg,#EEF2FF,#F0F9FF);padding:1rem 1.25rem;border-radius:12px;margin-bottom:1rem;border:1px solid #C7D2FE">';
-          html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem"><span style="font-size:.85rem;font-weight:600;color:var(--primary)"><i class="fas fa-tasks"></i> Progress</span><span style="font-size:.8rem;color:var(--text-light)">' + submittedCount + '/' + totalUpcoming + ' submitted</span></div>';
-          html += '<div style="background:#E2E8F0;border-radius:999px;height:8px;overflow:hidden"><div style="background:linear-gradient(135deg,var(--primary),var(--accent));height:100%;width:' + (totalUpcoming > 0 ? (submittedCount/totalUpcoming*100) : 0) + '%;border-radius:999px;transition:width .5s ease"></div></div>';
-          html += '</div>';
-        }
-
-        // List expectations and action buttons for upcoming bookings
-        html += '<div style="display:grid;gap:1rem">';
-        upcomingBookings.forEach(b => {
-          const tags = b.expectation && b.expectation.tags ? b.expectation.tags.split(',').filter(t=>t.trim()) : [];
-          html += '<div style="background:#fff;padding:1.25rem;border-radius:12px;box-shadow:var(--shadow);border-left:4px solid ' + (b.expectation ? 'var(--success)' : 'var(--warning)') + '">';
-          html += '<div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap">';
-          html += '<div><div style="font-weight:600">' + escapeHtml(b.title) + '</div><div style="font-size:.8rem;color:var(--text-light)">' + escapeHtml(b.location) + ' • ' + new Date(b.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) + '</div></div>';
-          if (b.expectation) {
-            html += '<span style="background:rgba(16,185,129,.1);color:var(--success);padding:.25rem .75rem;border-radius:999px;font-size:.75rem;font-weight:600"><i class="fas fa-check-circle"></i> Submitted</span>';
-          } else {
-            html += '<button class="btn btn-sm" style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff" onclick="showExpectationsForm(' + b.id + ')"><i class="fas fa-magic"></i> Add</button>';
-          }
-          html += '</div>';
-          if (b.expectation) {
-            html += '<div style="margin-top:.75rem;padding:.75rem;background:#F8FAFC;border-radius:8px;font-size:.9rem;color:var(--text)">' + escapeHtml(b.expectation.expectations).substring(0, 200) + (b.expectation.expectations.length > 200 ? '...' : '') + '</div>';
-            if (tags.length) {
-              html += '<div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.4rem">';
-              tags.forEach(t => { html += '<span style="background:rgba(108,60,225,.08);color:var(--primary);padding:.2rem .6rem;border-radius:999px;font-size:.7rem;font-weight:500">' + escapeHtml(t.trim()) + '</span>'; });
-              html += '</div>';
-            }
-            html += '<div style="margin-top:.75rem;display:flex;gap:.5rem"><button class="btn btn-sm" style="background:#F1F5F9" onclick="showExpectationsForm(' + b.id + ')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-sm" style="background:#FEE2E2;color:var(--danger)" onclick="deleteExpectation(' + b.expectation.id + ')"><i class="fas fa-trash"></i></button></div>';
-          }
-          html += '</div>';
-        });
-        html += '</div>';
-        return html;
-      })()}
     </section>
+    ${renderFooterHTML()}
+  `;
+
+  if (signal && signal.aborted) return;
+
+  const dataCache = {
+    bookingsPromise: null,
+    walletPromise: null,
+    verificationPromise: null,
+    notificationsPromise: null
+  };
+
+  const getBookings = () => {
+    if (!dataCache.bookingsPromise) {
+      dataCache.bookingsPromise = api('/bookings/' + currentUser.id, { signal, cacheTtl: 15000, showToast: false })
+        .then((d) => (Array.isArray(d) ? d : []));
+    }
+    return dataCache.bookingsPromise;
+  };
+
+  const getWallet = () => {
+    if (!dataCache.walletPromise) {
+      dataCache.walletPromise = api('/wallet/' + currentUser.id + '?page=1&pageSize=8', { signal, cacheTtl: 10000, showToast: false })
+        .then((d) => (d && d.success === false ? { balance: 0, summary: {}, transactions: [] } : (d || { balance: 0, summary: {}, transactions: [] })));
+    }
+    return dataCache.walletPromise;
+  };
+
+  const getVerification = () => {
+    if (!dataCache.verificationPromise) {
+      dataCache.verificationPromise = api('/verify-id/' + currentUser.id, { signal, cacheTtl: 30000, showToast: false })
+        .then((d) => d || { status: 'none' });
+    }
+    return dataCache.verificationPromise;
+  };
+
+  const getNotifications = () => {
+    if (!dataCache.notificationsPromise) {
+      dataCache.notificationsPromise = api('/notifications/' + currentUser.id, { signal, cacheTtl: 5000, background: true, showToast: false })
+        .then((d) => (Array.isArray(d) ? d : []));
+    }
+    return dataCache.notificationsPromise;
+  };
+
+  const renderers = {
+    profile: async () => {
+      const verification = await getVerification();
+      const status = verification.status || 'none';
+      const statusHtml = status === 'verified'
+        ? '<span class="verified-badge"><i class="fas fa-check-circle"></i> Verified</span>'
+        : status === 'pending'
+          ? '<span class="unverified-badge"><i class="fas fa-clock"></i> Under Review</span>'
+          : '<button class="btn btn-sm btn-primary" onclick="showVerifyId()"><i class="fas fa-id-card"></i> Verify Now</button>';
+      return `
+        <h4><i class="fas fa-user-circle" style="color:var(--primary)"></i> Profile</h4>
+        <div class="dashboard-list">
+          <div class="dashboard-list-item"><span>Name</span><strong>${escapeHtml(currentUser.name || '')}</strong></div>
+          <div class="dashboard-list-item"><span>Email</span><strong>${escapeHtml(currentUser.email || '-')}</strong></div>
+          <div class="dashboard-list-item"><span>ID Verification</span><span>${statusHtml}</span></div>
+        </div>`;
+    },
+    bookings: async () => {
+      const bookings = await getBookings();
+      const paid = bookings.filter((b) => b.payment_status === 'paid');
+      const totalSpent = bookings.reduce((sum, b) => sum + Number(b.total_amount || 0), 0);
+      return `
+        <h4><i class="fas fa-ticket-alt" style="color:var(--primary)"></i> Bookings</h4>
+        <div class="dashboard-list">
+          <div class="dashboard-list-item"><span>Total Bookings</span><strong>${bookings.length}</strong></div>
+          <div class="dashboard-list-item"><span>Confirmed Trips</span><strong>${paid.length}</strong></div>
+          <div class="dashboard-list-item"><span>Total Spent</span><strong>₹${totalSpent.toLocaleString()}</strong></div>
+          ${paid.slice(0, 2).map((b) => `<div class="dashboard-list-item"><span>${escapeHtml(b.title)}</span><button class="btn btn-sm" style="background:#F1F5F9" onclick="navigateToOuting(${b.outing_id})"><i class="fas fa-eye"></i></button></div>`).join('')}
+        </div>
+        <div style="margin-top:.75rem"><button class="btn btn-sm btn-primary" onclick="navigate('outings')"><i class="fas fa-compass"></i> Explore More</button></div>`;
+    },
+    wallet: async () => {
+      const wallet = await getWallet();
+      const balance = Number(wallet.balance || 0);
+      const recent = Array.isArray(wallet.transactions) ? wallet.transactions.slice(0, 3) : [];
+      return `
+        <h4><i class="fas fa-wallet" style="color:var(--success)"></i> Wallet</h4>
+        <div style="font-size:1.8rem;font-weight:800;margin-bottom:.75rem">₹${balance.toLocaleString()}</div>
+        <div class="dashboard-list">
+          ${recent.length ? recent.map((t) => `<div class="dashboard-list-item"><span>${escapeHtml(t.description || t.type || 'Transaction')}</span><strong style="color:${t.type === 'debit' ? 'var(--danger)' : 'var(--success)'}">${t.type === 'debit' ? '-' : '+'}₹${Number(t.amount || 0)}</strong></div>`).join('') : '<div class="dashboard-list-item"><span>No wallet activity yet</span><span></span></div>'}
+        </div>
+        <div style="margin-top:.75rem;display:flex;gap:.5rem"><button class="btn btn-sm" style="background:#F1F5F9" onclick="navigate('wallet')">Open Wallet</button><button class="btn btn-sm btn-primary" onclick="showAddMoney()"><i class="fas fa-plus"></i> Add</button></div>`;
+    },
+    notifications: async () => {
+      const notif = await getNotifications();
+      const unread = notif.filter((n) => !n.read);
+      return `
+        <h4><i class="fas fa-bell" style="color:var(--warning)"></i> Notifications</h4>
+        <div class="dashboard-list">
+          <div class="dashboard-list-item"><span>Unread</span><strong>${unread.length}</strong></div>
+          ${(unread.length ? unread : notif).slice(0, 3).map((n) => `<div class="dashboard-list-item"><span>${escapeHtml(n.title || 'Update')}</span><small>${timeAgo(n.created_at)}</small></div>`).join('') || '<div class="dashboard-list-item"><span>All caught up</span><span></span></div>'}
+        </div>
+        <div style="margin-top:.75rem"><button class="btn btn-sm" style="background:#F1F5F9" onclick="navigate('notifications')">View all</button></div>`;
+    },
+    rewards: async () => {
+      const wallet = await getWallet();
+      const summary = wallet.summary || {};
+      return `
+        <h4><i class="fas fa-gift" style="color:#F59E0B"></i> Rewards</h4>
+        <div class="dashboard-list">
+          <div class="dashboard-list-item"><span>Reward Credits</span><strong>₹${Number(summary.rewardCredits || 0).toLocaleString()}</strong></div>
+          <div class="dashboard-list-item"><span>Reward Transactions</span><strong>${Number(summary.rewardTransactions || 0)}</strong></div>
+          <div class="dashboard-list-item"><span>Recharge Credits</span><strong>₹${Number(summary.rechargeCredits || 0).toLocaleString()}</strong></div>
+          <div class="dashboard-list-item"><span>Booking Deductions</span><strong>₹${Number(summary.bookingDebits || 0).toLocaleString()}</strong></div>
+        </div>
+        <div style="margin-top:.75rem"><button class="btn btn-sm btn-primary" onclick="navigate('wallet')"><i class="fas fa-chart-line"></i> Reward History</button></div>`;
+    }
+  };
+
+  const loaded = new Set();
+  const loadWidget = async (name) => {
+    if (loaded.has(name)) return;
+    loaded.add(name);
+    const el = document.getElementById('widget-' + name);
+    if (!el || (signal && signal.aborted)) return;
+    try {
+      const html = await renderers[name]();
+      if (signal && signal.aborted) return;
+      el.innerHTML = html;
+    } catch (_) {
+      if (signal && signal.aborted) return;
+      el.innerHTML = `<h4>${name.charAt(0).toUpperCase() + name.slice(1)}</h4><p style="color:var(--text-light);font-size:.85rem">Unable to load widget right now.</p>`;
+    }
+  };
+
+  const widgetNames = ['profile', 'bookings', 'wallet', 'notifications', 'rewards'];
+  const observerTargets = widgetNames
+    .map((name) => ({ name, el: document.getElementById('widget-' + name) }))
+    .filter((w) => !!w.el);
+
+  if (typeof IntersectionObserver === 'function') {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const name = entry.target.getAttribute('data-widget');
+        if (name) loadWidget(name);
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: '120px 0px' });
+
+    observerTargets.forEach((w) => observer.observe(w.el));
+    setTimeout(() => {
+      observerTargets.forEach((w) => loadWidget(w.name));
+    }, 900);
+  } else {
+    widgetNames.forEach((name, idx) => {
+      setTimeout(() => loadWidget(name), idx * 120);
+    });
+  }
+}
+
+function renderDashboardWidgetSkeleton() {
+  return `
+    <div class="dashboard-skeleton dashboard-skeleton-line lg"></div>
+    <div class="dashboard-skeleton dashboard-skeleton-line"></div>
+    <div class="dashboard-skeleton dashboard-skeleton-line"></div>
+    <div class="dashboard-skeleton dashboard-skeleton-line sm"></div>
   `;
 }
 
@@ -3065,17 +3457,29 @@ async function deleteExpectation(expId) {
 }
 
 // ─── OUTING DETAIL PAGE (Reviews + Chat access) ────────────────
-async function renderOutingDetail(app, outingId, prefetchedOuting) {
-  const o = prefetchedOuting || await api('/outings/' + outingId, { showToast: false });
+async function renderOutingDetail(app, outingId, prefetchedOuting, signal) {
+  const o = prefetchedOuting || await api('/outings/' + outingId, { showToast: false, signal });
+  
+  // Check if render was cancelled
+  if (signal && signal.aborted) return;
+  
   if (!o || !o.id) {
     renderOutingNotFound(app);
     return;
   }
   setOutingSeo(o);
-  const reviewData = await api('/reviews/' + outingId);
+  const reviewData = await api('/reviews/' + outingId, { signal });
+  
+  // Check if render was cancelled
+  if (signal && signal.aborted) return;
+  
   const spotsLeft = o.max_participants - o.current_participants;
   const dateStr = new Date(o.date).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
-  const hasBooked = currentUser ? (await api('/bookings/' + currentUser.id)).some(b => b.outing_id === outingId && b.payment_status === 'paid') : false;
+  const hasBooked = currentUser ? (await api('/bookings/' + currentUser.id, { signal })).some(b => b.outing_id === outingId && b.payment_status === 'paid') : false;
+  
+  // Check if render was cancelled
+  if (signal && signal.aborted) return;
+  
   const tripPassed = new Date(o.date) < new Date();
   const canReviewBlog = hasBooked && tripPassed;
   const tripType = o.trip_type || 'one_day';
@@ -3565,8 +3969,12 @@ async function submitBlog(outingId) {
 }
 
 // ─── BLOG LIST PAGE ─────────────────────────────────────────────
-async function renderBlogList(app) {
-  const blogs = await api('/blogs');
+async function renderBlogList(app, signal) {
+  const blogs = await api('/blogs', { signal });
+  
+  // Check if render was cancelled before mutating DOM
+  if (signal && signal.aborted) return;
+  
   const categories = ['All', 'Adventure', 'Family Trip', 'Solo Travel', 'Budget Travel', 'Luxury Experience', 'Food Journey', 'Weekend Getaway', 'Cultural', 'Nature'];
   
   app.innerHTML = `
@@ -3625,8 +4033,12 @@ function filterBlogs(category) {
 }
 
 // ─── BLOG DETAIL PAGE ───────────────────────────────────────────
-async function renderBlogDetail(app, slug) {
-  const blog = await api('/blogs/by-slug/' + encodeURIComponent(slug));
+async function renderBlogDetail(app, slug, signal) {
+  const blog = await api('/blogs/by-slug/' + encodeURIComponent(slug), { signal });
+  
+  // Check if render was cancelled before mutating DOM
+  if (signal && signal.aborted) return;
+  
   if (!blog || blog.success === false) {
     app.innerHTML = `<section class="section" style="text-align:center;padding:4rem"><h2>Blog Not Found</h2><p style="color:var(--text-light)">This blog may have been removed or is pending approval.</p><button class="btn btn-primary" onclick="navigate('blogs')" style="margin-top:1rem">Browse All Blogs</button></section>`;
     return;
@@ -3673,9 +4085,13 @@ async function renderBlogDetail(app, slug) {
 }
 
 // ─── AI RECOMMENDATIONS PAGE ────────────────────────────────────
-async function renderRecommendations(app) {
+async function renderRecommendations(app, signal) {
   if (!currentUser) return showLogin();
-  const recs = await api('/recommendations/' + currentUser.id);
+  const recs = await api('/recommendations/' + currentUser.id, { signal });
+  
+  // Check if render was cancelled before mutating DOM
+  if (signal && signal.aborted) return;
+  
   app.innerHTML = `
     <section class="section">
       <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
@@ -3698,9 +4114,13 @@ async function renderRecommendations(app) {
 // ─── ID VERIFICATION (User Dashboard) ──────────────────────────
 let adminTab = 'overview';
 
-async function renderAdmin(app) {
+async function renderAdmin(app, signal) {
   if (!currentUser || currentUser.role !== 'admin') { navigate('home'); return; }
-  const stats = await api('/admin/stats');
+  const stats = await api('/admin/stats', { signal });
+  
+  // Check if render was cancelled before mutating DOM
+  if (signal && signal.aborted) return;
+  
   app.innerHTML = `
     <div class="dashboard">
       <div class="sidebar">
@@ -5287,25 +5707,53 @@ function renderLegalPage(app, type) {
 }
 
 // ─── WISHLIST ───────────────────────────────────────────────────
-let wishlistItems = JSON.parse(sessionStorage.getItem('vibes_wishlist') || '[]');
-
-function toggleWishlist(outingId) {
+async function toggleWishlist(outingId) {
   if (!currentUser) { showLogin(); return; }
-  const idx = wishlistItems.indexOf(outingId);
-  if (idx > -1) { wishlistItems.splice(idx, 1); toast('Removed from wishlist'); }
-  else { wishlistItems.push(outingId); toast('Added to wishlist! ❤️', 'success'); }
-  sessionStorage.setItem('vibes_wishlist', JSON.stringify(wishlistItems));
-  // Update heart icons on current page
+  const normalizedOutingId = Number(outingId);
+  if (!normalizedOutingId) return;
+
+  await syncWishlistFromServer().catch(() => {});
+
+  const existingWishlistId = wishlistItemMap.get(normalizedOutingId);
+  if (existingWishlistId) {
+    const removeRes = await api('/wishlist/' + existingWishlistId, { method: 'DELETE' });
+    if (removeRes && removeRes.success) {
+      wishlistItemMap.delete(normalizedOutingId);
+      wishlistItems = wishlistItems.filter((id) => id !== normalizedOutingId);
+      sessionStorage.setItem('vibes_wishlist', JSON.stringify(wishlistItems));
+      toast('Removed from wishlist');
+    }
+  } else {
+    const addRes = await api('/wishlist', { method: 'POST', body: { outing_id: normalizedOutingId } });
+    if (addRes && addRes.success) {
+      const row = addRes.item || {};
+      if (row.id) wishlistItemMap.set(normalizedOutingId, Number(row.id));
+      if (!wishlistItems.includes(normalizedOutingId)) wishlistItems.push(normalizedOutingId);
+      sessionStorage.setItem('vibes_wishlist', JSON.stringify(wishlistItems));
+      toast('Added to wishlist! ❤️', 'success');
+    }
+  }
+
   document.querySelectorAll('.wishlist-heart').forEach(btn => {
     const id = parseInt(btn.dataset.outingId);
     btn.classList.toggle('active', wishlistItems.includes(id));
     btn.innerHTML = wishlistItems.includes(id) ? '<i class="fas fa-heart" style="color:var(--danger)"></i>' : '<i class="far fa-heart"></i>';
   });
+
+  if (currentPage === 'wishlist') {
+    const app = document.getElementById('app');
+    if (app) renderWishlist(app);
+  }
 }
 
-async function renderWishlist(app) {
+async function renderWishlist(app, signal) {
   if (!currentUser) { showLogin(); return; }
-  const data = await api('/outings');
+  await syncWishlistFromServer({ force: true });
+  const data = await api('/outings', { signal, cacheTtl: 60000 });
+  
+  // Check if render was cancelled before mutating DOM
+  if (signal && signal.aborted) return;
+  
   const allOutings = Array.isArray(data) ? data : [];
   const saved = allOutings.filter(o => wishlistItems.includes(o.id));
   app.innerHTML = `
@@ -5314,7 +5762,7 @@ async function renderWishlist(app) {
       <p class="section-subtitle">Your saved outings — ready when you are</p>
       ${saved.length ? `<div class="wishlist-grid">${saved.map(o => `
         <div class="card wishlist-card">
-          <button class="wishlist-heart active" data-outing-id="${o.id}" onclick="toggleWishlist(${o.id});if(!wishlistItems.includes(${o.id}))this.closest('.wishlist-card').remove()"><i class="fas fa-heart" style="color:var(--danger)"></i></button>
+          <button class="wishlist-heart active" data-outing-id="${o.id}" onclick="toggleWishlist(${o.id})"><i class="fas fa-heart" style="color:var(--danger)"></i></button>
           <div class="card-img" style="background-image:url('${safeImageUrl(o.image_url)}');cursor:pointer" onclick="navigateToOuting(${o.id})">
             <span class="badge">${escapeHtml(o.location)}</span>
           </div>
@@ -5341,16 +5789,19 @@ async function renderWishlist(app) {
 }
 
 // ─── NOTIFICATIONS ──────────────────────────────────────────────
-let notifications = [];
-let notifPanelOpen = false;
-
-async function fetchNotifications() {
-  if (!currentUser || !authToken) return;
+async function fetchNotifications(opts = {}) {
+  if (!currentUser) return;
   // Background poll: a 401 here must not log the user out or redirect them.
-  const data = await api('/notifications/' + currentUser.id, { showToast: false, background: true });
+  const data = await api('/notifications/' + currentUser.id, {
+    showToast: false,
+    background: true,
+    cacheTtl: opts.force ? 0 : 5000
+  });
   if (data && data.sessionExpired) return;
-  notifications = Array.isArray(data) ? data : [];
+  if (!Array.isArray(data)) return;
+  notifications = data;
   updateNotifBadge();
+  if (notifPanelOpen) renderNotifPanel();
 }
 
 function updateNotifBadge() {
@@ -5406,9 +5857,13 @@ function timeAgo(dateStr) {
   return Math.floor(hrs / 24) + 'd ago';
 }
 
-async function renderNotificationsPage(app) {
+async function renderNotificationsPage(app, signal) {
   if (!currentUser) { showLogin(); return; }
-  await fetchNotifications();
+  await fetchNotifications({ force: true });
+  
+  // Check if render was cancelled before mutating DOM
+  if (signal && signal.aborted) return;
+  
   app.innerHTML = `
     <section class="section" style="max-width:700px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
@@ -5444,16 +5899,100 @@ async function markAllRead() {
   await api('/notifications/read-all', { method: 'PUT' });
   notifications.forEach(n => n.read = true);
   updateNotifBadge();
+  renderNotifPanel();
   renderNotificationsPage(document.getElementById('app'));
   toast('All notifications marked as read', 'success');
 }
 
 // ─── WALLET & PAYMENTS ─────────────────────────────────────────
-async function renderWallet(app) {
-  if (!currentUser) { showLogin(); return; }
-  const walletData = await api('/wallet/' + currentUser.id);
-  const balance = walletData.balance || 0;
-  const transactions = walletData.transactions || [];
+function bindWalletSyncListeners() {
+  if (_walletSyncListenersBound) return;
+  _walletSyncListenersBound = true;
+
+  const refreshWalletIfVisible = (reason) => {
+    if (_walletRefreshTimer) clearTimeout(_walletRefreshTimer);
+    _walletRefreshTimer = setTimeout(() => {
+      if (currentPage !== 'wallet' || !currentUser) return;
+      const app = document.getElementById('app');
+      if (!app || walletViewState.isLoading) return;
+      loadWalletPage(app, { page: walletViewState.page, silent: true, reason });
+    }, 220);
+  };
+
+  window.addEventListener('storage', (event) => {
+    if (event.key !== WALLET_SYNC_EVENT_KEY || !event.newValue) return;
+    let payload = null;
+    try { payload = JSON.parse(event.newValue); } catch (_) {}
+    if (!payload || !currentUser) return;
+    if (String(payload.userId || '') !== String(currentUser.id)) return;
+    refreshWalletIfVisible('cross_tab_sync');
+  });
+
+  window.addEventListener('focus', () => refreshWalletIfVisible('focus_refresh'));
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshWalletIfVisible('visibility_refresh');
+  });
+}
+
+function renderWalletLoading(app) {
+  app.innerHTML = `
+    <section class="section" style="max-width:800px">
+      <h2 class="section-title">💳 Wallet & Payments</h2>
+      <div class="wallet-card">
+        <h4>Available Balance</h4>
+        <div class="balance"><i class="fas fa-spinner fa-spin"></i></div>
+        <div class="wallet-actions">
+          <button disabled><i class="fas fa-clock"></i> Loading...</button>
+          <button disabled><i class="fas fa-receipt"></i> My Bookings</button>
+        </div>
+      </div>
+      <div class="content-card" style="text-align:center;padding:2rem">
+        <div class="loading-spinner" style="margin:0 auto .75rem"></div>
+        <p style="color:var(--text-light)">Loading wallet balance and transactions...</p>
+      </div>
+    </section>
+    ${renderFooterHTML()}
+  `;
+}
+
+function renderWalletError(app, message) {
+  const safeMessage = escapeHtml(message || 'Unable to load wallet details right now.');
+  app.innerHTML = `
+    <section class="section" style="max-width:800px">
+      <h2 class="section-title">💳 Wallet & Payments</h2>
+      <div class="content-card" style="text-align:center;padding:2rem">
+        <i class="fas fa-exclamation-triangle" style="font-size:2rem;color:var(--danger);margin-bottom:.75rem;display:block"></i>
+        <h3 style="margin-bottom:.5rem">Wallet temporarily unavailable</h3>
+        <p style="color:var(--text-light);margin-bottom:1rem">${safeMessage}</p>
+        <div style="display:flex;justify-content:center;gap:.6rem;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="retryWalletLoad()"><i class="fas fa-rotate-right"></i> Retry</button>
+          <button class="btn" style="background:#F1F5F9" onclick="navigate('dashboard')"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+        </div>
+      </div>
+    </section>
+    ${renderFooterHTML()}
+  `;
+}
+
+function walletTxnMetaText(t) {
+  const dateText = new Date(t.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const timeText = new Date(t.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  return dateText + ' at ' + timeText;
+}
+
+function renderWalletContent(app, walletData) {
+  const balance = Number(walletData.balance || 0);
+  const transactions = Array.isArray(walletData.transactions) ? walletData.transactions : [];
+  const pagination = walletData.pagination || {};
+  const summary = walletData.summary || {};
+  const page = Number(pagination.page || walletViewState.page || 1);
+  const totalPages = Math.max(1, Number(pagination.totalPages || 1));
+  const totalTransactions = Number(pagination.totalTransactions || transactions.length || 0);
+
+  walletViewState.page = page;
+  walletViewState.totalPages = totalPages;
+  walletViewState.totalTransactions = totalTransactions;
+
   app.innerHTML = `
     <section class="section" style="max-width:800px">
       <h2 class="section-title">💳 Wallet & Payments</h2>
@@ -5464,10 +6003,22 @@ async function renderWallet(app) {
         <div class="wallet-actions">
           <button onclick="showAddMoney()" style="background:linear-gradient(135deg,var(--success),#059669);font-weight:700;font-size:.95rem"><i class="fas fa-plus-circle"></i> Add Money</button>
           <button onclick="navigate('dashboard')"><i class="fas fa-receipt"></i> My Bookings</button>
+          <button onclick="retryWalletLoad(true)" ${walletViewState.isLoading ? 'disabled' : ''}><i class="fas fa-rotate-right"></i> Refresh</button>
+        </div>
+      </div>
+      <div class="content-card" style="margin-bottom:1rem">
+        <h2 style="margin-bottom:1rem"><i class="fas fa-chart-column" style="color:var(--secondary)"></i> Wallet Validation Summary</h2>
+        <div class="counter-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.65rem">
+          <div class="counter-item" style="padding:.9rem"><div class="num" style="font-size:1.2rem;color:var(--success)">₹${Number(summary.rechargeCredits || 0).toLocaleString()}</div><div class="label">Recharge Credits (${Number(summary.rechargeTransactions || 0)})</div></div>
+          <div class="counter-item" style="padding:.9rem"><div class="num" style="font-size:1.2rem;color:var(--primary)">₹${Number(summary.rewardCredits || 0).toLocaleString()}</div><div class="label">Reward Credits (${Number(summary.rewardTransactions || 0)})</div></div>
+          <div class="counter-item" style="padding:.9rem"><div class="num" style="font-size:1.2rem;color:var(--danger)">₹${Number(summary.bookingDebits || 0).toLocaleString()}</div><div class="label">Booking Deductions (${Number(summary.bookingDeductions || 0)})</div></div>
         </div>
       </div>
       <div class="content-card">
-        <h2 style="margin-bottom:1rem"><i class="fas fa-history" style="color:var(--primary)"></i> Transaction History</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem">
+          <h2 style="margin-bottom:0"><i class="fas fa-history" style="color:var(--primary)"></i> Transaction History</h2>
+          <div style="font-size:.82rem;color:var(--text-light)">Page ${page} of ${totalPages} • ${totalTransactions} transaction${totalTransactions === 1 ? '' : 's'}</div>
+        </div>
         ${transactions.length ? `<div class="txn-list">${transactions.map(t => `
           <div class="txn-item">
             <div class="txn-info">
@@ -5476,23 +6027,115 @@ async function renderWallet(app) {
               </div>
               <div>
                 <h5>${escapeHtml(t.description)}</h5>
-                <p>${new Date(t.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})} at ${new Date(t.created_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</p>
+                <p>${walletTxnMetaText(t)}</p>
                 <p style="font-size:.75rem;color:var(--text-light)"><span style="display:inline-block;background:${t.type==='credit'?'#ECFDF5':'#FEF2F2'};color:${t.type==='credit'?'#047857':'#B91C1C'};padding:1px 8px;border-radius:99px;font-weight:600;font-size:.7rem;text-transform:uppercase">${t.type}</span> &nbsp; ID: #${t.id}</p>
               </div>
             </div>
-            <div class="txn-amount ${t.type}">${t.type==='credit'?'+':'-'}₹${t.amount}</div>
+            <div class="txn-amount ${t.type}">${t.type==='credit'?'+':'-'}₹${Number(t.amount || 0).toLocaleString()}</div>
           </div>
         `).join('')}</div>` : `
           <div style="text-align:center;padding:2rem;color:var(--text-light)">
             <i class="fas fa-receipt" style="font-size:2rem;margin-bottom:.75rem;display:block;opacity:.3"></i>
-            <p>No transactions yet</p>
+            <p>No transactions on this page</p>
             <button class="btn btn-primary" style="margin-top:1rem" onclick="showAddMoney()"><i class="fas fa-plus"></i> Add Money to Get Started</button>
           </div>
         `}
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap;margin-top:1rem;padding-top:.85rem;border-top:1px solid var(--border)">
+          <button class="btn btn-sm" style="background:#F1F5F9" onclick="walletChangePage(-1)" ${page <= 1 || walletViewState.isLoading ? 'disabled' : ''}><i class="fas fa-chevron-left"></i> Previous</button>
+          <div style="font-size:.8rem;color:var(--text-light)">${walletViewState.isLoading ? 'Refreshing...' : ('Last updated: ' + new Date(walletViewState.lastLoadAt || Date.now()).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}))}</div>
+          <button class="btn btn-sm" style="background:#F1F5F9" onclick="walletChangePage(1)" ${page >= totalPages || walletViewState.isLoading ? 'disabled' : ''}>Next <i class="fas fa-chevron-right"></i></button>
+        </div>
       </div>
     </section>
     ${renderFooterHTML()}
   `;
+}
+
+async function loadWalletPage(app, opts = {}) {
+  if (!currentUser) { showLogin(); return; }
+  const signal = opts.signal;
+  const page = Math.max(1, Number(opts.page || walletViewState.page || 1));
+  const silent = !!opts.silent;
+  const maxRetries = 2;
+
+  walletViewState.isLoading = true;
+  walletViewState.lastError = null;
+
+  if (!walletViewState.lastData || opts.reason === 'initial') {
+    renderWalletLoading(app);
+  }
+
+  let lastError = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    if (signal && signal.aborted) {
+      walletViewState.isLoading = false;
+      return;
+    }
+    try {
+      const data = await api('/wallet/' + currentUser.id + '?page=' + page + '&pageSize=' + walletViewState.pageSize, {
+        signal,
+        showToast: !silent && attempt === maxRetries
+      });
+
+      if (signal && signal.aborted) {
+        walletViewState.isLoading = false;
+        return;
+      }
+
+      if (data && !data.sessionExpired && data.success !== false) {
+        walletViewState.lastData = data;
+        walletViewState.page = Number(data.pagination?.page || page);
+        walletViewState.totalPages = Math.max(1, Number(data.pagination?.totalPages || 1));
+        walletViewState.totalTransactions = Number(data.pagination?.totalTransactions || 0);
+        walletViewState.lastLoadAt = Date.now();
+        bookingWalletBalance = Math.max(0, Number(data.balance || 0));
+        walletViewState.isLoading = false;
+        renderWalletContent(app, data);
+        return;
+      }
+
+      lastError = (data && data.message) || 'Unable to fetch wallet details.';
+    } catch (err) {
+      lastError = err && err.message ? err.message : 'Unable to fetch wallet details.';
+    }
+
+    if (attempt < maxRetries) {
+      await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+    }
+  }
+
+  walletViewState.isLoading = false;
+  walletViewState.lastError = lastError || 'Unable to load wallet details.';
+
+  if (walletViewState.lastData) {
+    renderWalletContent(app, walletViewState.lastData);
+    if (!silent) toast('Showing last synced wallet data. Tap Refresh to retry.', 'error');
+    return;
+  }
+  renderWalletError(app, walletViewState.lastError);
+}
+
+function walletChangePage(delta) {
+  if (!currentUser || walletViewState.isLoading) return;
+  const nextPage = Math.max(1, Math.min(walletViewState.totalPages || 1, (walletViewState.page || 1) + Number(delta || 0)));
+  if (nextPage === walletViewState.page) return;
+  const app = document.getElementById('app');
+  if (!app) return;
+  loadWalletPage(app, { page: nextPage, reason: 'pagination' });
+}
+
+function retryWalletLoad(silent) {
+  if (!currentUser || walletViewState.isLoading) return;
+  const app = document.getElementById('app');
+  if (!app) return;
+  loadWalletPage(app, { page: walletViewState.page || 1, silent: !!silent, reason: 'manual_retry' });
+}
+
+async function renderWallet(app, signal) {
+  if (!currentUser) { showLogin(); return; }
+  bindWalletSyncListeners();
+  walletViewState.page = 1;
+  await loadWalletPage(app, { page: walletViewState.page, signal, reason: 'initial' });
 }
 
 function showAddMoney() {
@@ -5518,7 +6161,7 @@ function showAddMoney() {
 async function handleWalletRecharge(e) {
   e.preventDefault();
   const amountInput = document.getElementById('rechargeAmount');
-  const amount = parseInt(amountInput.value);
+  const amount = parseInt(amountInput.value, 10);
   if (!amount || amount < 100 || amount > 50000) {
     toast('Please enter an amount between ₹100 and ₹50,000', 'error');
     return;
@@ -5553,6 +6196,8 @@ async function handleWalletRecharge(e) {
         amount: amount
       }});
       if (verifyRes.success) {
+        markWalletDirty('wallet_recharge');
+        bookingWalletBalance = Math.max(0, Number(verifyRes.balance || 0));
         toast('💰 ₹' + amount + ' added to your wallet!', 'success');
         openModal(`
           <button class="close" onclick="closeModal()">&times;</button>
@@ -5821,9 +6466,13 @@ async function deleteGallery(galleryId) {
 }
 
 // ─── USER GALLERY (MY GALLERIES) ───────────────────────────────
-async function renderUserGalleries(app) {
+async function renderUserGalleries(app, signal) {
   if (!currentUser) { showLogin(); return; }
-  const galleries = await api('/user/galleries');
+  const galleries = await api('/user/galleries', { signal });
+  
+  // Check if render was cancelled before mutating DOM
+  if (signal && signal.aborted) return;
+  
   const list = Array.isArray(galleries) ? galleries : [];
   app.innerHTML = `
     <section class="section">
@@ -5858,8 +6507,12 @@ async function renderUserGalleries(app) {
 let galleryMedia = [];
 let galleryLightboxIdx = 0;
 
-async function openUserGallery(galleryId) {
-  const gallery = await api('/gallery/' + galleryId);
+async function openUserGallery(galleryId, signal) {
+  const gallery = await api('/gallery/' + galleryId, { signal });
+  
+  // Check if render was cancelled
+  if (signal && signal.aborted) return;
+  
   if (!gallery || !gallery.id) {
     if (gallery && gallery.message) toast(gallery.message, 'error');
     else toast('Gallery not available', 'error');
@@ -6012,6 +6665,10 @@ if ('serviceWorker' in navigator) {
 }
 
 renderNav();
+if (currentUser) {
+  syncWishlistFromServer({ force: true }).catch(() => {});
+  initNotificationsRealtime();
+}
 initOfferBar();
 (async () => {
   if (_pendingPasswordReset) return;

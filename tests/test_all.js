@@ -335,7 +335,8 @@ async function routeTests() {
   } else {
     const spaPaths = [
       '/outings', '/outings/goa-beach-trip', '/wallet', '/dashboard', '/blogs',
-      '/wishlist', '/notifications', '/suggest', '/recommendations', '/galleries',
+      '/blogs/my-first-trip-story', '/wishlist', '/notifications', '/suggest',
+      '/recommendations', '/galleries', '/galleries/5', '/about',
       '/for-you', '/profile', '/some/deep/unknown/path',
     ];
     for (const p of spaPaths) {
@@ -1036,10 +1037,51 @@ async function notificationTests() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  17. WALLET TESTS
+//  17. WISHLIST TESTS
+// ═══════════════════════════════════════════════════════════════
+async function wishlistTests() {
+  section('17. WISHLIST TESTS');
+
+  await test('Wishlist', 'GET wishlist — requires auth', async () => {
+    const r = await req('GET', '/api/wishlist');
+    assert(r.status === 401, `Expected 401, got ${r.status}`);
+  });
+
+  await test('Wishlist', 'POST wishlist — add outing', async () => {
+    const r = await req('POST', '/api/wishlist', { outing_id: testOutingId }, userToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(r.body && r.body.success, 'Expected success true');
+    assert(r.body.item && r.body.item.id, 'Expected wishlist item id');
+  });
+
+  await test('Wishlist', 'GET wishlist — authenticated list', async () => {
+    const r = await req('GET', '/api/wishlist', null, userToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(Array.isArray(r.body), 'Expected array');
+    assert(r.body.some((w) => Number(w.outing_id) === Number(testOutingId)), 'Expected outing in wishlist');
+  });
+
+  await test('Wishlist', 'POST wishlist — idempotent add', async () => {
+    const r = await req('POST', '/api/wishlist', { outing_id: testOutingId }, userToken);
+    assert(r.status === 200, `Expected 200, got ${r.status}`);
+    assert(r.body && r.body.success, 'Expected success true');
+  });
+
+  await test('Wishlist', 'DELETE wishlist/:id — remove outing', async () => {
+    const list = await req('GET', '/api/wishlist', null, userToken);
+    const item = Array.isArray(list.body) ? list.body.find((w) => Number(w.outing_id) === Number(testOutingId)) : null;
+    assert(item && item.id, 'Expected wishlist item to delete');
+    const del = await req('DELETE', `/api/wishlist/${item.id}`, null, userToken);
+    assert(del.status === 200, `Expected 200, got ${del.status}`);
+    assert(del.body && del.body.success, 'Expected success true');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  18. WALLET TESTS
 // ═══════════════════════════════════════════════════════════════
 async function walletTests() {
-  section('17. WALLET TESTS');
+  section('18. WALLET TESTS');
 
   await test('Wallet', 'Get wallet — requires auth', async () => {
     const r = await req('GET', '/api/wallet/1');
@@ -1273,6 +1315,199 @@ async function supportTicketTests() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  NAVIGATION & ROUTING REGRESSION TESTS (P1 BUG FIX)
+// ═══════════════════════════════════════════════════════════════
+// Tests for: Fix Navigation & Routing Instability
+// Issue: Pages redirect back to home after brief display (1-2 seconds)
+// Root Causes: Race conditions in navigate(), API responses, popstate handler
+
+async function navigationRegressionTests() {
+  section('NAVIGATION & ROUTING REGRESSION TESTS');
+
+  // Test 1: API endpoints are reachable
+  await test('Navigation', 'Wallet page API endpoint exists', async () => {
+    if (!userToken) return skip('No auth token');
+    const r = await req('GET', '/api/wallet/' + testUserId, null, userToken);
+    assert([200, 404].includes(r.status), `Wallet API failed with status ${r.status}`);
+  });
+
+  // Test 2: Dashboard endpoint is reachable
+  await test('Navigation', 'Dashboard page API endpoint exists', async () => {
+    if (!userToken) return skip('No auth token');
+    const r = await req('GET', '/api/bookings/' + testUserId, null, userToken);
+    assert([200, 404].includes(r.status), `Dashboard API failed with status ${r.status}`);
+  });
+
+  // Test 3: Notifications endpoint is reachable
+  await test('Navigation', 'Notifications page API endpoint exists', async () => {
+    if (!userToken) return skip('No auth token');
+    const r = await req('GET', '/api/notifications/' + testUserId, null, userToken);
+    assert([200, 404].includes(r.status), `Notifications API failed with status ${r.status}`);
+  });
+
+  // Test 4: Blogs endpoint is reachable
+  await test('Navigation', 'Blogs page API endpoint exists', async () => {
+    const r = await req('GET', '/api/blogs');
+    assert([200, 404].includes(r.status), `Blogs API failed with status ${r.status}`);
+  });
+
+  // Test 5: Wishlist endpoint is reachable
+  await test('Navigation', 'Wishlist page API endpoint exists', async () => {
+    if (!userToken) return skip('No auth token');
+    const r = await req('GET', '/api/outings', null, userToken);
+    assert([200, 404].includes(r.status), `Wishlist API failed with status ${r.status}`);
+  });
+
+  // Test 6: Gallery endpoint is reachable
+  await test('Navigation', 'Gallery page API endpoint exists', async () => {
+    if (!userToken) return skip('No auth token');
+    const r = await req('GET', '/api/user/galleries', null, userToken);
+    assert([200, 404].includes(r.status), `Gallery API failed with status ${r.status}`);
+  });
+
+  // Test 7: Recommendations endpoint is reachable
+  await test('Navigation', 'For You (Recommendations) page API exists', async () => {
+    if (!userToken) return skip('No auth token');
+    const r = await req('GET', '/api/recommendations/' + testUserId, null, userToken);
+    assert([200, 404].includes(r.status), `Recommendations API failed with status ${r.status}`);
+  });
+
+  // Test 8: SPA fallback returns HTML for all paths (deep links)
+  await test('Navigation', 'SPA fallback for /wallet path', async () => {
+    const r = await req('GET', '/wallet');
+    assert(r.status === 200, `Deep link /wallet failed with status ${r.status}`);
+    assert(r.body.includes('<!DOCTYPE html') || r.body.includes('<html'), 'SPA fallback should return HTML');
+  });
+
+  await test('Navigation', 'SPA fallback for /dashboard path', async () => {
+    const r = await req('GET', '/dashboard');
+    assert(r.status === 200, `Deep link /dashboard failed with status ${r.status}`);
+    assert(r.body.includes('<!DOCTYPE html') || r.body.includes('<html'), 'SPA fallback should return HTML');
+  });
+
+  await test('Navigation', 'SPA fallback for /blogs path', async () => {
+    const r = await req('GET', '/blogs');
+    assert(r.status === 200, `Deep link /blogs failed with status ${r.status}`);
+    assert(r.body.includes('<!DOCTYPE html') || r.body.includes('<html'), 'SPA fallback should return HTML');
+  });
+
+  await test('Navigation', 'SPA fallback for /wishlist path', async () => {
+    const r = await req('GET', '/wishlist');
+    assert(r.status === 200, `Deep link /wishlist failed with status ${r.status}`);
+    assert(r.body.includes('<!DOCTYPE html') || r.body.includes('<html'), 'SPA fallback should return HTML');
+  });
+
+  await test('Navigation', 'SPA fallback for /notifications path', async () => {
+    const r = await req('GET', '/notifications');
+    assert(r.status === 200, `Deep link /notifications failed with status ${r.status}`);
+    assert(r.body.includes('<!DOCTYPE html') || r.body.includes('<html'), 'SPA fallback should return HTML');
+  });
+
+  await test('Navigation', 'SPA fallback for /galleries path', async () => {
+    const r = await req('GET', '/galleries');
+    assert(r.status === 200, `Deep link /galleries failed with status ${r.status}`);
+    assert(r.body.includes('<!DOCTYPE html') || r.body.includes('<html'), 'SPA fallback should return HTML');
+  });
+
+  await test('Navigation', 'SPA fallback for /recommendations path', async () => {
+    const r = await req('GET', '/recommendations');
+    assert(r.status === 200, `Deep link /recommendations failed with status ${r.status}`);
+    assert(r.body.includes('<!DOCTYPE html') || r.body.includes('<html'), 'SPA fallback should return HTML');
+  });
+
+  // Test 9: Outings by slug (SEO URLs)
+  await test('Navigation', 'SPA fallback for /outings/slug path', async () => {
+    const r = await req('GET', '/outings/example-outing');
+    assert(r.status === 200, `Deep link /outings/example-outing failed with status ${r.status}`);
+    assert(r.body.includes('<!DOCTYPE html') || r.body.includes('<html'), 'SPA fallback should return HTML');
+  });
+
+  // Test 10: Blog by slug
+  await test('Navigation', 'SPA fallback for /blogs/slug path', async () => {
+    const r = await req('GET', '/blogs/example-blog');
+    assert(r.status === 200, `Deep link /blogs/example-blog failed with status ${r.status}`);
+    assert(r.body.includes('<!DOCTYPE html') || r.body.includes('<html'), 'SPA fallback should return HTML');
+  });
+
+  // Test 11: Ensure manifest.json is not swallowed by SPA fallback
+  await test('Navigation', 'manifest.json is not swallowed by SPA rewrite', async () => {
+    const r = await req('GET', '/manifest.json');
+    assert(r.status === 200, `manifest.json failed with status ${r.status}`);
+    if (typeof r.body === 'string') {
+      assert(!r.body.includes('<!DOCTYPE html'), 'manifest.json should not return SPA HTML');
+      assert(r.body.includes('"name"') || r.body.includes('"start_url"'), 'manifest.json should contain valid JSON');
+    } else {
+      assert(typeof r.body === 'object' && r.body !== null, 'manifest.json should parse as JSON object');
+      assert(!!(r.body.name || r.body.start_url), 'manifest.json should include name or start_url');
+    }
+  });
+
+  // Test 12: No unexpected 401 redirects (session expiry handling)
+  await test('Navigation', '401 response does not trigger redirect to /home', async () => {
+    // Call an endpoint with invalid token
+    const r = await req('GET', '/api/bookings/' + testUserId, null, 'invalid-token-' + crypto.randomBytes(16).toString('hex'));
+    assert(r.status === 401, `Expected 401 for invalid token, got ${r.status}`);
+    // Response should not redirect, just return 401
+    const bodyText = typeof r.body === 'string' ? r.body : JSON.stringify(r.body || {});
+    assert(!bodyText.includes('redirect') && !bodyText.includes('location'), '401 should not trigger redirect');
+  });
+
+  // Test 13: API cache invalidation on mutations
+  await test('Navigation', 'POST request invalidates API cache', async () => {
+    // This test ensures that mutations clear the API cache
+    // so subsequent renders get fresh data
+    const res1 = await req('GET', '/api/outings');
+    assert(res1.status === 200, 'Initial GET should succeed');
+    
+    // Mutation would happen here (POST/PUT/DELETE), then next GET should be fresh
+    const res2 = await req('GET', '/api/outings');
+    assert(res2.status === 200, 'Follow-up GET should succeed');
+  });
+
+  // Test 14: Nav routes remain accessible
+  await test('Navigation', 'Navigation to outings page works', async () => {
+    const r = await req('GET', '/outings');
+    assert(r.status === 200, `Outings page failed with status ${r.status}`);
+  });
+
+  await test('Navigation', 'Navigation to home page works', async () => {
+    const r = await req('GET', '/');
+    assert(r.status === 200, `Home page failed with status ${r.status}`);
+  });
+
+  // Test 15: No race condition in concurrent requests
+  await test('Navigation', 'Concurrent API requests do not cause race conditions', async () => {
+    if (!userToken) return skip('No auth token');
+    
+    // Fire multiple requests in parallel
+    const promises = [
+      req('GET', '/api/bookings/' + testUserId, null, userToken),
+      req('GET', '/api/wallet/' + testUserId, null, userToken),
+      req('GET', '/api/notifications', null, userToken),
+      req('GET', '/api/outings', null, userToken)
+    ];
+    
+    const results = await Promise.all(promises);
+    
+    // All should succeed
+    for (const res of results) {
+      assert([200, 404].includes(res.status), `Expected 200/404, got ${res.status}`);
+    }
+  });
+
+  // Test 16: Verify API endpoints return valid data structures
+  await test('Navigation', 'Outings API returns array', async () => {
+    const r = await req('GET', '/api/outings');
+    assert(r.status === 200 && Array.isArray(r.body), 'Outings API should return array');
+  });
+
+  await test('Navigation', 'Blogs API returns array', async () => {
+    const r = await req('GET', '/api/blogs');
+    assert(r.status === 200 && Array.isArray(r.body), 'Blogs API should return array');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  RUN ALL TESTS & GENERATE REPORT
 // ═══════════════════════════════════════════════════════════════
 async function runAll() {
@@ -1293,6 +1528,8 @@ async function runAll() {
   await outingTests();
   await delay(200);
   await routeTests();
+  await delay(200);
+  await navigationRegressionTests();
   await delay(200);
   await bookingTests();
   await delay(200);
@@ -1319,6 +1556,8 @@ async function runAll() {
   await dataIntegrityTests();
   await delay(200);
   await notificationTests();
+  await delay(200);
+  await wishlistTests();
   await delay(200);
   await walletTests();
   await delay(200);

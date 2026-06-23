@@ -7,12 +7,17 @@
     "start": "node server.js",
     "dev": "node server.js",
     "test": "node tests/test_all.js",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:integration": "node --test tests/integration/*.test.js",
     "loadtest": "node tests/load_test.js",
-    "build": "node optimize-images.js",
+    "build": "node optimize-images.js && node scripts/build-frontend.js",
+    "build:frontend": "node scripts/build-frontend.js",
     "audit": "npm audit",
     "audit:fix": "npm audit fix"
   },
   "dependencies": {
+    "@sentry/browser": "^8.37.1",
+    "@sentry/node": "^8.37.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^9.6.0",
@@ -33,6 +38,9 @@
     "razorpay": "^2.9.2",
     "sharp": "^0.34.5",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
   },
   "engines": {
     "node": ">=18.0.0"
