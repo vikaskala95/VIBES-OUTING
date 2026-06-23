@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<!-- Installable PWA / native-app shell -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#6C3CE1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VIBES@Outing">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <title>VIBES@Outing — GenZ Group Outings | Discover, Join & Explore</title>
 <meta name="description" content="VIBES@Outing — Discover & book premium group outings with friends. Get ₹100 Vibes Wallet credit on every booking. Weekend trips from Bangalore, travel rewards & trip cashback. Bangalore's #1 GenZ outing platform.">
 <meta name="keywords" content="group outings, team outing, weekend trips from Bangalore, Bangalore outings, GenZ travel, adventure trips, Goa trips, trekking, travel rewards, trip cashback, budget travel deals, VibesOuting offers">
@@ -732,6 +740,42 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
   .dash-stats{grid-template-columns:1fr}
 }
 
+/* ─── MOBILE APP BOTTOM NAVIGATION ─── */
+.bottom-nav{display:none}
+@media(max-width:768px){
+  .bottom-nav{
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:140;
+    background:rgba(255,255,255,.96);backdrop-filter:saturate(180%) blur(14px);
+    -webkit-backdrop-filter:saturate(180%) blur(14px);
+    border-top:1px solid var(--border);
+    box-shadow:0 -4px 20px rgba(0,0,0,.08);
+    padding:.3rem .25rem calc(.3rem + env(safe-area-inset-bottom));
+    justify-content:space-around;align-items:stretch;
+  }
+  .bottom-nav a{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;padding:.35rem .15rem;text-decoration:none;color:var(--text-light);
+    font-size:.62rem;font-weight:600;letter-spacing:.2px;border-radius:12px;
+    position:relative;transition:color .18s ease,transform .18s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .bottom-nav a i{font-size:1.18rem;line-height:1;transition:transform .18s ease}
+  .bottom-nav a.active{color:var(--primary)}
+  .bottom-nav a.active i{transform:translateY(-2px)}
+  .bottom-nav a.active::before{
+    content:'';position:absolute;top:3px;width:22px;height:3px;border-radius:3px;
+    background:var(--primary);
+  }
+  .bottom-nav a:active{transform:scale(.92)}
+  .bottom-nav .bn-badge{
+    position:absolute;top:2px;right:calc(50% - 18px);min-width:15px;height:15px;padding:0 3px;
+    background:var(--danger);color:#fff;font-size:.55rem;font-weight:700;border-radius:999px;
+    display:none;align-items:center;justify-content:center;line-height:1;
+  }
+  /* Clear fixed bottom bar so content / footer never hides behind it */
+  body{padding-bottom:calc(58px + env(safe-area-inset-bottom))}
+}
+
 /* Safari-specific fixes */
 @supports (-webkit-touch-callout: none){
   .hero{min-height:-webkit-fill-available}
@@ -834,6 +878,9 @@ th{font-weight:600;color:var(--text-light);background:#FAFBFC;letter-spacing:.3p
 
 <!-- APP CONTAINER -->
 <main id="app"></main>
+
+<!-- MOBILE APP BOTTOM NAVIGATION -->
+<nav class="bottom-nav" id="bottomNav" role="navigation" aria-label="Primary mobile navigation"></nav>
 
 <!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
@@ -1292,10 +1339,9 @@ async function migrateLegacyOutingHashRoute() {
   return nextPage;
 }
 
-async function navigateToOuting(outingRef, skipHistory) {
-  // Resolve outing reference to a page string, don't call navigate()
-  // This prevents nested navigate calls and race conditions
-  
+// Pure resolver: outing reference (id | slug) → page string. Does NOT navigate,
+// so it is safe to call from inside the navigation queue without recursion.
+async function resolveOutingPage(outingRef) {
   if (typeof outingRef === 'string' && !/^\d+$/.test(outingRef)) {
     const slug = normalizeSlug(outingRef);
     if (!slug) return null;
@@ -1304,14 +1350,22 @@ async function navigateToOuting(outingRef, skipHistory) {
 
   const outingId = parseInt(outingRef, 10);
   if (!outingId) return null;
-  
+
   const outing = await api('/outings/' + outingId, { showToast: false });
   if (!outing || !outing.slug) {
     toast('Outing not found', 'error');
     return 'outings';
   }
-  
+
   return 'outing-slug:' + outing.slug;
+}
+
+// Click-handler facing helper used by outing cards, wishlist, dashboard, blogs.
+// Resolves the outing to its SEO page and actually navigates there.
+async function navigateToOuting(outingRef, skipHistory) {
+  const page = await resolveOutingPage(outingRef);
+  if (page) await navigate(page, skipHistory);
+  return page;
 }
 // Blur placeholders cache
 let _blurPlaceholders = null;
@@ -1696,6 +1750,62 @@ function renderNav() {
   // Keep the offer-bar CTA in sync with auth state
   const offerCta = document.getElementById('offerBarCta');
   if (offerCta) offerCta.textContent = currentUser ? 'Book Now' : 'Sign Up & Claim ₹100';
+  renderBottomNav();
+}
+
+// ─── MOBILE APP BOTTOM NAV ──────────────────────────────────────
+// Native-app style tab bar shown on phones. Mirrors the most-used
+// destinations and highlights the active page.
+function renderBottomNav() {
+  const bn = document.getElementById('bottomNav');
+  if (!bn) return;
+  let items;
+  if (!currentUser) {
+    items = [
+      { page: 'home', icon: 'fa-house', label: 'Home' },
+      { page: 'outings', icon: 'fa-compass', label: 'Explore' },
+      { page: 'blogs', icon: 'fa-feather', label: 'Stories' },
+      { action: 'showLogin()', icon: 'fa-circle-user', label: 'Account' },
+    ];
+  } else if (currentUser.role === 'admin') {
+    items = [
+      { page: 'home', icon: 'fa-house', label: 'Home' },
+      { page: 'outings', icon: 'fa-compass', label: 'Explore' },
+      { page: 'admin', icon: 'fa-gauge-high', label: 'Admin' },
+      { page: 'notifications', icon: 'fa-bell', label: 'Alerts', badge: true },
+      { page: 'dashboard', icon: 'fa-circle-user', label: 'Account' },
+    ];
+  } else {
+    items = [
+      { page: 'home', icon: 'fa-house', label: 'Home' },
+      { page: 'outings', icon: 'fa-compass', label: 'Explore' },
+      { page: 'wishlist', icon: 'fa-heart', label: 'Saved' },
+      { page: 'wallet', icon: 'fa-wallet', label: 'Wallet' },
+      { page: 'dashboard', icon: 'fa-circle-user', label: 'Account' },
+    ];
+  }
+  bn.innerHTML = items.map((it) => {
+    const handler = it.action ? it.action : `navigate('${it.page}')`;
+    const badge = it.badge ? '<span class="bn-badge" id="bnNotifBadge">0</span>' : '';
+    return `<a href="#" data-page="${it.page || ''}" onclick="${handler};return false" aria-label="${it.label}"><i class="fas ${it.icon}"></i>${badge}<span>${it.label}</span></a>`;
+  }).join('');
+  updateBottomNavActive(currentPage);
+  updateNotifBadge();
+}
+
+function updateBottomNavActive(page) {
+  const bn = document.getElementById('bottomNav');
+  if (!bn) return;
+  // Map detail/sub pages back to their primary tab.
+  let key = page;
+  if (page === 'galleries' || page === 'recommendations' || page === 'suggest' || page === 'notifications') {
+    // these have no dedicated tab for normal users; leave Account/Home unhighlighted
+  }
+  if (page && page.startsWith('outing-slug:')) key = 'outings';
+  if (page && page.startsWith('blog-')) key = 'blogs';
+  bn.querySelectorAll('a').forEach((a) => {
+    a.classList.toggle('active', a.getAttribute('data-page') === key);
+  });
 }
 
 // ─── AUTH ────────────────────────────────────────────────────────
@@ -2131,7 +2241,7 @@ async function _navigateInternal(page, skipHistory) {
   if (page && /^outing-\d+$/.test(page)) {
     const legacyId = parseInt(page.split('-')[1], 10);
     if (legacyId) {
-      const resolvedPage = await navigateToOuting(legacyId, skipHistory);
+      const resolvedPage = await resolveOutingPage(legacyId);
       if (resolvedPage && resolvedPage !== page) {
         // Re-queue with resolved page instead of recursive call
         _navigationQueue.unshift({ page: resolvedPage, skipHistory, resolve: () => {}, timestamp: Date.now() });
@@ -2142,6 +2252,7 @@ async function _navigateInternal(page, skipHistory) {
 
   currentPage = page;
   const app = document.getElementById('app');
+  updateBottomNavActive(page);
   
   // Cancel any in-flight render from previous navigation
   if (_currentRenderController) {
@@ -5805,11 +5916,17 @@ async function fetchNotifications(opts = {}) {
 }
 
 function updateNotifBadge() {
-  const badge = document.getElementById('notifBadge');
-  if (!badge) return;
   const unread = notifications.filter(n => !n.read).length;
-  badge.textContent = unread;
-  badge.style.display = unread > 0 ? 'flex' : 'none';
+  const badge = document.getElementById('notifBadge');
+  if (badge) {
+    badge.textContent = unread;
+    badge.style.display = unread > 0 ? 'flex' : 'none';
+  }
+  const bnBadge = document.getElementById('bnNotifBadge');
+  if (bnBadge) {
+    bnBadge.textContent = unread > 9 ? '9+' : unread;
+    bnBadge.style.display = unread > 0 ? 'flex' : 'none';
+  }
 }
 
 function toggleNotifPanel() {
